@@ -171,3 +171,135 @@ export async function saveBusinessCard(data: any) {
     }
   }
 }
+
+export async function updateBusinessCard(card: any) {
+  if (!isSupabaseConfigured() || !supabase) {
+    return {
+      success: false,
+      error: "데이터베이스가 설정되지 않았습니다.",
+    }
+  }
+
+  try {
+    // 1. 카테고리 ID 찾기
+    let categoryId = 10 // 기본값: 서비스
+
+    const { data: categories, error: categoryError } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("name", card.category)
+      .single()
+
+    if (categories) {
+      categoryId = categories.id
+    }
+
+    // 2. 비즈니스 카드 업데이트
+    const { error: cardError } = await supabase
+      .from("business_cards")
+      .update({
+        title: card.title,
+        description: card.description,
+        category_id: categoryId,
+        location: card.location,
+        phone: card.phone,
+        kakao_id: card.kakaoId,
+        line_id: card.lineId,
+        website: card.website,
+        hours: card.hours,
+        price: card.price,
+        promotion: card.promotion,
+        rating: card.rating,
+        is_promoted: card.isPromoted || false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", card.id)
+
+    if (cardError) {
+      console.error("Card update error:", cardError)
+      return {
+        success: false,
+        error: "비즈니스 카드 업데이트 중 오류가 발생했습니다.",
+      }
+    }
+
+    // 3. 기존 태그 연결 삭제
+    await supabase.from("business_card_tags").delete().eq("business_card_id", card.id)
+
+    // 4. 새 태그 처리
+    if (card.tags && card.tags.length > 0) {
+      for (const tagName of card.tags) {
+        // 태그 찾기 또는 생성
+        let { data: tag, error: tagError } = await supabase.from("tags").select("id").eq("name", tagName).single()
+
+        if (tagError && tagError.code === "PGRST116") {
+          // 태그가 없으면 생성
+          const { data: newTag, error: createTagError } = await supabase
+            .from("tags")
+            .insert({ name: tagName })
+            .select()
+            .single()
+
+          if (createTagError) {
+            console.error("Tag creation error:", createTagError)
+            continue
+          }
+          tag = newTag
+        }
+
+        if (tag) {
+          // 비즈니스 카드와 태그 연결
+          await supabase.from("business_card_tags").insert({
+            business_card_id: card.id,
+            tag_id: tag.id,
+          })
+        }
+      }
+    }
+
+    return {
+      success: true,
+    }
+  } catch (error) {
+    console.error("Error updating business card:", error)
+    return {
+      success: false,
+      error: "업데이트 중 오류가 발생했습니다.",
+    }
+  }
+}
+
+export async function deleteBusinessCard(cardId: number) {
+  if (!isSupabaseConfigured() || !supabase) {
+    return {
+      success: false,
+      error: "데이터베이스가 설정되지 않았습니다.",
+    }
+  }
+
+  try {
+    // 1. 태그 연결 삭제 (CASCADE로 자동 삭제되지만 명시적으로)
+    await supabase.from("business_card_tags").delete().eq("business_card_id", cardId)
+
+    // 2. 비즈니스 카드 삭제
+    const { error: cardError } = await supabase.from("business_cards").delete().eq("id", cardId)
+
+    if (cardError) {
+      console.error("Card delete error:", cardError)
+      return {
+        success: false,
+        error: "비즈니스 카드 삭제 중 오류가 발생했습니다.",
+      }
+    }
+
+    return {
+      success: true,
+    }
+  } catch (error) {
+    console.error("Error deleting business card:", error)
+    return {
+      success: false,
+      error: "삭제 중 오류가 발생했습니다.",
+    }
+  }
+}
