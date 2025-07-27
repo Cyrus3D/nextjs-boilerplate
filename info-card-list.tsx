@@ -5,6 +5,7 @@ import GoogleAds from "./components/google-ads"
 import BusinessCardComponent from "./components/business-card"
 import BusinessDetailModal from "./components/business-detail-modal"
 import { getBusinessCards, incrementViewCount } from "./lib/api"
+import { isSupabaseConfigured } from "./lib/supabase"
 import type { BusinessCard } from "./types/business-card"
 import AdsenseBanner from "./components/adsense-banner"
 import React from "react"
@@ -34,8 +35,10 @@ export default function InfoCardList() {
     setSelectedCard(card)
     setIsModalOpen(true)
 
-    // 조회수 증가
-    await incrementViewCount(card.id)
+    // 조회수 증가 (Supabase가 설정된 경우에만)
+    if (isSupabaseConfigured()) {
+      await incrementViewCount(card.id)
+    }
   }
 
   const handleCloseModal = () => {
@@ -62,6 +65,13 @@ export default function InfoCardList() {
           <div className="mb-4">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">태국 한인 비즈니스 정보</h1>
             <p className="text-gray-600">태국 거주 한인들을 위한 다양한 비즈니스 정보를 확인해보세요</p>
+
+            {/* 개발 환경에서 데이터베이스 상태 표시 */}
+            {process.env.NODE_ENV === "development" && !isSupabaseConfigured() && (
+              <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm text-yellow-800">
+                ⚠️ 데모 모드: Supabase가 설정되지 않아 샘플 데이터를 사용 중입니다.
+              </div>
+            )}
           </div>
 
           {/* 구글 광고 배너 */}

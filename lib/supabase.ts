@@ -1,9 +1,18 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// 환경변수가 설정되지 않은 경우 더미 값 사용
+const defaultUrl = "https://dummy.supabase.co"
+const defaultKey = "dummy-key"
+
+export const supabase = createClient(supabaseUrl || defaultUrl, supabaseAnonKey || defaultKey)
+
+// Supabase가 제대로 설정되었는지 확인하는 함수
+export const isSupabaseConfigured = () => {
+  return !!(supabaseUrl && supabaseAnonKey && supabaseUrl !== defaultUrl && supabaseAnonKey !== defaultKey)
+}
 
 // 타입 정의
 export interface Database {
