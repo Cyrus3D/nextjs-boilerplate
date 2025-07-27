@@ -15,27 +15,14 @@ export default function InfoCardList() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [businessCards, setBusinessCards] = useState<BusinessCard[]>([])
   const [loading, setLoading] = useState(true)
-  const [dataSource, setDataSource] = useState<"database" | "sample">("sample")
 
   useEffect(() => {
     async function fetchData() {
       try {
-        console.log("Starting data fetch...")
         const cards = await getBusinessCards()
         setBusinessCards(cards)
-
-        // 데이터 소스 확인
-        if (isSupabaseConfigured() && cards.length > 0) {
-          setDataSource("database")
-        } else {
-          setDataSource("sample")
-        }
-
-        console.log("Data fetch completed:", cards.length, "cards")
       } catch (error) {
         console.error("Failed to fetch business cards:", error)
-        // 에러 발생 시에도 샘플 데이터 표시
-        setBusinessCards([])
       } finally {
         setLoading(false)
       }
@@ -79,18 +66,10 @@ export default function InfoCardList() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">태국 한인 비즈니스 정보</h1>
             <p className="text-gray-600">태국 거주 한인들을 위한 다양한 비즈니스 정보를 확인해보세요</p>
 
-            {/* 데이터 소스 상태 표시 */}
-            {process.env.NODE_ENV === "development" && (
-              <div
-                className={`mt-2 p-2 border rounded text-sm ${
-                  dataSource === "database"
-                    ? "bg-green-100 border-green-300 text-green-800"
-                    : "bg-yellow-100 border-yellow-300 text-yellow-800"
-                }`}
-              >
-                {dataSource === "database"
-                  ? "✅ 데이터베이스 연결됨"
-                  : "⚠️ 샘플 데이터 사용 중 (데이터베이스 미연결 또는 데이터 없음)"}
+            {/* 개발 환경에서 데이터베이스 상태 표시 */}
+            {process.env.NODE_ENV === "development" && !isSupabaseConfigured() && (
+              <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm text-yellow-800">
+                ⚠️ 데모 모드: Supabase가 설정되지 않아 샘플 데이터를 사용 중입니다.
               </div>
             )}
           </div>

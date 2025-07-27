@@ -10,8 +10,6 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
   }
 
   try {
-    console.log("Attempting to fetch from Supabase...")
-
     const { data, error } = await supabase
       .from("business_cards")
       .select(`
@@ -31,17 +29,9 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("Supabase query error:", error)
-      console.warn("Falling back to sample data due to query error")
+      console.error("Error fetching business cards:", error)
       return sampleBusinessCards
     }
-
-    if (!data || data.length === 0) {
-      console.warn("No data found in database, using sample data")
-      return sampleBusinessCards
-    }
-
-    console.log("Successfully fetched data from Supabase:", data.length, "records")
 
     return data.map((card) => ({
       id: card.id,
@@ -63,7 +53,6 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
     }))
   } catch (error) {
     console.error("Failed to fetch from database:", error)
-    console.warn("Falling back to sample data due to network/connection error")
     return sampleBusinessCards
   }
 }
