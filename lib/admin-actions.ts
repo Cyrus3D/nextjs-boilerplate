@@ -303,3 +303,79 @@ export async function deleteBusinessCard(cardId: number) {
     }
   }
 }
+
+export async function getBusinessCards() {
+  if (!isSupabaseConfigured() || !supabase) {
+    return []
+  }
+
+  try {
+    // 비즈니스 카드 조회 (카테고리 정보 포함)
+    const { data: cards, error: cardsError } = await supabase
+      .from("business_cards")
+      .select(`
+        *,
+        categories (
+          name
+        )
+      `)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+
+    if (cardsError) {
+      console.error("Cards query error:", cardsError)
+      return []
+    }
+
+    if (!cards || cards.length === 0) {
+      return []
+    }
+
+    // 각 카드의 태그 정보 조회
+    const cardsWithTags = await Promise.all(
+      cards.map(async (card) => {
+        let tags: string[] = []
+
+        try {
+          const { data: tagData } = await supabase
+            .from("business_card_tags")
+            .select(`
+              tags (
+                name
+              )
+            `)
+            .eq("business_card_id", card.id)
+
+          if (tagData) {
+            tags = tagData.map((item: any) => item.tags?.name).filter(Boolean)
+          }
+        } catch (error) {
+          console.warn("Tags query failed for card", card.id)
+        }
+
+        return {
+          id: card.id,
+          title: card.title,
+          description: card.description,
+          category: card.categories?.name || "기타",
+          location: card.location,
+          phone: card.phone,
+          kakaoId: card.kakao_id,
+          lineId: card.line_id,
+          website: card.website,
+          hours: card.hours,
+          price: card.price,
+          promotion: card.promotion,
+          tags: tags,
+          rating: card.rating,
+          isPromoted: card.is_promoted,
+        }
+      }),
+    )
+
+    return cardsWithTags
+  } catch (error) {
+    console.error("Error fetching business cards:", error)
+    return []
+  }
+}
