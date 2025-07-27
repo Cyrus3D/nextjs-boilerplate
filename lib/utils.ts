@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // URL이 지도 링크인지 확인하는 함수
-export function isMapUrl(url: string): boolean {
+export function isMapUrl(url?: string): boolean {
   if (!url) return false
 
   const mapPatterns = [
@@ -14,17 +14,11 @@ export function isMapUrl(url: string): boolean {
     /maps\.google\.com/,
     /goo\.gl\/maps/,
     /google\.com\/maps/,
-    /maps\.app\.goo/,
+    /maps\.app\.goo\.gl/,
     /g\.co\/kgs/,
   ]
 
   return mapPatterns.some((pattern) => pattern.test(url))
-}
-
-// URL이 웹사이트 링크인지 확인하는 함수
-export function isWebsiteUrl(url: string): boolean {
-  if (!url) return false
-  return !isMapUrl(url) && (url.startsWith("http") || url.startsWith("www"))
 }
 
 // 구글 맵 검색 URL 생성 함수
@@ -42,6 +36,7 @@ export function isValidLocation(location?: string): boolean {
   if (trimmedLocation.length < 2) return false
 
   const invalidPatterns = [/^전지역$/, /^전국$/, /^온라인$/, /^인터넷$/, /^배송$/, /^택배$/, /^태국\s*전지역$/]
+
   return !invalidPatterns.some((pattern) => pattern.test(trimmedLocation))
 }
 
@@ -52,4 +47,10 @@ export function cleanLocationForSearch(location: string): string {
     .replace(/\s*-\s*.*$/, "") // 대시 이후 내용 제거
     .replace(/\s+/g, " ") // 연속된 공백을 하나로
     .trim()
+}
+
+// URL 타입 확인 함수
+export function getUrlType(url?: string): "map" | "website" | null {
+  if (!url) return null
+  return isMapUrl(url) ? "map" : "website"
 }

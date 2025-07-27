@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { MapPin, Phone, Clock, Star, MessageCircle, Globe, Zap, Map, Search } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
-import { isValidLocation, isMapUrl, isWebsiteUrl } from "../lib/utils"
+import { isValidLocation, getUrlType } from "../lib/utils"
 
 interface BusinessCardProps {
   card: BusinessCard
@@ -29,8 +29,7 @@ const getCategoryColor = (category: string) => {
 }
 
 export default function BusinessCardComponent({ card, onDetailClick }: BusinessCardProps) {
-  const websiteIsMap = card.website && isMapUrl(card.website)
-  const websiteIsWebsite = card.website && isWebsiteUrl(card.website)
+  const urlType = getUrlType(card.website)
 
   return (
     <Card
@@ -122,25 +121,24 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
                 <span className="text-xs">카톡</span>
               </div>
             )}
-            {/* 지도 링크가 있는 경우 */}
-            {websiteIsMap && (
+            {/* URL 타입에 따라 아이콘 표시 */}
+            {urlType === "map" && (
               <div className="flex items-center space-x-1">
                 <Map className="h-4 w-4" />
                 <span className="text-xs">지도</span>
               </div>
             )}
-            {/* 위치 정보로 검색 가능한 경우 (지도 링크가 없을 때만) */}
-            {!websiteIsMap && isValidLocation(card.location) && (
-              <div className="flex items-center space-x-1">
-                <Search className="h-4 w-4" />
-                <span className="text-xs">검색</span>
-              </div>
-            )}
-            {/* 웹사이트가 있는 경우 */}
-            {websiteIsWebsite && (
+            {urlType === "website" && (
               <div className="flex items-center space-x-1">
                 <Globe className="h-4 w-4" />
                 <span className="text-xs">웹사이트</span>
+              </div>
+            )}
+            {/* 위치 정보로 검색 가능한 경우 */}
+            {isValidLocation(card.location) && (
+              <div className="flex items-center space-x-1">
+                <Search className="h-4 w-4" />
+                <span className="text-xs">검색</span>
               </div>
             )}
           </div>

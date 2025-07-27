@@ -19,13 +19,7 @@ import {
   Search,
 } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
-import {
-  generateGoogleMapsSearchUrl,
-  isValidLocation,
-  cleanLocationForSearch,
-  isMapUrl,
-  isWebsiteUrl,
-} from "../lib/utils"
+import { generateGoogleMapsSearchUrl, isValidLocation, cleanLocationForSearch, getUrlType } from "../lib/utils"
 
 interface BusinessDetailModalProps {
   card: BusinessCard | null
@@ -77,9 +71,8 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
     }
   }
 
-  // URL 타입에 따른 처리
-  const websiteIsMap = card.website && isMapUrl(card.website)
-  const websiteIsWebsite = card.website && isWebsiteUrl(card.website)
+  // URL 타입 확인
+  const urlType = getUrlType(card.website)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -158,8 +151,8 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                 <div className="flex-1">
                   <p className="text-gray-900">{card.location}</p>
                   <div className="flex gap-2 mt-2">
-                    {/* 웹사이트가 지도 링크인 경우 */}
-                    {websiteIsMap && (
+                    {/* URL이 지도 링크인 경우 */}
+                    {urlType === "map" && (
                       <Button
                         variant="link"
                         size="sm"
@@ -170,8 +163,8 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                         정확한 위치 보기 <ExternalLink className="h-3 w-3 ml-1" />
                       </Button>
                     )}
-                    {/* 위치 정보로 구글 맵 검색 (지도 링크가 없는 경우에만) */}
-                    {!websiteIsMap && isValidLocation(card.location) && (
+                    {/* 위치 정보로 구글 맵 검색 (지도 링크가 없거나 추가 검색이 필요한 경우) */}
+                    {isValidLocation(card.location) && (
                       <Button variant="link" size="sm" className="p-0 h-auto text-green-600" onClick={handleMapSearch}>
                         <Search className="h-3 w-3 mr-1" />
                         지도에서 검색 <ExternalLink className="h-3 w-3 ml-1" />
@@ -239,8 +232,8 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
               </div>
             )}
 
-            {/* 웹사이트가 실제 웹사이트인 경우에만 표시 */}
-            {websiteIsWebsite && (
+            {/* 웹사이트 (지도가 아닌 경우만) */}
+            {card.website && urlType === "website" && (
               <div className="flex items-center gap-3">
                 <Globe className="h-5 w-5 text-gray-500 flex-shrink-0" />
                 <div className="flex-1 flex items-center justify-between">
