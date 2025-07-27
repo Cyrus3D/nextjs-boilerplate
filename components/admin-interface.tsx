@@ -27,6 +27,8 @@ import {
   TrendingUp,
   Eye,
   Calendar,
+  Database,
+  Weight,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import {
@@ -39,8 +41,10 @@ import {
   getBusinessCardsForAdmin,
   parseBusinessCardData,
   updatePremiumStatus,
-  updateExposureBoost,
+  updateExposureCount,
+  updateExposureWeight,
   checkAIStatus,
+  testDatabaseConnection,
   type BusinessCardData,
   type AIStatusResult,
 } from "@/lib/admin-actions"
@@ -74,8 +78,9 @@ export default function AdminInterface() {
   const [aiStatus, setAiStatus] = useState<AIStatusResult | null>(null)
   const [checkingAI, setCheckingAI] = useState(false)
   const [analyzingText, setAnalyzingText] = useState(false)
+  const [creating, setCreating] = useState(false)
 
-  // 새 카드 폼 상태
+  // 새 카드 폼 상태 - rating 제거
   const [newCard, setNewCard] = useState<Partial<BusinessCardData>>({
     title: "",
     description: "",
@@ -85,15 +90,14 @@ export default function AdminInterface() {
     kakao_id: "",
     line_id: "",
     website: "",
-    map_url: "",
     hours: "",
     price: "",
     promotion: "",
-    rating: 0,
     is_promoted: false,
     is_active: true,
     is_premium: false,
-    exposure_boost: 0,
+    exposure_count: 0,
+    exposure_weight: 1.0,
   })
 
   // AI 텍스트 분석용 상태
@@ -134,6 +138,22 @@ export default function AdminInterface() {
       })
     } finally {
       setCheckingAI(false)
+    }
+  }
+
+  const testDatabase = async () => {
+    try {
+      await testDatabaseConnection()
+      toast({
+        title: "성공",
+        description: "데이터베이스 연결이 정상입니다.",
+      })
+    } catch (error) {
+      toast({
+        title: "데이터베이스 연결 오류",
+        description: error instanceof Error ? error.message : "데이터베이스 연결에 실패했습니다.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -201,7 +221,11 @@ export default function AdminInterface() {
   }
 
   const handleCreateCard = async () => {
-    if (!newCard.title || !newCard.description || !newCard.category_id) {
+    console.log("handleCreateCard 호출됨")
+    console.log("newCard 데이터:", newCard)
+
+    // 필수 필드 검증
+    if (!newCard.title || !newCard.description || !newCard.category_id || newCard.category_id === 0) {
       toast({
         title: "오류",
         description: "제목, 설명, 카테고리는 필수 입력 항목입니다.",
@@ -210,12 +234,18 @@ export default function AdminInterface() {
       return
     }
 
+    setCreating(true)
     try {
-      await createBusinessCard(newCard as BusinessCardData)
+      console.log("createBusinessCard 호출 시작")
+      const result = await createBusinessCard(newCard as BusinessCardData)
+      console.log("createBusinessCard 결과:", result)
+
       toast({
         title: "성공",
         description: "새 카드가 생성되었습니다.",
       })
+
+      // 폼 초기화 - rating 제거
       setIsCreating(false)
       setNewCard({
         title: "",
@@ -226,24 +256,28 @@ export default function AdminInterface() {
         kakao_id: "",
         line_id: "",
         website: "",
-        map_url: "",
         hours: "",
         price: "",
         promotion: "",
-        rating: 0,
         is_promoted: false,
         is_active: true,
         is_premium: false,
-        exposure_boost: 0,
+        exposure_count: 0,
+        exposure_weight: 1.0,
       })
       setAnalysisText("")
-      loadData()
+
+      // 데이터 다시 로드
+      await loadData()
     } catch (error) {
+      console.error("카드 생성 오류:", error)
       toast({
         title: "오류",
         description: error instanceof Error ? error.message : "카드 생성 중 오류가 발생했습니다.",
         variant: "destructive",
       })
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -351,19 +385,35 @@ export default function AdminInterface() {
     }
   }
 
-  const handleExposureBoost = async (cardId: number, boostLevel: number) => {
+  const handleExposureCountUpdate = async (cardId: number, count: number) => {
     try {
-      const expiresAt = boostLevel > 0 ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : undefined
-      await updateExposureBoost(cardId, boostLevel, expiresAt)
+      await updateExposureCount(cardId, count)
       toast({
         title: "성공",
-        description: `노출 부스트가 ${boostLevel}레벨로 설정되었습니다.`,
+        description: `노출 카운트가 ${count}로 설정되었습니다.`,
       })
       loadData()
     } catch (error) {
       toast({
         title: "오류",
-        description: error instanceof Error ? error.message : "노출 부스트 설정 중 오류가 발생했습니다.",
+        description: error instanceof Error ? error.message : "노출 카운트 설정 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleExposureWeightUpdate = async (cardId: number, weight: number) => {
+    try {
+      await updateExposureWeight(cardId, weight)
+      toast({
+        title: "성공",
+        description: `노출 가중치가 ${weight}로 설정되었습니다.`,
+      })
+      loadData()
+    } catch (error) {
+      toast({
+        title: "오류",
+        description: error instanceof Error ? error.message : "노출 가중치 설정 중 오류가 발생했습니다.",
         variant: "destructive",
       })
     }
@@ -385,6 +435,10 @@ export default function AdminInterface() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">관리자 대시보드</h1>
         <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={testDatabase} className="flex items-center gap-2 bg-transparent">
+            <Database className="h-4 w-4" />
+            DB 연결 테스트
+          </Button>
           {selectedCards.size > 0 && (
             <Button variant="destructive" onClick={handleBulkDelete} className="flex items-center gap-2">
               <Trash2 className="h-4 w-4" />
@@ -469,81 +523,118 @@ export default function AdminInterface() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {cards.map((card) => (
-              <div key={card.id} className="border rounded-lg p-4">
-                <div className="flex items-start gap-4">
-                  <Checkbox
-                    checked={selectedCards.has(card.id)}
-                    onCheckedChange={(checked) => handleSelectCard(card.id, checked as boolean)}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold">{card.title}</h3>
-                      {card.categories && <Badge className={card.categories.color_class}>{card.categories.name}</Badge>}
-                      {card.is_premium && (
-                        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                          <Crown className="h-3 w-3 mr-1" />
-                          프리미엄
-                        </Badge>
-                      )}
-                      {(card.exposure_boost || 0) > 0 && (
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                          <TrendingUp className="h-3 w-3 mr-1" />
-                          부스트 {card.exposure_boost || 0}
-                        </Badge>
-                      )}
-                      {!card.is_active && (
-                        <Badge variant="secondary" className="bg-gray-100 text-gray-800">
-                          비활성화
-                        </Badge>
-                      )}
+            {cards.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">등록된 카드가 없습니다. 새 카드를 추가해보세요.</div>
+            ) : (
+              cards.map((card) => (
+                <div key={card.id} className="border rounded-lg p-4">
+                  <div className="flex items-start gap-4">
+                    <Checkbox
+                      checked={selectedCards.has(card.id)}
+                      onCheckedChange={(checked) => handleSelectCard(card.id, checked as boolean)}
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold">{card.title}</h3>
+                        {card.categories && (
+                          <Badge className={card.categories.color_class}>{card.categories.name}</Badge>
+                        )}
+                        {card.is_premium && (
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                            <Crown className="h-3 w-3 mr-1" />
+                            프리미엄
+                          </Badge>
+                        )}
+                        {(card.exposure_count || 0) > 0 && (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            <TrendingUp className="h-3 w-3 mr-1" />
+                            노출 {card.exposure_count || 0}
+                          </Badge>
+                        )}
+                        {(card.exposure_weight || 1.0) !== 1.0 && (
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                            <Weight className="h-3 w-3 mr-1" />
+                            가중치 {card.exposure_weight || 1.0}
+                          </Badge>
+                        )}
+                        {!card.is_active && (
+                          <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+                            비활성화
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{card.description}</p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          조회 {card.view_count || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(card.created_at).toLocaleDateString()}
+                        </span>
+                        {card.last_exposed_at && (
+                          <span className="flex items-center gap-1">
+                            <TrendingUp className="h-3 w-3" />
+                            마지막 노출: {new Date(card.last_exposed_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-600 mb-2">{card.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        조회 {card.view_count || 0}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(card.created_at).toLocaleDateString()}
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePremiumToggle(card.id, !card.is_premium)}
+                      >
+                        <Crown className="h-4 w-4" />
+                        {card.is_premium ? "프리미엄 해제" : "프리미엄 설정"}
+                      </Button>
+                      <Select
+                        value={(card.exposure_count || 0).toString()}
+                        onValueChange={(value) => handleExposureCountUpdate(card.id, Number.parseInt(value))}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">노출 0</SelectItem>
+                          <SelectItem value="1">노출 1</SelectItem>
+                          <SelectItem value="5">노출 5</SelectItem>
+                          <SelectItem value="10">노출 10</SelectItem>
+                          <SelectItem value="50">노출 50</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={(card.exposure_weight || 1.0).toString()}
+                        onValueChange={(value) => handleExposureWeightUpdate(card.id, Number.parseFloat(value))}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0.5">가중치 0.5</SelectItem>
+                          <SelectItem value="1.0">가중치 1.0</SelectItem>
+                          <SelectItem value="1.5">가중치 1.5</SelectItem>
+                          <SelectItem value="2.0">가중치 2.0</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="outline" size="sm" onClick={() => setEditingCard(card)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteCard(card.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handlePremiumToggle(card.id, !card.is_premium)}>
-                      <Crown className="h-4 w-4" />
-                      {card.is_premium ? "프리미엄 해제" : "프리미엄 설정"}
-                    </Button>
-                    <Select
-                      value={(card.exposure_boost || 0).toString()}
-                      onValueChange={(value) => handleExposureBoost(card.id, Number.parseInt(value))}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">부스트 없음</SelectItem>
-                        <SelectItem value="1">부스트 1</SelectItem>
-                        <SelectItem value="2">부스트 2</SelectItem>
-                        <SelectItem value="3">부스트 3</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button variant="outline" size="sm" onClick={() => setEditingCard(card)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDeleteCard(card.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* 새 카드 생성 다이얼로그 */}
+      {/* 새 카드 생성 다이얼로그 - rating 필드 제거 */}
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -697,16 +788,6 @@ export default function AdminInterface() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="map_url">지도 URL</Label>
-              <Input
-                id="map_url"
-                value={newCard.map_url || ""}
-                onChange={(e) => setNewCard((prev) => ({ ...prev, map_url: e.target.value }))}
-                placeholder="지도 URL"
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="hours">운영시간</Label>
               <Input
                 id="hours"
@@ -734,20 +815,6 @@ export default function AdminInterface() {
                 onChange={(e) => setNewCard((prev) => ({ ...prev, promotion: e.target.value }))}
                 placeholder="프로모션 또는 할인 정보"
                 rows={2}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="rating">평점</Label>
-              <Input
-                id="rating"
-                type="number"
-                min="0"
-                max="5"
-                step="0.1"
-                value={newCard.rating || 0}
-                onChange={(e) => setNewCard((prev) => ({ ...prev, rating: Number.parseFloat(e.target.value) || 0 }))}
-                placeholder="평점 (0-5)"
               />
             </div>
 
@@ -782,18 +849,27 @@ export default function AdminInterface() {
           </div>
 
           <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={() => setIsCreating(false)}>
+            <Button variant="outline" onClick={() => setIsCreating(false)} disabled={creating}>
               취소
             </Button>
-            <Button onClick={handleCreateCard}>
-              <Save className="mr-2 h-4 w-4" />
-              저장
+            <Button onClick={handleCreateCard} disabled={creating}>
+              {creating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  저장 중...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  저장
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* 편집 다이얼로그 */}
+      {/* 편집 다이얼로그 - rating 필드 제거 */}
       <Dialog open={!!editingCard} onOpenChange={() => setEditingCard(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -888,15 +964,6 @@ export default function AdminInterface() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-map_url">지도 URL</Label>
-                <Input
-                  id="edit-map_url"
-                  value={editingCard.map_url || ""}
-                  onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, map_url: e.target.value } : null))}
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="edit-hours">운영시간</Label>
                 <Input
                   id="edit-hours"
@@ -921,23 +988,6 @@ export default function AdminInterface() {
                   value={editingCard.promotion || ""}
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, promotion: e.target.value } : null))}
                   rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-rating">평점</Label>
-                <Input
-                  id="edit-rating"
-                  type="number"
-                  min="0"
-                  max="5"
-                  step="0.1"
-                  value={editingCard.rating || 0}
-                  onChange={(e) =>
-                    setEditingCard((prev) =>
-                      prev ? { ...prev, rating: Number.parseFloat(e.target.value) || 0 } : null,
-                    )
-                  }
                 />
               </div>
 

@@ -5,6 +5,7 @@ import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { revalidatePath } from "next/cache"
 
+// 실제 데이터베이스 스키마에 맞게 수정된 인터페이스 (rating 제거)
 export interface BusinessCardData {
   title: string
   description: string
@@ -14,18 +15,17 @@ export interface BusinessCardData {
   kakao_id?: string | null
   line_id?: string | null
   website?: string | null
-  map_url?: string | null
   hours?: string | null
   price?: string | null
   promotion?: string | null
   image_url?: string | null
-  rating?: number | null
   is_promoted?: boolean
   is_active?: boolean
   is_premium?: boolean
   premium_expires_at?: string | null
-  exposure_boost?: number
-  exposure_expires_at?: string | null
+  exposure_count?: number
+  last_exposed_at?: string | null
+  exposure_weight?: number
   view_count?: number
 }
 
@@ -82,7 +82,7 @@ export async function checkAIStatus(): Promise<AIStatusResult> {
   }
 }
 
-// AI를 사용한 비즈니스 카드 데이터 파싱
+// AI를 사용한 비즈니스 카드 데이터 파싱 (rating 제거)
 export async function parseBusinessCardData(text: string): Promise<Partial<BusinessCardData>> {
   if (!text.trim()) {
     throw new Error("분석할 텍스트가 없습니다.")
@@ -105,11 +105,9 @@ export async function parseBusinessCardData(text: string): Promise<Partial<Busin
         "kakao_id": "카카오톡 ID",
         "line_id": "라인 ID", 
         "website": "웹사이트 URL",
-        "map_url": "지도 URL",
         "hours": "운영시간",
         "price": "가격 정보",
-        "promotion": "프로모션/할인 정보",
-        "rating": 평점(숫자)
+        "promotion": "프로모션/할인 정보"
       }
 
       JSON만 반환하고 다른 텍스트는 포함하지 마세요.`,
@@ -120,7 +118,7 @@ export async function parseBusinessCardData(text: string): Promise<Partial<Busin
     const cleanedResult = result.replace(/```json\n?|\n?```/g, "").trim()
     const parsedData = JSON.parse(cleanedResult)
 
-    // 기본값 설정
+    // 기본값 설정 (rating 제거)
     const businessData: Partial<BusinessCardData> = {
       title: parsedData.title || "제목 없음",
       description: parsedData.description || "설명 없음",
@@ -129,15 +127,14 @@ export async function parseBusinessCardData(text: string): Promise<Partial<Busin
       kakao_id: parsedData.kakao_id || null,
       line_id: parsedData.line_id || null,
       website: parsedData.website || null,
-      map_url: parsedData.map_url || null,
       hours: parsedData.hours || null,
       price: parsedData.price || null,
       promotion: parsedData.promotion || null,
-      rating: parsedData.rating ? Number(parsedData.rating) : null,
       is_active: true,
       is_promoted: false,
       is_premium: false,
-      exposure_boost: 0,
+      exposure_count: 0,
+      exposure_weight: 1.0,
     }
 
     return businessData
@@ -147,32 +144,59 @@ export async function parseBusinessCardData(text: string): Promise<Partial<Busin
   }
 }
 
-// 비즈니스 카드 생성
+// 비즈니스 카드 생성 (rating 제거)
 export async function createBusinessCard(data: BusinessCardData) {
+  console.log("createBusinessCard 호출됨:", data)
+
   if (!supabase) {
+    console.error("Supabase 클라이언트가 없습니다")
     throw new Error("Supabase가 설정되지 않았습니다.")
   }
 
+  // 필수 필드 검증
+  if (!data.title || !data.description || !data.category_id) {
+    throw new Error("제목, 설명, 카테고리는 필수 입력 항목입니다.")
+  }
+
   try {
-    const { data: result, error } = await supabase
-      .from("business_cards")
-      .insert([
-        {
-          ...data,
-          view_count: 0,
-          exposure_count: 0,
-          exposure_weight: 1.0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ])
-      .select()
-      .single()
+    // 데이터베이스에 삽입할 데이터 준비 - rating 제거
+    const insertData = {
+      title: data.title,
+      description: data.description,
+      category_id: data.category_id,
+      location: data.location || null,
+      phone: data.phone || null,
+      kakao_id: data.kakao_id || null,
+      line_id: data.line_id || null,
+      website: data.website || null,
+      hours: data.hours || null,
+      price: data.price || null,
+      promotion: data.promotion || null,
+      image_url: data.image_url || null,
+      is_promoted: data.is_promoted || false,
+      is_active: data.is_active !== false,
+      is_premium: data.is_premium || false,
+      premium_expires_at: data.premium_expires_at || null,
+      exposure_count: data.exposure_count || 0,
+      last_exposed_at: data.last_exposed_at || null,
+      exposure_weight: data.exposure_weight || 1.0,
+      view_count: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    console.log("삽입할 데이터:", insertData)
+
+    const { data: result, error } = await supabase.from("business_cards").insert([insertData]).select().single()
 
     if (error) {
+      console.error("Supabase 삽입 오류:", error)
       throw new Error(`카드 생성 실패: ${error.message}`)
     }
 
+    console.log("카드 생성 성공:", result)
+
+    // 페이지 재검증
     revalidatePath("/dashboard-mgmt-2024")
     revalidatePath("/")
 
@@ -370,22 +394,17 @@ export async function updatePremiumStatus(id: number, isPremium: boolean, expire
   }
 }
 
-// 노출 부스트 설정
-export async function updateExposureBoost(id: number, boostLevel: number, expiresAt?: string) {
+// 노출 카운트 업데이트
+export async function updateExposureCount(id: number, count: number) {
   if (!supabase) {
     throw new Error("Supabase가 설정되지 않았습니다.")
   }
 
   try {
     const updateData: any = {
-      exposure_boost: boostLevel,
+      exposure_count: count,
+      last_exposed_at: count > 0 ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
-    }
-
-    if (boostLevel > 0 && expiresAt) {
-      updateData.exposure_expires_at = expiresAt
-    } else if (boostLevel === 0) {
-      updateData.exposure_expires_at = null
     }
 
     const { data: result, error } = await supabase
@@ -396,7 +415,7 @@ export async function updateExposureBoost(id: number, boostLevel: number, expire
       .single()
 
     if (error) {
-      throw new Error(`노출 부스트 업데이트 실패: ${error.message}`)
+      throw new Error(`노출 카운트 업데이트 실패: ${error.message}`)
     }
 
     revalidatePath("/dashboard-mgmt-2024")
@@ -404,7 +423,60 @@ export async function updateExposureBoost(id: number, boostLevel: number, expire
 
     return result
   } catch (error) {
-    console.error("노출 부스트 업데이트 오류:", error)
+    console.error("노출 카운트 업데이트 오류:", error)
+    throw error
+  }
+}
+
+// 노출 가중치 업데이트
+export async function updateExposureWeight(id: number, weight: number) {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
+  }
+
+  try {
+    const updateData: any = {
+      exposure_weight: weight,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { data: result, error } = await supabase
+      .from("business_cards")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(`노출 가중치 업데이트 실패: ${error.message}`)
+    }
+
+    revalidatePath("/dashboard-mgmt-2024")
+    revalidatePath("/")
+
+    return result
+  } catch (error) {
+    console.error("노출 가중치 업데이트 오류:", error)
+    throw error
+  }
+}
+
+// 데이터베이스 연결 테스트 함수
+export async function testDatabaseConnection() {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
+  }
+
+  try {
+    const { data, error } = await supabase.from("categories").select("count").limit(1)
+
+    if (error) {
+      throw new Error(`데이터베이스 연결 실패: ${error.message}`)
+    }
+
+    return { success: true, message: "데이터베이스 연결 성공" }
+  } catch (error) {
+    console.error("데이터베이스 연결 테스트 오류:", error)
     throw error
   }
 }

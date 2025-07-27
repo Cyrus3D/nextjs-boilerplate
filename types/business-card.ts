@@ -1,48 +1,64 @@
-// 현재 구조 + 향후 확장 대비
 export interface BusinessCard {
   id: number
   title: string
   description: string
   category: string
-  location?: string
-  phone?: string
-  kakaoId?: string
-  lineId?: string
-  website?: string // 기본 웹사이트 또는 주요 링크
-  mapUrl?: string // 향후 추가될 수 있는 전용 지도 링크
-  socialLinks?: BusinessLink[] // 향후 확장용
-  hours?: string
-  price?: string
-  promotion?: string
+  location?: string | null
+  phone?: string | null
+  kakaoId?: string | null
+  lineId?: string | null
+  website?: string | null
+  hours?: string | null
+  price?: string | null
+  promotion?: string | null
   tags: string[]
-  image?: string // 이미지 URL 필드 추가
-  isPromoted?: boolean
-  // 프리미엄 및 노출 관련 필드 추가
-  isPremium?: boolean
-  premiumExpiresAt?: string
-  exposureCount?: number
-  lastExposedAt?: string
-  exposureWeight?: number
-  fairnessScore?: number // 클라이언트 계산용
+  image?: string | null
+  isPromoted: boolean
+  isPremium: boolean
+  premiumExpiresAt?: string | null
+  exposureCount: number
+  lastExposedAt?: string | null
+  exposureWeight: number
 }
 
-// 향후 확장을 위한 링크 타입
-export interface BusinessLink {
-  type: "website" | "map" | "facebook" | "instagram" | "youtube" | "blog" | "menu"
-  url: string
-  displayName?: string
-  isPrimary?: boolean
+export interface BusinessCardData {
+  title: string
+  description: string
+  category_id: number
+  location?: string | null
+  phone?: string | null
+  kakao_id?: string | null
+  line_id?: string | null
+  website?: string | null
+  hours?: string | null
+  price?: string | null
+  promotion?: string | null
+  image_url?: string | null
+  is_promoted?: boolean
+  is_active?: boolean
+  is_premium?: boolean
+  premium_expires_at?: string | null
+  exposure_count?: number
+  last_exposed_at?: string | null
+  exposure_weight?: number
 }
 
-// URL 타입 정의
-export type UrlType = "website" | "map" | "social" | "unknown"
+export interface Category {
+  id: number
+  name: string
+  color_class: string
+  created_at: string
+}
 
-// 카드 정렬 옵션
-export type CardSortOption = "fairness" | "premium-first" | "random" | "recent"
+export interface Tag {
+  id: number
+  name: string
+  created_at: string
+}
 
-// 노출 통계
-export interface ExposureStats {
-  totalExposures: number
-  averageExposures: number
-  lastUpdated: string
+export interface BusinessCardTag {
+  id: number
+  business_card_id: number
+  tag_id: number
+  created_at: string
 }

@@ -1,179 +1,107 @@
 import { supabase, isSupabaseConfigured } from "./supabase"
 import type { BusinessCard } from "../types/business-card"
 
-// 카드 노출 통계 업데이트
-export async function updateExposureStats(cardIds: number[]) {
+export function sortCardsForFairExposure(cards: BusinessCard[]): BusinessCard[] {
+  // 프리미엄 카드와 일반 카드 분리
+  const premiumCards = cards.filter((card) => card.isPremium)
+  const regularCards = cards.filter((card) => !card.isPremium)
+
+  // 노출 횟수와 가중치를 고려한 공정성 점수 계산
+  const calculateFairnessScore = (card: BusinessCard): number => {
+    const baseScore = 1000 - card.exposureCount * 10
+    const weightMultiplier = card.exposureWeight || 1.0
+    const timeSinceLastExposure = card.lastExposedAt ? Date.now() - new Date(card.lastExposedAt).getTime() : Date.now()
+
+    // 시간이 오래 지날수록 점수 증가 (1시간 = 3600000ms)
+    const timeBonus = Math.min(timeSinceLastExposure / 3600000, 24) * 50
+
+    return (baseScore + timeBonus) * weightMultiplier
+  }
+
+  // 각 그룹 내에서 공정성 점수로 정렬
+  premiumCards.sort((a, b) => calculateFairnessScore(b) - calculateFairnessScore(a))
+  regularCards.sort((a, b) => calculateFairnessScore(b) - calculateFairnessScore(a))
+
+  // 프리미엄:일반 = 2:1 비율로 섞기
+  const result: BusinessCard[] = []
+  let premiumIndex = 0
+  let regularIndex = 0
+
+  while (premiumIndex < premiumCards.length || regularIndex < regularCards.length) {
+    // 프리미엄 카드 2개 추가
+    for (let i = 0; i < 2 && premiumIndex < premiumCards.length; i++) {
+      result.push(premiumCards[premiumIndex++])
+    }
+
+    // 일반 카드 1개 추가
+    if (regularIndex < regularCards.length) {
+      result.push(regularCards[regularIndex++])
+    }
+  }
+
+  return result
+}
+
+export async function updateExposureStats(cardIds: number[]): Promise<void> {
   if (!isSupabaseConfigured() || !supabase || cardIds.length === 0) {
     return
   }
 
+  const now = new Date().toISOString()
+
   try {
-    // Check if exposure columns exist first
-    const { data: testData, error: testError } = await supabase.from("business_cards").select("*").limit(1)
-
-    if (testError || !testData || testData.length === 0) {
-      console.warn("Cannot check table structure for exposure stats")
-      return
-    }
-
-    const hasExposureColumns = "exposure_count" in testData[0] && "last_exposed_at" in testData[0]
-
-    if (!hasExposureColumns) {
-      console.warn("Exposure tracking columns not found. Skipping exposure stats update.")
-      return
-    }
-
-    // 각 카드의 노출 횟수 증가
     for (const cardId of cardIds) {
-      // Use RPC function if it exists, otherwise use regular update
-      try {
-        await supabase.rpc("increment_exposure", { card_id: cardId })
-      } catch (rpcError) {
-        // Fallback to regular update if RPC function doesn't exist
-        console.warn("RPC function not found, using fallback update")
-        const { data: currentCard } = await supabase
-          .from("business_cards")
-          .select("exposure_count")
-          .eq("id", cardId)
-          .single()
+      // 현재 노출 카운트 조회
+      const { data: currentCard, error: fetchError } = await supabase
+        .from("business_cards")
+        .select("exposure_count")
+        .eq("id", cardId)
+        .single()
 
-        const newCount = (currentCard?.exposure_count || 0) + 1
+      if (fetchError) {
+        console.error(`Error fetching current exposure count for card ${cardId}:`, fetchError)
+        continue
+      }
 
-        await supabase
-          .from("business_cards")
-          .update({
-            exposure_count: newCount,
-            last_exposed_at: new Date().toISOString(),
-            exposure_weight: newCount < 50 ? 1.0 + (50 - newCount) * 0.02 : 1.0 - (newCount - 50) * 0.01,
-          })
-          .eq("id", cardId)
+      // 노출 카운트 증가
+      const newExposureCount = (currentCard?.exposure_count || 0) + 1
+      const { error: updateError } = await supabase
+        .from("business_cards")
+        .update({
+          exposure_count: newExposureCount,
+          last_exposed_at: now,
+          updated_at: now,
+        })
+        .eq("id", cardId)
+
+      if (updateError) {
+        console.error(`Error updating exposure stats for card ${cardId}:`, updateError)
       }
     }
   } catch (error) {
-    console.error("Error updating exposure stats:", error)
+    console.error("Failed to update exposure stats:", error)
   }
 }
 
-// 공평한 노출을 위한 가중치 계산
-export function calculateExposureWeight(card: any): number {
-  const now = new Date()
-  const lastExposed = card.last_exposed_at ? new Date(card.last_exposed_at) : new Date(0)
-  const hoursSinceLastExposure = (now.getTime() - lastExposed.getTime()) / (1000 * 60 * 60)
-
-  // 기본 가중치
-  let weight = 1.0
-
-  // 노출 횟수가 적을수록 가중치 증가
-  const avgExposure = 100 // 평균 노출 횟수 기준
-  if (card.exposure_count < avgExposure) {
-    weight += (avgExposure - card.exposure_count) / avgExposure
+export async function resetExposureStats(): Promise<void> {
+  if (!isSupabaseConfigured() || !supabase) {
+    return
   }
 
-  // 오래 노출되지 않았을수록 가중치 증가
-  if (hoursSinceLastExposure > 24) {
-    weight += Math.min(hoursSinceLastExposure / 24, 2.0)
-  }
+  try {
+    const { error } = await supabase
+      .from("business_cards")
+      .update({
+        exposure_count: 0,
+        last_exposed_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .neq("id", 0) // Update all records
 
-  return weight
-}
-
-// 카드 순서 결정 알고리즘
-export function sortCardsForFairExposure(cards: BusinessCard[]): BusinessCard[] {
-  // 1. 프리미엄 카드와 일반 카드 분리
-  const premiumCards = cards.filter((card) => card.isPremium && !isPremiumExpired(card))
-  const regularCards = cards.filter((card) => !card.isPremium || isPremiumExpired(card))
-
-  // 2. 프리미엄 카드 정렬 (최신 결제순)
-  const sortedPremiumCards = premiumCards.sort((a, b) => {
-    if (a.premiumExpiresAt && b.premiumExpiresAt) {
-      return new Date(b.premiumExpiresAt).getTime() - new Date(a.premiumExpiresAt).getTime()
+    if (error) {
+      console.error("Error resetting exposure stats:", error)
     }
-    return 0
-  })
-
-  // 3. 일반 카드 공평 노출 정렬
-  const sortedRegularCards = sortRegularCardsForFairness(regularCards)
-
-  // 4. 프리미엄 카드를 상단에, 일반 카드를 하단에 배치
-  return [...sortedPremiumCards, ...sortedRegularCards]
-}
-
-// 일반 카드의 공평한 노출을 위한 정렬
-function sortRegularCardsForFairness(cards: BusinessCard[]): BusinessCard[] {
-  const now = new Date()
-  const sessionSeed = getSessionSeed()
-
-  // 각 카드에 공평성 점수 계산
-  const cardsWithScore = cards.map((card) => {
-    let fairnessScore = 0
-
-    // 1. 노출 횟수 기반 점수 (적게 노출될수록 높은 점수)
-    const maxExposure = Math.max(...cards.map((c) => c.exposureCount || 0))
-    const exposureScore = maxExposure - (card.exposureCount || 0)
-    fairnessScore += exposureScore * 0.4
-
-    // 2. 마지막 노출 시간 기반 점수 (오래될수록 높은 점수)
-    const lastExposed = card.lastExposedAt ? new Date(card.lastExposedAt) : new Date(0)
-    const hoursSinceExposure = (now.getTime() - lastExposed.getTime()) / (1000 * 60 * 60)
-    fairnessScore += Math.min(hoursSinceExposure, 168) * 0.3 // 최대 1주일
-
-    // 3. 세션 기반 랜덤 요소 (같은 세션에서는 일관성 유지)
-    const cardHash = hashString(card.id.toString() + sessionSeed)
-    const randomScore = (cardHash % 1000) / 1000
-    fairnessScore += randomScore * 0.3
-
-    return {
-      ...card,
-      fairnessScore,
-    }
-  })
-
-  // 공평성 점수 기준으로 정렬
-  return cardsWithScore.sort((a, b) => b.fairnessScore - a.fairnessScore).map(({ fairnessScore, ...card }) => card)
-}
-
-// 프리미엄 만료 확인
-function isPremiumExpired(card: BusinessCard): boolean {
-  if (!card.premiumExpiresAt) return true
-  return new Date(card.premiumExpiresAt) < new Date()
-}
-
-// 세션별 시드 생성 (브라우저 세션 동안 일관성 유지)
-function getSessionSeed(): string {
-  if (typeof window === "undefined") return "0"
-
-  let seed = sessionStorage.getItem("cardRotationSeed")
-  if (!seed) {
-    seed = Date.now().toString() + Math.random().toString()
-    sessionStorage.setItem("cardRotationSeed", seed)
+  } catch (error) {
+    console.error("Failed to reset exposure stats:", error)
   }
-  return seed
-}
-
-// 문자열 해시 함수
-function hashString(str: string): number {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    hash = (hash << 5) - hash + char
-    hash = hash & hash // 32bit 정수로 변환
-  }
-  return Math.abs(hash)
-}
-
-// 시간 기반 로테이션 (매 시간마다 순서 변경)
-export function getTimeBasedRotationSeed(): string {
-  const now = new Date()
-  const hoursSinceEpoch = Math.floor(now.getTime() / (1000 * 60 * 60))
-  return hoursSinceEpoch.toString()
-}
-
-// 카드 그룹 로테이션 (페이지네이션과 유사)
-export function rotateCardGroups(cards: BusinessCard[], groupSize = 6): BusinessCard[] {
-  if (cards.length <= groupSize) return cards
-
-  const timeBasedOffset = Math.floor(Date.now() / (1000 * 60 * 60)) % cards.length
-  const rotatedCards = [...cards.slice(timeBasedOffset), ...cards.slice(0, timeBasedOffset)]
-
-  return rotatedCards
 }
