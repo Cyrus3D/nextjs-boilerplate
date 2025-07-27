@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import GoogleAds from "./components/google-ads"
 import BusinessCardComponent from "./components/business-card"
 import BusinessDetailModal from "./components/business-detail-modal"
+import NativeAdCard from "./components/native-ad-card"
+import InFeedAd from "./components/in-feed-ad"
 import { getBusinessCards, incrementViewCount, checkDatabaseStatus } from "./lib/api"
 import { isSupabaseConfigured } from "./lib/supabase"
 import type { BusinessCard } from "./types/business-card"
@@ -120,7 +122,7 @@ export default function InfoCardList() {
             )}
           </div>
 
-          {/* 구글 광고 배너 */}
+          {/* 상단 배너 광고 */}
           <GoogleAds
             adSlot={process.env.NEXT_PUBLIC_ADSENSE_BANNER_SLOT || "1234567890"}
             style={{
@@ -143,7 +145,17 @@ export default function InfoCardList() {
             {businessCards.map((card, index) => (
               <React.Fragment key={card.id}>
                 <BusinessCardComponent card={card} onDetailClick={handleDetailClick} />
-                {/* 6번째 카드 후에 광고 삽입 */}
+
+                {/* 3번째 카드 후에 네이티브 광고 삽입 */}
+                {index === 2 && (
+                  <NativeAdCard
+                    adSlot={process.env.NEXT_PUBLIC_ADSENSE_NATIVE_SLOT || "2345678901"}
+                    style="card"
+                    className="md:col-span-1"
+                  />
+                )}
+
+                {/* 6번째 카드 후에 배너 광고 삽입 */}
                 {index === 5 && (
                   <div className="md:col-span-2 lg:col-span-3">
                     <AdsenseBanner
@@ -152,6 +164,23 @@ export default function InfoCardList() {
                       className="my-4"
                     />
                   </div>
+                )}
+
+                {/* 9번째 카드 후에 인피드 광고 삽입 */}
+                {index === 8 && (
+                  <InFeedAd
+                    adSlot={process.env.NEXT_PUBLIC_ADSENSE_INFEED_SLOT || "3456789012"}
+                    className="md:col-span-1"
+                  />
+                )}
+
+                {/* 15번째 카드 후에 또 다른 네이티브 광고 */}
+                {index === 14 && (
+                  <NativeAdCard
+                    adSlot={process.env.NEXT_PUBLIC_ADSENSE_NATIVE_SLOT_2 || "4567890123"}
+                    style="card"
+                    className="md:col-span-1"
+                  />
                 )}
               </React.Fragment>
             ))}
