@@ -6,6 +6,8 @@ import BusinessCardComponent from "./components/business-card"
 import BusinessDetailModal from "./components/business-detail-modal"
 import { sampleBusinessCards } from "./data/sample-cards"
 import type { BusinessCard } from "./types/business-card"
+import AdsenseBanner from "./components/adsense-banner"
+import React from "react"
 
 export default function InfoCardList() {
   const [selectedCard, setSelectedCard] = useState<BusinessCard | null>(null)
@@ -33,7 +35,7 @@ export default function InfoCardList() {
 
           {/* 구글 광고 배너 */}
           <GoogleAds
-            adSlot="1234567890"
+            adSlot={process.env.NEXT_PUBLIC_ADSENSE_BANNER_SLOT || "1234567890"}
             style={{
               display: "block",
               width: "100%",
@@ -46,8 +48,20 @@ export default function InfoCardList() {
       {/* 스크롤 가능한 콘텐츠 영역 */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {sampleBusinessCards.map((card) => (
-            <BusinessCardComponent key={card.id} card={card} onDetailClick={handleDetailClick} />
+          {sampleBusinessCards.map((card, index) => (
+            <React.Fragment key={card.id}>
+              <BusinessCardComponent card={card} onDetailClick={handleDetailClick} />
+              {/* 6번째 카드 후에 광고 삽입 */}
+              {index === 5 && (
+                <div className="md:col-span-2 lg:col-span-3">
+                  <AdsenseBanner
+                    slot={process.env.NEXT_PUBLIC_ADSENSE_BANNER_SLOT}
+                    format="horizontal"
+                    className="my-4"
+                  />
+                </div>
+              )}
+            </React.Fragment>
           ))}
         </div>
       </div>
