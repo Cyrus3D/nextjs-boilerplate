@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { MapPin, Phone, Clock, Star, MessageCircle, Globe, Zap, Map, Search } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
-import { isValidLocation } from "../lib/utils"
+import { isValidLocation, isMapUrl, isWebsiteUrl } from "../lib/utils"
 
 interface BusinessCardProps {
   card: BusinessCard
@@ -29,6 +29,9 @@ const getCategoryColor = (category: string) => {
 }
 
 export default function BusinessCardComponent({ card, onDetailClick }: BusinessCardProps) {
+  const websiteIsMap = card.website && isMapUrl(card.website)
+  const websiteIsWebsite = card.website && isWebsiteUrl(card.website)
+
   return (
     <Card
       className={`overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer ${card.isPromoted ? "ring-2 ring-yellow-400" : ""}`}
@@ -119,21 +122,22 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
                 <span className="text-xs">카톡</span>
               </div>
             )}
-            {/* 직접 지도 링크가 있는 경우 */}
-            {card.mapUrl && (
+            {/* 지도 링크가 있는 경우 */}
+            {websiteIsMap && (
               <div className="flex items-center space-x-1">
                 <Map className="h-4 w-4" />
                 <span className="text-xs">지도</span>
               </div>
             )}
-            {/* 위치 정보로 검색 가능한 경우 */}
-            {!card.mapUrl && isValidLocation(card.location) && (
+            {/* 위치 정보로 검색 가능한 경우 (지도 링크가 없을 때만) */}
+            {!websiteIsMap && isValidLocation(card.location) && (
               <div className="flex items-center space-x-1">
                 <Search className="h-4 w-4" />
                 <span className="text-xs">검색</span>
               </div>
             )}
-            {card.website && (
+            {/* 웹사이트가 있는 경우 */}
+            {websiteIsWebsite && (
               <div className="flex items-center space-x-1">
                 <Globe className="h-4 w-4" />
                 <span className="text-xs">웹사이트</span>

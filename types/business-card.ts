@@ -7,8 +7,7 @@ export interface BusinessCard {
   phone?: string
   kakaoId?: string
   lineId?: string
-  website?: string
-  mapUrl?: string // 지도 URL 추가
+  website?: string // 단일 필드로 지도/웹사이트 모두 처리
   hours?: string
   price?: string
   promotion?: string
