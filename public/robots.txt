@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# 관리자 페이지는 검색엔진에서 제외
+Disallow: /admin
+
+# 업로드 폴더 제외
+Disallow: /uploads
+
+Sitemap: https://your-domain.com/sitemap.xml
