@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Phone, Clock, MessageCircle, Globe, Zap, Map, Search, Crown } from "lucide-react"
+import { MapPin, Phone, Clock, MessageCircle, Globe, Map, Search, Crown } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
 import { isValidLocation, getUrlType } from "../lib/utils"
 
@@ -34,7 +34,7 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
 
   return (
     <Card
-      className={`overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer ${card.isPromoted ? "ring-2 ring-yellow-400" : ""}`}
+      className={`overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer`}
       onClick={() => onDetailClick(card)}
     >
       <div className="relative">
@@ -55,13 +55,6 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
           <Badge className={getCategoryColor(card.category)} variant="secondary">
             {card.category}
           </Badge>
-          {/* 추천 배지 */}
-          {card.isPromoted && (
-            <Badge className="bg-green-100 text-green-800 flex items-center gap-1" variant="secondary">
-              <Zap className="h-3 w-3" />
-              추천
-            </Badge>
-          )}
         </div>
       </div>
 

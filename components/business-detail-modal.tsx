@@ -144,13 +144,6 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                 <Badge className={getCategoryColor(card.category)} variant="secondary">
                   {card.category}
                 </Badge>
-                {/* 추천 배지 */}
-                {card.isPromoted && (
-                  <Badge className="bg-green-100 text-green-800 flex items-center gap-1" variant="secondary">
-                    <Zap className="h-3 w-3" />
-                    추천
-                  </Badge>
-                )}
               </div>
               <DialogTitle className="text-2xl">{card.title}</DialogTitle>
             </div>
