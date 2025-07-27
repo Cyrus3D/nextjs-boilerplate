@@ -18,7 +18,16 @@ export async function POST(request: NextRequest) {
     const result = await verifyAdminPassword(password)
 
     if (result.success) {
-      return NextResponse.json({ success: true })
+      // 성공 시 쿠키 설정 (옵션)
+      const response = NextResponse.json({ success: true })
+      response.cookies.set("admin-auth", "true", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 2 * 60 * 60, // 2시간
+      })
+
+      return response
     } else {
       return NextResponse.json(
         {

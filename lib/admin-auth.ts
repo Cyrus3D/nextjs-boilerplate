@@ -1,52 +1,52 @@
-"use server"
+export interface AdminAuthResult {
+  success: boolean
+  error?: string
+}
 
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
+export async function verifyAdminPassword(password: string): Promise<AdminAuthResult> {
+  // 환경 변수에서 관리자 비밀번호 가져오기
+  const adminPassword = process.env.ADMIN_PASSWORD || "your-secure-admin-password-2024"
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "your-secure-admin-password-2024"
-const SESSION_DURATION = 2 * 60 * 60 * 1000 // 2시간
-
-export async function verifyAdminPassword(password: string) {
   if (!password || password.trim() === "") {
-    return { success: false, error: "비밀번호를 입력해주세요." }
+    return {
+      success: false,
+      error: "비밀번호를 입력해주세요.",
+    }
   }
 
-  if (password !== ADMIN_PASSWORD) {
-    return { success: false, error: "관리자 비밀번호가 올바르지 않습니다." }
+  if (password === adminPassword) {
+    return {
+      success: true,
+    }
+  } else {
+    return {
+      success: false,
+      error: "관리자 비밀번호가 올바르지 않습니다.",
+    }
+  }
+}
+
+// 세션 검증 함수
+export function validateAdminSession(): boolean {
+  if (typeof window === "undefined") return false
+
+  const authStatus = sessionStorage.getItem("admin-auth")
+  const authTime = sessionStorage.getItem("admin-auth-time")
+
+  if (authStatus === "true" && authTime) {
+    const loginTime = Number.parseInt(authTime)
+    const currentTime = Date.now()
+    const sessionDuration = 2 * 60 * 60 * 1000 // 2시간
+
+    if (currentTime - loginTime < sessionDuration) {
+      return true
+    } else {
+      // 세션 만료
+      sessionStorage.removeItem("admin-auth")
+      sessionStorage.removeItem("admin-auth-time")
+      return false
+    }
   }
 
-  // 세션 쿠키 설정
-  const cookieStore = cookies()
-  const sessionToken = generateSessionToken()
-
-  cookieStore.set("admin-session", sessionToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: SESSION_DURATION / 1000, // 초 단위
-  })
-
-  return { success: true }
-}
-
-export async function checkAdminAuth() {
-  const cookieStore = cookies()
-  const sessionToken = cookieStore.get("admin-session")
-
-  if (!sessionToken) {
-    return false
-  }
-
-  // 실제 환경에서는 데이터베이스에서 세션 검증
-  return true
-}
-
-export async function adminLogout() {
-  const cookieStore = cookies()
-  cookieStore.delete("admin-session")
-  redirect("/")
-}
-
-function generateSessionToken(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36)
+  return false
 }

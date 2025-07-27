@@ -4,8 +4,6 @@ import { useState, useEffect } from "react"
 import AdminInterface from "./admin-interface"
 import AdminLogin from "./admin-login"
 
-const ADMIN_PASSWORD = "your-secure-admin-password-2024" // 실제로는 환경 변수 사용
-
 export default function SecureAdminInterface() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loginError, setLoginError] = useState("")
@@ -36,33 +34,47 @@ export default function SecureAdminInterface() {
   const handleLogin = async (password: string) => {
     setLoginError("")
 
-    // 비밀번호 검증
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true)
-      sessionStorage.setItem("admin-auth", "true")
-      sessionStorage.setItem("admin-auth-time", Date.now().toString())
+    try {
+      const response = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      })
 
-      // 로그인 시도 횟수 초기화
-      localStorage.removeItem("login-attempts")
-    } else {
-      setLoginError("관리자 비밀번호가 올바르지 않습니다.")
+      const result = await response.json()
 
-      // 잘못된 시도 기록
-      const attempts = Number.parseInt(localStorage.getItem("login-attempts") || "0")
-      const newAttempts = attempts + 1
-      localStorage.setItem("login-attempts", newAttempts.toString())
+      if (result.success) {
+        setIsAuthenticated(true)
+        sessionStorage.setItem("admin-auth", "true")
+        sessionStorage.setItem("admin-auth-time", Date.now().toString())
 
-      if (newAttempts >= 5) {
-        setLoginError("너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.")
+        // 로그인 시도 횟수 초기화
+        localStorage.removeItem("login-attempts")
+      } else {
+        setLoginError(result.error || "로그인에 실패했습니다.")
 
-        // 5분 후 시도 횟수 초기화
-        setTimeout(
-          () => {
-            localStorage.removeItem("login-attempts")
-          },
-          5 * 60 * 1000,
-        )
+        // 잘못된 시도 기록
+        const attempts = Number.parseInt(localStorage.getItem("login-attempts") || "0")
+        const newAttempts = attempts + 1
+        localStorage.setItem("login-attempts", newAttempts.toString())
+
+        if (newAttempts >= 5) {
+          setLoginError("너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.")
+
+          // 5분 후 시도 횟수 초기화
+          setTimeout(
+            () => {
+              localStorage.removeItem("login-attempts")
+            },
+            5 * 60 * 1000,
+          )
+        }
       }
+    } catch (error) {
+      console.error("Login error:", error)
+      setLoginError("서버 오류가 발생했습니다. 다시 시도해주세요.")
     }
   }
 
@@ -70,6 +82,9 @@ export default function SecureAdminInterface() {
     setIsAuthenticated(false)
     sessionStorage.removeItem("admin-auth")
     sessionStorage.removeItem("admin-auth-time")
+
+    // 쿠키도 제거
+    document.cookie = "admin-auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
   }
 
   if (isLoading) {
