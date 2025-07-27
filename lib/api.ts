@@ -4,7 +4,7 @@ import { sampleBusinessCards } from "../data/sample-cards"
 
 export async function getBusinessCards(): Promise<BusinessCard[]> {
   // Supabase가 설정되지 않은 경우 샘플 데이터 반환
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured() || !supabase) {
     console.warn("Supabase not configured, using sample data")
     return sampleBusinessCards
   }
@@ -58,7 +58,7 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
 }
 
 export async function incrementViewCount(cardId: number) {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured() || !supabase) {
     console.warn("Supabase not configured, skipping view count increment")
     return
   }
@@ -78,7 +78,7 @@ export async function incrementViewCount(cardId: number) {
 }
 
 export async function getCategories() {
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseConfigured() || !supabase) {
     console.warn("Supabase not configured, returning empty categories")
     return []
   }
