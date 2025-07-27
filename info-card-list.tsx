@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import GoogleAds from "./components/google-ads"
 import BusinessCardComponent from "./components/business-card"
 import BusinessDetailModal from "./components/business-detail-modal"
-import { sampleBusinessCards } from "./data/sample-cards"
+import { getBusinessCards, incrementViewCount } from "./lib/api"
 import type { BusinessCard } from "./types/business-card"
 import AdsenseBanner from "./components/adsense-banner"
 import React from "react"
@@ -12,15 +12,46 @@ import React from "react"
 export default function InfoCardList() {
   const [selectedCard, setSelectedCard] = useState<BusinessCard | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [businessCards, setBusinessCards] = useState<BusinessCard[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const handleDetailClick = (card: BusinessCard) => {
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const cards = await getBusinessCards()
+        setBusinessCards(cards)
+      } catch (error) {
+        console.error("Failed to fetch business cards:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  const handleDetailClick = async (card: BusinessCard) => {
     setSelectedCard(card)
     setIsModalOpen(true)
+
+    // 조회수 증가
+    await incrementViewCount(card.id)
   }
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setSelectedCard(null)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -47,23 +78,29 @@ export default function InfoCardList() {
 
       {/* 스크롤 가능한 콘텐츠 영역 */}
       <div className="container mx-auto px-4 py-8">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {sampleBusinessCards.map((card, index) => (
-            <React.Fragment key={card.id}>
-              <BusinessCardComponent card={card} onDetailClick={handleDetailClick} />
-              {/* 6번째 카드 후에 광고 삽입 */}
-              {index === 5 && (
-                <div className="md:col-span-2 lg:col-span-3">
-                  <AdsenseBanner
-                    slot={process.env.NEXT_PUBLIC_ADSENSE_BANNER_SLOT}
-                    format="horizontal"
-                    className="my-4"
-                  />
-                </div>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
+        {businessCards.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">등록된 비즈니스 정보가 없습니다.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {businessCards.map((card, index) => (
+              <React.Fragment key={card.id}>
+                <BusinessCardComponent card={card} onDetailClick={handleDetailClick} />
+                {/* 6번째 카드 후에 광고 삽입 */}
+                {index === 5 && (
+                  <div className="md:col-span-2 lg:col-span-3">
+                    <AdsenseBanner
+                      slot={process.env.NEXT_PUBLIC_ADSENSE_BANNER_SLOT}
+                      format="horizontal"
+                      className="my-4"
+                    />
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 상세 정보 모달 */}
