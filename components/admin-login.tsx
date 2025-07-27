@@ -39,8 +39,8 @@ export default function AdminLogin({ onLogin, error }: AdminLoginProps) {
           <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
             <Shield className="h-6 w-6 text-blue-600" />
           </div>
-          <CardTitle className="text-2xl">관리자 로그인</CardTitle>
-          <CardDescription>관리자 권한이 필요한 페이지입니다</CardDescription>
+          <CardTitle className="text-2xl">관리자 인증</CardTitle>
+          <CardDescription>관리자 비밀번호를 입력하여 접근하세요</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -55,6 +55,7 @@ export default function AdminLogin({ onLogin, error }: AdminLoginProps) {
                   placeholder="비밀번호를 입력하세요"
                   className="pr-10"
                   disabled={isLoading}
+                  autoFocus
                 />
                 <Button
                   type="button"
@@ -81,12 +82,12 @@ export default function AdminLogin({ onLogin, error }: AdminLoginProps) {
             )}
 
             <Button type="submit" className="w-full" disabled={isLoading || !password.trim()}>
-              {isLoading ? "확인 중..." : "로그인"}
+              {isLoading ? "인증 중..." : "관리자 로그인"}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500">보안을 위해 관리자 권한이 확인된 후 접근할 수 있습니다.</p>
+            <p className="text-xs text-gray-500">보안을 위해 관리자 비밀번호 확인 후 접근할 수 있습니다.</p>
           </div>
         </CardContent>
       </Card>

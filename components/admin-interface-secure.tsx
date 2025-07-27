@@ -36,20 +36,32 @@ export default function SecureAdminInterface() {
   const handleLogin = async (password: string) => {
     setLoginError("")
 
-    // 실제 환경에서는 서버에서 비밀번호 검증
+    // 비밀번호 검증
     if (password === ADMIN_PASSWORD) {
       setIsAuthenticated(true)
       sessionStorage.setItem("admin-auth", "true")
       sessionStorage.setItem("admin-auth-time", Date.now().toString())
+
+      // 로그인 시도 횟수 초기화
+      localStorage.removeItem("login-attempts")
     } else {
-      setLoginError("비밀번호가 올바르지 않습니다.")
+      setLoginError("관리자 비밀번호가 올바르지 않습니다.")
 
-      // 잘못된 시도 기록 (선택사항)
+      // 잘못된 시도 기록
       const attempts = Number.parseInt(localStorage.getItem("login-attempts") || "0")
-      localStorage.setItem("login-attempts", (attempts + 1).toString())
+      const newAttempts = attempts + 1
+      localStorage.setItem("login-attempts", newAttempts.toString())
 
-      if (attempts >= 5) {
-        setLoginError("너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.")
+      if (newAttempts >= 5) {
+        setLoginError("너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.")
+
+        // 5분 후 시도 횟수 초기화
+        setTimeout(
+          () => {
+            localStorage.removeItem("login-attempts")
+          },
+          5 * 60 * 1000,
+        )
       }
     }
   }

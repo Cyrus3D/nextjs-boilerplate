@@ -7,8 +7,12 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "your-secure-admin-password
 const SESSION_DURATION = 2 * 60 * 60 * 1000 // 2시간
 
 export async function verifyAdminPassword(password: string) {
+  if (!password || password.trim() === "") {
+    return { success: false, error: "비밀번호를 입력해주세요." }
+  }
+
   if (password !== ADMIN_PASSWORD) {
-    return { success: false, error: "비밀번호가 올바르지 않습니다." }
+    return { success: false, error: "관리자 비밀번호가 올바르지 않습니다." }
   }
 
   // 세션 쿠키 설정
