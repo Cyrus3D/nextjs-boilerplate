@@ -33,7 +33,6 @@ interface ParsedBusinessData {
   price?: string
   promotion?: string
   tags: string[]
-  rating?: number
   isPromoted?: boolean
   image?: string
   isPremium?: boolean
@@ -512,27 +511,12 @@ export default function AdminInterface() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label>프로모션/특별혜택</Label>
-                            <Input
-                              value={parsedData.promotion || ""}
-                              onChange={(e) => handleFieldChange("promotion", e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <Label>평점 (0-5)</Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              max="5"
-                              step="0.1"
-                              value={parsedData.rating || ""}
-                              onChange={(e) =>
-                                handleFieldChange("rating", Number.parseFloat(e.target.value) || undefined)
-                              }
-                            />
-                          </div>
+                        <div>
+                          <Label>프로모션/특별혜택</Label>
+                          <Input
+                            value={parsedData.promotion || ""}
+                            onChange={(e) => handleFieldChange("promotion", e.target.value)}
+                          />
                         </div>
 
                         <div>
@@ -559,7 +543,13 @@ export default function AdminInterface() {
                       <div className="space-y-4">
                         <div>
                           <h3 className="font-semibold text-lg">{parsedData.title}</h3>
-                          <div className="flex gap-2 mt-1">
+                          <div className="flex gap-2 mt-1 flex-wrap">
+                            {parsedData.isPremium && (
+                              <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1">
+                                <Crown className="h-3 w-3" />
+                                프리미엄
+                              </Badge>
+                            )}
                             <Badge className="mt-1">{parsedData.category}</Badge>
                             {parsedData.isPromoted && (
                               <Badge variant="secondary" className="ml-2">
@@ -622,11 +612,6 @@ export default function AdminInterface() {
                           {parsedData.promotion && (
                             <p>
                               <strong>프로모션:</strong> {parsedData.promotion}
-                            </p>
-                          )}
-                          {parsedData.rating && (
-                            <p>
-                              <strong>평점:</strong> {parsedData.rating}/5
                             </p>
                           )}
                         </div>
@@ -715,14 +700,14 @@ export default function AdminInterface() {
                         <div className="flex items-start justify-between">
                           <div>
                             <CardTitle className="text-lg">{card.title}</CardTitle>
-                            <div className="flex gap-2 mt-1">
-                              <Badge className="mt-1">{card.category}</Badge>
+                            <div className="flex gap-2 mt-1 flex-wrap">
                               {card.isPremium && (
                                 <Badge className="bg-yellow-100 text-yellow-800">
                                   <Crown className="h-3 w-3 mr-1" />
                                   프리미엄
                                 </Badge>
                               )}
+                              <Badge className="mt-1">{card.category}</Badge>
                             </div>
                           </div>
                           <div className="flex gap-1">
@@ -877,30 +862,12 @@ export default function AdminInterface() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>프로모션/특별혜택</Label>
-                    <Input
-                      value={selectedCardForEdit.promotion || ""}
-                      onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, promotion: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label>평점 (0-5)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="5"
-                      step="0.1"
-                      value={selectedCardForEdit.rating || ""}
-                      onChange={(e) =>
-                        setSelectedCardForEdit({
-                          ...selectedCardForEdit,
-                          rating: Number.parseFloat(e.target.value) || undefined,
-                        })
-                      }
-                    />
-                  </div>
+                <div>
+                  <Label>프로모션/특별혜택</Label>
+                  <Input
+                    value={selectedCardForEdit.promotion || ""}
+                    onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, promotion: e.target.value })}
+                  />
                 </div>
 
                 <div>

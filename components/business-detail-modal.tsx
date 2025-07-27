@@ -8,7 +8,6 @@ import {
   MapPin,
   Phone,
   Clock,
-  Star,
   MessageCircle,
   Globe,
   Zap,
@@ -20,6 +19,7 @@ import {
   Facebook,
   Instagram,
   Youtube,
+  Crown,
 } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
 import {
@@ -48,6 +48,7 @@ const getCategoryColor = (category: string) => {
     유흥업소: "bg-pink-100 text-pink-800",
     교통서비스: "bg-emerald-100 text-emerald-800",
     서비스: "bg-gray-100 text-gray-800",
+    프리미엄: "bg-yellow-100 text-yellow-800",
   }
   return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
 }
@@ -131,12 +132,21 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                {/* 프리미엄 카테고리를 가장 먼저 표시 */}
+                {card.isPremium && (
+                  <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1" variant="secondary">
+                    <Crown className="h-3 w-3" />
+                    프리미엄
+                  </Badge>
+                )}
+                {/* 기본 카테고리 */}
                 <Badge className={getCategoryColor(card.category)} variant="secondary">
                   {card.category}
                 </Badge>
+                {/* 추천 배지 */}
                 {card.isPromoted && (
-                  <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1" variant="secondary">
+                  <Badge className="bg-green-100 text-green-800 flex items-center gap-1" variant="secondary">
                     <Zap className="h-3 w-3" />
                     추천
                   </Badge>
@@ -144,12 +154,6 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
               </div>
               <DialogTitle className="text-2xl">{card.title}</DialogTitle>
             </div>
-            {card.rating && (
-              <div className="flex items-center bg-gray-50 rounded-full px-3 py-1">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-medium ml-1">{card.rating}</span>
-              </div>
-            )}
           </div>
         </DialogHeader>
 

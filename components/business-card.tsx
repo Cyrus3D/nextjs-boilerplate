@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Phone, Clock, Star, MessageCircle, Globe, Zap, Map, Search } from "lucide-react"
+import { MapPin, Phone, Clock, MessageCircle, Globe, Zap, Map, Search, Crown } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
 import { isValidLocation, getUrlType } from "../lib/utils"
 
@@ -24,6 +24,7 @@ const getCategoryColor = (category: string) => {
     유흥업소: "bg-pink-100 text-pink-800",
     교통서비스: "bg-emerald-100 text-emerald-800",
     서비스: "bg-gray-100 text-gray-800",
+    프리미엄: "bg-yellow-100 text-yellow-800",
   }
   return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
 }
@@ -42,23 +43,26 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
           alt={card.title}
           className="w-full h-48 object-cover"
         />
-        <div className="absolute top-3 left-3 flex gap-2">
+        <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
+          {/* 프리미엄 카테고리를 가장 먼저 표시 */}
+          {card.isPremium && (
+            <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1" variant="secondary">
+              <Crown className="h-3 w-3" />
+              프리미엄
+            </Badge>
+          )}
+          {/* 기본 카테고리 */}
           <Badge className={getCategoryColor(card.category)} variant="secondary">
             {card.category}
           </Badge>
+          {/* 추천 배지 */}
           {card.isPromoted && (
-            <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1" variant="secondary">
+            <Badge className="bg-green-100 text-green-800 flex items-center gap-1" variant="secondary">
               <Zap className="h-3 w-3" />
               추천
             </Badge>
           )}
         </div>
-        {card.rating && (
-          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 flex items-center">
-            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            <span className="text-sm font-medium ml-1">{card.rating}</span>
-          </div>
-        )}
       </div>
 
       <CardHeader className="pb-3">
