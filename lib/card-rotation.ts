@@ -8,9 +8,46 @@ export async function updateExposureStats(cardIds: number[]) {
   }
 
   try {
+    // Check if exposure columns exist first
+    const { data: testData, error: testError } = await supabase.from("business_cards").select("*").limit(1)
+
+    if (testError || !testData || testData.length === 0) {
+      console.warn("Cannot check table structure for exposure stats")
+      return
+    }
+
+    const hasExposureColumns = "exposure_count" in testData[0] && "last_exposed_at" in testData[0]
+
+    if (!hasExposureColumns) {
+      console.warn("Exposure tracking columns not found. Skipping exposure stats update.")
+      return
+    }
+
     // 각 카드의 노출 횟수 증가
     for (const cardId of cardIds) {
-      await supabase.rpc("increment_exposure", { card_id: cardId })
+      // Use RPC function if it exists, otherwise use regular update
+      try {
+        await supabase.rpc("increment_exposure", { card_id: cardId })
+      } catch (rpcError) {
+        // Fallback to regular update if RPC function doesn't exist
+        console.warn("RPC function not found, using fallback update")
+        const { data: currentCard } = await supabase
+          .from("business_cards")
+          .select("exposure_count")
+          .eq("id", cardId)
+          .single()
+
+        const newCount = (currentCard?.exposure_count || 0) + 1
+
+        await supabase
+          .from("business_cards")
+          .update({
+            exposure_count: newCount,
+            last_exposed_at: new Date().toISOString(),
+            exposure_weight: newCount < 50 ? 1.0 + (50 - newCount) * 0.02 : 1.0 - (newCount - 50) * 0.01,
+          })
+          .eq("id", cardId)
+      }
     }
   } catch (error) {
     console.error("Error updating exposure stats:", error)

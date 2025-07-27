@@ -22,7 +22,11 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
       return sampleBusinessCards
     }
 
-    // 테이블이 존재하면 전체 데이터 조회 (프리미엄 및 노출 정보 포함)
+    // Check if premium and exposure columns exist
+    const hasNewColumns =
+      simpleData && simpleData.length > 0 && "is_premium" in simpleData[0] && "exposure_count" in simpleData[0]
+
+    // 테이블이 존재하면 전체 데이터 조회
     const { data, error } = await supabase
       .from("business_cards")
       .select("*")
@@ -101,24 +105,26 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
           image: card.image_url,
           rating: card.rating,
           isPromoted: card.is_promoted,
-          // 프리미엄 및 노출 관련 필드
-          isPremium: card.is_premium || false,
-          premiumExpiresAt: card.premium_expires_at,
-          exposureCount: card.exposure_count || 0,
-          lastExposedAt: card.last_exposed_at,
-          exposureWeight: card.exposure_weight || 1.0,
+          // 프리미엄 및 노출 관련 필드 (새 컬럼이 있는 경우에만)
+          isPremium: hasNewColumns ? card.is_premium || false : false,
+          premiumExpiresAt: hasNewColumns ? card.premium_expires_at : undefined,
+          exposureCount: hasNewColumns ? card.exposure_count || 0 : 0,
+          lastExposedAt: hasNewColumns ? card.last_exposed_at : undefined,
+          exposureWeight: hasNewColumns ? card.exposure_weight || 1.0 : 1.0,
         }
       }),
     )
 
-    // 공평한 노출을 위한 카드 정렬
-    const sortedCards = sortCardsForFairExposure(cardsWithDetails)
+    // 공평한 노출을 위한 카드 정렬 (새 컬럼이 있는 경우에만)
+    const sortedCards = hasNewColumns ? sortCardsForFairExposure(cardsWithDetails) : cardsWithDetails
 
-    // 노출 통계 업데이트 (상위 12개 카드만)
-    const exposedCardIds = sortedCards.slice(0, 12).map((card) => card.id)
-    if (exposedCardIds.length > 0) {
-      // 비동기로 실행하여 페이지 로딩 속도에 영향 없도록
-      updateExposureStats(exposedCardIds).catch(console.error)
+    // 노출 통계 업데이트 (새 컬럼이 있고 상위 12개 카드만)
+    if (hasNewColumns) {
+      const exposedCardIds = sortedCards.slice(0, 12).map((card) => card.id)
+      if (exposedCardIds.length > 0) {
+        // 비동기로 실행하여 페이지 로딩 속도에 영향 없도록
+        updateExposureStats(exposedCardIds).catch(console.error)
+      }
     }
 
     return sortedCards
@@ -219,6 +225,28 @@ export async function getExposureStats() {
   }
 
   try {
+    // First check if the exposure columns exist
+    const { data: tableInfo, error: tableError } = await supabase.from("business_cards").select("*").limit(1)
+
+    if (tableError) {
+      console.error("Error checking table structure:", tableError)
+      return null
+    }
+
+    // Check if exposure_count column exists
+    const hasExposureColumns =
+      tableInfo && tableInfo.length > 0 && "exposure_count" in tableInfo[0] && "last_exposed_at" in tableInfo[0]
+
+    if (!hasExposureColumns) {
+      console.warn("Exposure tracking columns not found. Please run the database migration.")
+      return {
+        totalExposures: 0,
+        averageExposures: 0,
+        lastUpdated: new Date().toISOString(),
+        migrationNeeded: true,
+      }
+    }
+
     const { data, error } = await supabase
       .from("business_cards")
       .select("exposure_count, last_exposed_at")
@@ -237,9 +265,15 @@ export async function getExposureStats() {
       totalExposures,
       averageExposures: Math.round(averageExposures * 100) / 100,
       lastUpdated,
+      migrationNeeded: false,
     }
   } catch (error) {
     console.error("Failed to fetch exposure stats:", error)
-    return null
+    return {
+      totalExposures: 0,
+      averageExposures: 0,
+      lastUpdated: new Date().toISOString(),
+      migrationNeeded: true,
+    }
   }
 }
