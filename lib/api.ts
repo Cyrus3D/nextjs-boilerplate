@@ -119,10 +119,22 @@ export async function incrementViewCount(cardId: number) {
   }
 
   try {
-    const { error } = await supabase
+    // First get the current view count
+    const { data: currentData, error: fetchError } = await supabase
       .from("business_cards")
-      .update({ view_count: supabase.raw("view_count + 1") })
+      .select("view_count")
       .eq("id", cardId)
+      .single()
+
+    if (fetchError) {
+      console.error("Error fetching current view count:", fetchError)
+      return
+    }
+
+    // Increment the view count
+    const newViewCount = (currentData?.view_count || 0) + 1
+
+    const { error } = await supabase.from("business_cards").update({ view_count: newViewCount }).eq("id", cardId)
 
     if (error) {
       console.error("Error incrementing view count:", error)
