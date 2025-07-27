@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from "./supabase"
 import type { BusinessCard } from "../types/business-card"
 import { sampleBusinessCards } from "../data/sample-cards"
+import { sortCardsForFairExposure, updateExposureStats } from "./card-rotation"
 
 export async function getBusinessCards(): Promise<BusinessCard[]> {
   // Supabase가 설정되지 않은 경우 샘플 데이터 반환
@@ -21,12 +22,11 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
       return sampleBusinessCards
     }
 
-    // 테이블이 존재하면 전체 데이터 조회 (관계 없이)
+    // 테이블이 존재하면 전체 데이터 조회 (프리미엄 및 노출 정보 포함)
     const { data, error } = await supabase
       .from("business_cards")
       .select("*")
       .eq("is_active", true)
-      .order("is_promoted", { ascending: false })
       .order("created_at", { ascending: false })
 
     if (error) {
@@ -93,7 +93,7 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
           kakaoId: card.kakao_id,
           lineId: card.line_id,
           website: card.website,
-          mapUrl: card.map_url, // 데이터베이스 필드 추가
+          mapUrl: card.map_url,
           hours: card.hours,
           price: card.price,
           promotion: card.promotion,
@@ -101,11 +101,27 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
           image: card.image_url,
           rating: card.rating,
           isPromoted: card.is_promoted,
+          // 프리미엄 및 노출 관련 필드
+          isPremium: card.is_premium || false,
+          premiumExpiresAt: card.premium_expires_at,
+          exposureCount: card.exposure_count || 0,
+          lastExposedAt: card.last_exposed_at,
+          exposureWeight: card.exposure_weight || 1.0,
         }
       }),
     )
 
-    return cardsWithDetails
+    // 공평한 노출을 위한 카드 정렬
+    const sortedCards = sortCardsForFairExposure(cardsWithDetails)
+
+    // 노출 통계 업데이트 (상위 12개 카드만)
+    const exposedCardIds = sortedCards.slice(0, 12).map((card) => card.id)
+    if (exposedCardIds.length > 0) {
+      // 비동기로 실행하여 페이지 로딩 속도에 영향 없도록
+      updateExposureStats(exposedCardIds).catch(console.error)
+    }
+
+    return sortedCards
   } catch (error) {
     console.error("Failed to fetch from database:", error)
     console.warn("Falling back to sample data due to network/connection error")
@@ -193,5 +209,37 @@ export async function checkDatabaseStatus() {
     }
   } catch (error) {
     return { status: "error", error }
+  }
+}
+
+// 노출 통계 조회
+export async function getExposureStats() {
+  if (!isSupabaseConfigured() || !supabase) {
+    return null
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("business_cards")
+      .select("exposure_count, last_exposed_at")
+      .eq("is_active", true)
+
+    if (error) {
+      console.error("Error fetching exposure stats:", error)
+      return null
+    }
+
+    const totalExposures = data.reduce((sum, card) => sum + (card.exposure_count || 0), 0)
+    const averageExposures = data.length > 0 ? totalExposures / data.length : 0
+    const lastUpdated = new Date().toISOString()
+
+    return {
+      totalExposures,
+      averageExposures: Math.round(averageExposures * 100) / 100,
+      lastUpdated,
+    }
+  } catch (error) {
+    console.error("Failed to fetch exposure stats:", error)
+    return null
   }
 }

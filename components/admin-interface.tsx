@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Upload, Wand2, Check, X, RefreshCw, AlertCircle, FileText, ImageIcon, Loader2 } from "lucide-react"
+import { Upload, Wand2, Check, X, RefreshCw, AlertCircle, FileText, ImageIcon, Loader2, Crown } from "lucide-react"
 import {
   parseBusinessCardData,
   saveBusinessCard,
@@ -18,6 +18,7 @@ import {
   deleteBusinessCard,
 } from "../lib/admin-actions"
 import ImageUpload from "./image-upload"
+import PremiumManagement from "./admin-premium-management"
 
 interface ParsedBusinessData {
   title: string
@@ -35,10 +36,15 @@ interface ParsedBusinessData {
   rating?: number
   isPromoted?: boolean
   image?: string
+  isPremium?: boolean
+  premiumExpiresAt?: string
 }
 
 interface BusinessCard extends ParsedBusinessData {
   id: number
+  exposureCount?: number
+  lastExposedAt?: string
+  exposureWeight?: number
 }
 
 export default function AdminInterface() {
@@ -49,7 +55,7 @@ export default function AdminInterface() {
   const [isSaving, setIsSaving] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [editMode, setEditMode] = useState(false)
-  const [activeTab, setActiveTab] = useState<"create" | "manage">("create")
+  const [activeTab, setActiveTab] = useState<"create" | "manage" | "premium">("create")
   const [existingCards, setExistingCards] = useState<BusinessCard[]>([])
   const [selectedCardForEdit, setSelectedCardForEdit] = useState<BusinessCard | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -178,7 +184,7 @@ export default function AdminInterface() {
   }
 
   useEffect(() => {
-    if (activeTab === "manage") {
+    if (activeTab === "manage" || activeTab === "premium") {
       loadExistingCards()
     }
   }, [activeTab])
@@ -261,6 +267,17 @@ export default function AdminInterface() {
               >
                 기존 카드 관리
               </button>
+              <button
+                className={`flex-1 px-6 py-4 text-sm font-medium ${
+                  activeTab === "premium"
+                    ? "border-b-2 border-blue-500 text-blue-600 bg-blue-50"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+                onClick={() => setActiveTab("premium")}
+              >
+                <Crown className="h-4 w-4 inline mr-2" />
+                프리미엄 관리
+              </button>
             </div>
           </CardContent>
         </Card>
@@ -276,7 +293,7 @@ export default function AdminInterface() {
         )}
 
         {activeTab === "create" ? (
-          // 기존 새 카드 등록 UI
+          // 기존 새 카드 등록 UI (이전과 동일)
           <div className="grid gap-6 lg:grid-cols-2">
             {/* 입력 섹션 */}
             <div className="space-y-6">
@@ -352,7 +369,7 @@ export default function AdminInterface() {
               </Card>
             </div>
 
-            {/* 결과 섹션 */}
+            {/* 결과 섹션 (이전과 동일) */}
             <div className="space-y-6">
               {parsedData && (
                 <Card>
@@ -371,7 +388,7 @@ export default function AdminInterface() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {editMode ? (
-                      // 편집 모드
+                      // 편집 모드 (이전과 동일하지만 이미지 업로드 컴포넌트 추가)
                       <div className="space-y-4">
                         <div>
                           <Label>제목</Label>
@@ -396,6 +413,7 @@ export default function AdminInterface() {
                           onImageRemove={() => handleFieldChange("image", undefined)}
                         />
 
+                        {/* 나머지 필드들... (이전과 동일) */}
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label>카테고리</Label>
@@ -497,7 +515,7 @@ export default function AdminInterface() {
                         </div>
                       </div>
                     ) : (
-                      // 미리보기 모드
+                      // 미리보기 모드 (이전과 동일)
                       <div className="space-y-4">
                         <div>
                           <h3 className="font-semibold text-lg">{parsedData.title}</h3>
@@ -600,8 +618,8 @@ export default function AdminInterface() {
               )}
             </div>
           </div>
-        ) : (
-          // 새로운 기존 카드 관리 UI
+        ) : activeTab === "manage" ? (
+          // 기존 카드 관리 UI
           <div className="space-y-6">
             {/* 검색 및 필터 */}
             <Card>
@@ -643,7 +661,15 @@ export default function AdminInterface() {
                         <div className="flex items-start justify-between">
                           <div>
                             <CardTitle className="text-lg">{card.title}</CardTitle>
-                            <Badge className="mt-1">{card.category}</Badge>
+                            <div className="flex gap-2 mt-1">
+                              <Badge className="mt-1">{card.category}</Badge>
+                              {card.isPremium && (
+                                <Badge className="bg-yellow-100 text-yellow-800">
+                                  <Crown className="h-3 w-3 mr-1" />
+                                  프리미엄
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                           <div className="flex gap-1">
                             <Button size="sm" variant="outline" onClick={() => setSelectedCardForEdit(card)}>
@@ -663,12 +689,18 @@ export default function AdminInterface() {
                             </Badge>
                           ))}
                         </div>
+                        <div className="text-xs text-gray-400 mt-2">
+                          노출: {card.exposureCount || 0}회 | 가중치: {(card.exposureWeight || 1.0).toFixed(2)}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
               </div>
             )}
           </div>
+        ) : (
+          // 프리미엄 관리 탭
+          <PremiumManagement cards={existingCards} onUpdateCard={handleUpdateCard} />
         )}
       </div>
 
