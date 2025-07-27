@@ -19,30 +19,20 @@ export default function GoogleAds({
   adClient = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "ca-pub-xxxxxxxxxxxxxxxxx",
 }: GoogleAdsProps) {
   useEffect(() => {
-    try {
-      // @ts-ignore
-      ;(window.adsbygoogle = window.adsbygoogle || []).push({})
-    } catch (err) {
-      console.error("Google Ads error:", err)
+    // 애드센스가 제대로 설정된 경우에만 광고 로드
+    if (adClient && !adClient.includes("xxxxxxxxx")) {
+      try {
+        // @ts-ignore
+        ;(window.adsbygoogle = window.adsbygoogle || []).push({})
+      } catch (err) {
+        console.error("Google Ads error:", err)
+      }
     }
-  }, [])
+  }, [adClient])
 
-  // 개발 환경에서는 플레이스홀더 표시
-  if (process.env.NODE_ENV === "development" || adClient.includes("xxxxxxxxx")) {
-    return (
-      <div className="w-full flex justify-center my-4">
-        <div
-          className="bg-gray-200 border-2 border-dashed border-gray-400 flex items-center justify-center text-gray-600 font-medium"
-          style={{
-            width: "100%",
-            height: "90px",
-            ...style,
-          }}
-        >
-          광고 배너 영역 (애드센스 승인 후 표시됩니다)
-        </div>
-      </div>
-    )
+  // 애드센스 승인 전에는 광고를 표시하지 않음
+  if (!adClient || adClient.includes("xxxxxxxxx")) {
+    return null
   }
 
   return (

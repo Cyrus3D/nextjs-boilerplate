@@ -9,6 +9,13 @@ interface AdsenseBannerProps {
 }
 
 export default function AdsenseBanner({ slot, format = "horizontal", className = "" }: AdsenseBannerProps) {
+  const adClient = process.env.NEXT_PUBLIC_GOOGLE_ADSENSE_CLIENT_ID || "ca-pub-xxxxxxxxxxxxxxxxx"
+
+  // 애드센스 승인 전에는 광고를 표시하지 않음
+  if (!adClient || adClient.includes("xxxxxxxxx")) {
+    return null
+  }
+
   const getAdStyle = () => {
     switch (format) {
       case "horizontal":
