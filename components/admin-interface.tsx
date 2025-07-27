@@ -17,6 +17,7 @@ import {
   updateBusinessCard,
   deleteBusinessCard,
 } from "../lib/admin-actions"
+import ImageUpload from "./image-upload"
 
 interface ParsedBusinessData {
   title: string
@@ -33,6 +34,7 @@ interface ParsedBusinessData {
   tags: string[]
   rating?: number
   isPromoted?: boolean
+  image?: string
 }
 
 interface BusinessCard extends ParsedBusinessData {
@@ -388,6 +390,12 @@ export default function AdminInterface() {
                           />
                         </div>
 
+                        <ImageUpload
+                          currentImageUrl={parsedData.image}
+                          onImageChange={(imageUrl) => handleFieldChange("image", imageUrl)}
+                          onImageRemove={() => handleFieldChange("image", undefined)}
+                        />
+
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label>카테고리</Label>
@@ -695,6 +703,12 @@ export default function AdminInterface() {
                     rows={3}
                   />
                 </div>
+
+                <ImageUpload
+                  currentImageUrl={selectedCardForEdit.image}
+                  onImageChange={(imageUrl) => setSelectedCardForEdit({ ...selectedCardForEdit, image: imageUrl })}
+                  onImageRemove={() => setSelectedCardForEdit({ ...selectedCardForEdit, image: undefined })}
+                />
 
                 <div>
                   <Label>카테고리</Label>

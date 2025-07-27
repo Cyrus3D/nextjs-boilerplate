@@ -15,7 +15,7 @@ export interface BusinessCard {
   price?: string
   promotion?: string
   tags: string[]
-  image?: string
+  image?: string // 이미지 URL 필드 추가
   rating?: number
   isPromoted?: boolean
 }

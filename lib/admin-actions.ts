@@ -25,6 +25,7 @@ const BusinessCardSchema = z.object({
   tags: z.array(z.string()).describe("관련 태그들"),
   rating: z.number().min(0).max(5).optional().describe("평점 (0-5)"),
   isPromoted: z.boolean().optional().describe("추천 비즈니스 여부"),
+  image: z.string().optional().describe("이미지 URL"),
 })
 
 export async function parseBusinessCardData(input: string, type: "text" | "image") {
@@ -115,7 +116,7 @@ export async function saveBusinessCard(data: any) {
         promotion: data.promotion,
         rating: data.rating,
         is_promoted: data.isPromoted || false,
-        image_url: "/placeholder.svg?height=200&width=400",
+        image_url: data.image || "/placeholder.svg?height=200&width=400",
       })
       .select()
       .single()
@@ -211,6 +212,7 @@ export async function updateBusinessCard(card: any) {
         promotion: card.promotion,
         rating: card.rating,
         is_promoted: card.isPromoted || false,
+        image_url: card.image || "/placeholder.svg?height=200&width=400",
         updated_at: new Date().toISOString(),
       })
       .eq("id", card.id)
@@ -369,6 +371,7 @@ export async function getBusinessCards() {
           tags: tags,
           rating: card.rating,
           isPromoted: card.is_promoted,
+          image: card.image_url,
         }
       }),
     )
