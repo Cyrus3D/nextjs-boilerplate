@@ -12,20 +12,19 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
   try {
     console.log("Attempting to fetch from Supabase...")
 
+    // 먼저 간단한 쿼리로 테이블 존재 여부 확인
+    const { data: simpleData, error: simpleError } = await supabase.from("business_cards").select("*").limit(1)
+
+    if (simpleError) {
+      console.error("Basic table query failed:", simpleError)
+      console.warn("Tables may not exist yet. Using sample data.")
+      return sampleBusinessCards
+    }
+
+    // 테이블이 존재하면 전체 데이터 조회 (관계 없이)
     const { data, error } = await supabase
       .from("business_cards")
-      .select(`
-        *,
-        categories (
-          name,
-          color_class
-        ),
-        business_card_tags (
-          tags (
-            name
-          )
-        )
-      `)
+      .select("*")
       .eq("is_active", true)
       .order("is_promoted", { ascending: false })
       .order("created_at", { ascending: false })
@@ -43,24 +42,69 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
 
     console.log("Successfully fetched data from Supabase:", data.length, "records")
 
-    return data.map((card) => ({
-      id: card.id,
-      title: card.title,
-      description: card.description,
-      category: card.categories?.name || "기타",
-      location: card.location,
-      phone: card.phone,
-      kakaoId: card.kakao_id,
-      lineId: card.line_id,
-      website: card.website,
-      hours: card.hours,
-      price: card.price,
-      promotion: card.promotion,
-      tags: card.business_card_tags?.map((tag: any) => tag.tags.name) || [],
-      image: card.image_url,
-      rating: card.rating,
-      isPromoted: card.is_promoted,
-    }))
+    // 카테고리와 태그 정보를 별도로 조회하여 매핑
+    const cardsWithDetails = await Promise.all(
+      data.map(async (card) => {
+        let categoryName = "기타"
+        let tags: string[] = []
+
+        // 카테고리 정보 조회 (테이블이 존재하는 경우)
+        if (card.category_id) {
+          try {
+            const { data: categoryData } = await supabase
+              .from("categories")
+              .select("name")
+              .eq("id", card.category_id)
+              .single()
+
+            if (categoryData) {
+              categoryName = categoryData.name
+            }
+          } catch (error) {
+            console.warn("Category table not found or accessible")
+          }
+        }
+
+        // 태그 정보 조회 (테이블이 존재하는 경우)
+        try {
+          const { data: tagData } = await supabase
+            .from("business_card_tags")
+            .select(`
+              tags (
+                name
+              )
+            `)
+            .eq("business_card_id", card.id)
+
+          if (tagData) {
+            tags = tagData.map((item: any) => item.tags?.name).filter(Boolean)
+          }
+        } catch (error) {
+          console.warn("Tags table not found or accessible")
+        }
+
+        return {
+          id: card.id,
+          title: card.title,
+          description: card.description,
+          category: categoryName,
+          location: card.location,
+          phone: card.phone,
+          kakaoId: card.kakao_id,
+          lineId: card.line_id,
+          website: card.website,
+          hours: card.hours,
+          price: card.price,
+          promotion: card.promotion,
+          tags: tags,
+          image: card.image_url,
+          rating: card.rating,
+          isPromoted: card.is_promoted,
+        }
+      }),
+    )
+
+    return cardsWithDetails
   } catch (error) {
     console.error("Failed to fetch from database:", error)
     console.warn("Falling back to sample data due to network/connection error")
@@ -106,5 +150,35 @@ export async function getCategories() {
   } catch (error) {
     console.error("Failed to fetch categories:", error)
     return []
+  }
+}
+
+// 데이터베이스 상태 확인 함수
+export async function checkDatabaseStatus() {
+  if (!isSupabaseConfigured() || !supabase) {
+    return { status: "not_configured" }
+  }
+
+  try {
+    // 각 테이블 존재 여부 확인
+    const tables = ["business_cards", "categories", "tags", "business_card_tags"]
+    const tableStatus: Record<string, boolean> = {}
+
+    for (const table of tables) {
+      try {
+        const { error } = await supabase.from(table).select("*").limit(1)
+        tableStatus[table] = !error
+      } catch {
+        tableStatus[table] = false
+      }
+    }
+
+    return {
+      status: "configured",
+      tables: tableStatus,
+      allTablesExist: Object.values(tableStatus).every(Boolean),
+    }
+  } catch (error) {
+    return { status: "error", error }
   }
 }
