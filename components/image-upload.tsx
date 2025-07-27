@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -103,17 +103,11 @@ export default function ImageUpload({ currentImageUrl, onImageChange, onImageRem
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          이미지 등록
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="p-4">
         {/* 현재 이미지 표시 */}
         {currentImageUrl && (
           <div className="mb-4">
-            <Label className="text-sm font-medium">현재 이미지</Label>
+            <Label className="text-sm font-medium">현재 대표 이미지</Label>
             <div className="relative mt-2">
               <img
                 src={currentImageUrl || "/placeholder.svg"}
@@ -131,7 +125,7 @@ export default function ImageUpload({ currentImageUrl, onImageChange, onImageRem
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="url" className="flex items-center gap-2">
               <Link className="h-4 w-4" />
-              외부 링크
+              이미지 URL
             </TabsTrigger>
             <TabsTrigger value="upload" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
@@ -141,7 +135,7 @@ export default function ImageUpload({ currentImageUrl, onImageChange, onImageRem
 
           <TabsContent value="url" className="space-y-4">
             <div>
-              <Label htmlFor="image-url">이미지 URL</Label>
+              <Label htmlFor="image-url">이미지 URL 주소</Label>
               <div className="flex gap-2 mt-1">
                 <Input
                   id="image-url"
@@ -160,12 +154,14 @@ export default function ImageUpload({ currentImageUrl, onImageChange, onImageRem
 
           <TabsContent value="upload" className="space-y-4">
             <div>
-              <Label htmlFor="image-file">이미지 파일</Label>
+              <Label htmlFor="image-file">이미지 파일 선택</Label>
               <Input id="image-file" type="file" accept="image/*" onChange={handleFileSelect} className="mt-1" />
               <p className="text-xs text-gray-500 mt-1">최대 5MB, JPG, PNG, GIF, WebP 형식 지원</p>
             </div>
 
-            {uploadError && <div className="text-red-600 text-sm bg-red-50 p-2 rounded">{uploadError}</div>}
+            {uploadError && (
+              <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-200">{uploadError}</div>
+            )}
 
             {previewUrl && (
               <div className="space-y-3">
@@ -179,7 +175,7 @@ export default function ImageUpload({ currentImageUrl, onImageChange, onImageRem
                   <Button
                     variant="outline"
                     size="sm"
-                    className="absolute top-2 right-2 bg-transparent"
+                    className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm"
                     onClick={handleRemoveFile}
                   >
                     <X className="h-4 w-4" />
@@ -195,7 +191,7 @@ export default function ImageUpload({ currentImageUrl, onImageChange, onImageRem
                     ) : (
                       <>
                         <Upload className="h-4 w-4 mr-2" />
-                        업로드
+                        업로드하기
                       </>
                     )}
                   </Button>

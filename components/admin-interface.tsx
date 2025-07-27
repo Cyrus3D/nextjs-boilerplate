@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Upload, Wand2, Check, X, RefreshCw, AlertCircle, FileText, ImageIcon, Loader2, Crown } from "lucide-react"
+import { Wand2, Check, X, RefreshCw, AlertCircle, FileText, ImageIcon, Loader2, Crown, Camera } from "lucide-react"
 import {
   parseBusinessCardData,
   saveBusinessCard,
@@ -49,7 +49,8 @@ interface BusinessCard extends ParsedBusinessData {
 
 export default function AdminInterface() {
   const [inputText, setInputText] = useState("")
-  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [ocrImageFile, setOcrImageFile] = useState<File | null>(null)
+  const [inputMethod, setInputMethod] = useState<"text" | "image">("text")
   const [isProcessing, setIsProcessing] = useState(false)
   const [parsedData, setParsedData] = useState<ParsedBusinessData | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -61,32 +62,13 @@ export default function AdminInterface() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoadingCards, setIsLoadingCards] = useState(false)
 
-  const handleTextSubmit = async () => {
-    if (!inputText.trim()) {
+  const handleDataExtraction = async () => {
+    if (inputMethod === "text" && !inputText.trim()) {
       setMessage({ type: "error", text: "텍스트를 입력해주세요." })
       return
     }
 
-    setIsProcessing(true)
-    setMessage(null)
-
-    try {
-      const result = await parseBusinessCardData(inputText, "text")
-      if (result.success && result.data) {
-        setParsedData(result.data)
-        setMessage({ type: "success", text: "텍스트가 성공적으로 분석되었습니다!" })
-      } else {
-        setMessage({ type: "error", text: result.error || "분석 중 오류가 발생했습니다." })
-      }
-    } catch (error) {
-      setMessage({ type: "error", text: "API 호출 중 오류가 발생했습니다." })
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const handleImageSubmit = async () => {
-    if (!imageFile) {
+    if (inputMethod === "image" && !ocrImageFile) {
       setMessage({ type: "error", text: "이미지를 선택해주세요." })
       return
     }
@@ -95,18 +77,26 @@ export default function AdminInterface() {
     setMessage(null)
 
     try {
-      // 이미지를 base64로 변환
-      const base64 = await fileToBase64(imageFile)
-      const result = await parseBusinessCardData(base64, "image")
+      let result
+      if (inputMethod === "text") {
+        result = await parseBusinessCardData(inputText, "text")
+      } else {
+        // 이미지를 base64로 변환
+        const base64 = await fileToBase64(ocrImageFile!)
+        result = await parseBusinessCardData(base64, "image")
+      }
 
       if (result.success && result.data) {
         setParsedData(result.data)
-        setMessage({ type: "success", text: "이미지가 성공적으로 분석되었습니다!" })
+        setMessage({
+          type: "success",
+          text: `${inputMethod === "text" ? "텍스트" : "이미지"}가 성공적으로 분석되었습니다!`,
+        })
       } else {
         setMessage({ type: "error", text: result.error || "분석 중 오류가 발생했습니다." })
       }
     } catch (error) {
-      setMessage({ type: "error", text: "이미지 처리 중 오류가 발생했습니다." })
+      setMessage({ type: "error", text: "분석 중 오류가 발생했습니다." })
     } finally {
       setIsProcessing(false)
     }
@@ -132,10 +122,7 @@ export default function AdminInterface() {
       if (result.success) {
         setMessage({ type: "success", text: "비즈니스 카드가 성공적으로 저장되었습니다!" })
         // 폼 초기화
-        setInputText("")
-        setImageFile(null)
-        setParsedData(null)
-        setEditMode(false)
+        resetForm()
         // 페이지 새로고침
         setTimeout(() => {
           window.location.reload()
@@ -165,10 +152,11 @@ export default function AdminInterface() {
 
   const resetForm = () => {
     setInputText("")
-    setImageFile(null)
+    setOcrImageFile(null)
     setParsedData(null)
     setEditMode(false)
     setMessage(null)
+    setInputMethod("text")
   }
 
   const loadExistingCards = async () => {
@@ -238,7 +226,7 @@ export default function AdminInterface() {
               비즈니스 카드 관리자
             </CardTitle>
             <CardDescription>
-              자연어 텍스트나 이미지를 업로드하여 AI가 구조화된 비즈니스 정보로 변환합니다.
+              자연어 텍스트나 이미지에서 텍스트를 추출하여 AI가 구조화된 비즈니스 정보로 변환합니다.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -293,31 +281,99 @@ export default function AdminInterface() {
         )}
 
         {activeTab === "create" ? (
-          // 기존 새 카드 등록 UI (이전과 동일)
           <div className="grid gap-6 lg:grid-cols-2">
             {/* 입력 섹션 */}
             <div className="space-y-6">
-              {/* 텍스트 입력 */}
+              {/* 비즈니스 정보 추출 */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    텍스트 입력
+                    <Wand2 className="h-5 w-5" />
+                    비즈니스 정보 추출
                   </CardTitle>
+                  <CardDescription>
+                    텍스트를 직접 입력하거나 이미지에서 텍스트를 추출하여 비즈니스 정보를 분석합니다.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="text-input">비즈니스 정보 텍스트</Label>
-                    <Textarea
-                      id="text-input"
-                      placeholder="비즈니스 정보를 자연어로 입력하세요. 예: '윤키친은 공항에서 15분 거리에 있는 한식당입니다. 무한리필 숯불구이를 제공하며 전화번호는 082-048-8139입니다...'"
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      rows={8}
-                      className="resize-none"
-                    />
+                  {/* 입력 방법 선택 */}
+                  <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
+                    <button
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        inputMethod === "text"
+                          ? "bg-white text-blue-600 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                      onClick={() => setInputMethod("text")}
+                    >
+                      <FileText className="h-4 w-4" />
+                      텍스트 입력
+                    </button>
+                    <button
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        inputMethod === "image"
+                          ? "bg-white text-blue-600 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                      onClick={() => setInputMethod("image")}
+                    >
+                      <Camera className="h-4 w-4" />
+                      이미지 OCR
+                    </button>
                   </div>
-                  <Button onClick={handleTextSubmit} disabled={isProcessing || !inputText.trim()} className="w-full">
+
+                  {/* 텍스트 입력 */}
+                  {inputMethod === "text" && (
+                    <div className="space-y-3">
+                      <Label htmlFor="text-input">비즈니스 정보 텍스트</Label>
+                      <Textarea
+                        id="text-input"
+                        placeholder="비즈니스 정보를 자연어로 입력하세요. 예: '윤키친은 공항에서 15분 거리에 있는 한식당입니다. 무한리필 숯불구이를 제공하며 전화번호는 082-048-8139입니다...'"
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        rows={8}
+                        className="resize-none"
+                      />
+                      <p className="text-xs text-gray-500">
+                        비즈니스 이름, 설명, 연락처, 위치, 가격 등의 정보를 자유롭게 입력하세요.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 이미지 OCR */}
+                  {inputMethod === "image" && (
+                    <div className="space-y-3">
+                      <Label htmlFor="ocr-image-input">텍스트가 포함된 이미지</Label>
+                      <Input
+                        id="ocr-image-input"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setOcrImageFile(e.target.files?.[0] || null)}
+                      />
+                      {ocrImageFile && (
+                        <div className="mt-3">
+                          <p className="text-sm text-gray-600 mb-2">선택된 파일: {ocrImageFile.name}</p>
+                          <div className="relative">
+                            <img
+                              src={URL.createObjectURL(ocrImageFile) || "/placeholder.svg"}
+                              alt="OCR 대상 이미지"
+                              className="w-full max-h-48 object-contain rounded-lg border bg-gray-50"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        명함, 전단지, 광고 이미지 등에서 텍스트를 자동으로 추출합니다.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 분석 버튼 */}
+                  <Button
+                    onClick={handleDataExtraction}
+                    disabled={isProcessing || (inputMethod === "text" ? !inputText.trim() : !ocrImageFile)}
+                    className="w-full"
+                  >
                     {isProcessing ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -326,42 +382,7 @@ export default function AdminInterface() {
                     ) : (
                       <>
                         <Wand2 className="h-4 w-4 mr-2" />
-                        텍스트 분석하기
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* 이미지 업로드 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ImageIcon className="h-5 w-5" />
-                    이미지 업로드
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="image-input">이미지 파일</Label>
-                    <Input
-                      id="image-input"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                    />
-                    {imageFile && <p className="text-sm text-gray-600 mt-2">선택된 파일: {imageFile.name}</p>}
-                  </div>
-                  <Button onClick={handleImageSubmit} disabled={isProcessing || !imageFile} className="w-full">
-                    {isProcessing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        분석 중...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4 mr-2" />
-                        이미지 분석하기
+                        {inputMethod === "text" ? "텍스트 분석하기" : "이미지에서 텍스트 추출하기"}
                       </>
                     )}
                   </Button>
@@ -369,7 +390,7 @@ export default function AdminInterface() {
               </Card>
             </div>
 
-            {/* 결과 섹션 (이전과 동일) */}
+            {/* 결과 섹션 */}
             <div className="space-y-6">
               {parsedData && (
                 <Card>
@@ -388,7 +409,7 @@ export default function AdminInterface() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {editMode ? (
-                      // 편집 모드 (이전과 동일하지만 이미지 업로드 컴포넌트 추가)
+                      // 편집 모드
                       <div className="space-y-4">
                         <div>
                           <Label>제목</Label>
@@ -407,13 +428,22 @@ export default function AdminInterface() {
                           />
                         </div>
 
-                        <ImageUpload
-                          currentImageUrl={parsedData.image}
-                          onImageChange={(imageUrl) => handleFieldChange("image", imageUrl)}
-                          onImageRemove={() => handleFieldChange("image", undefined)}
-                        />
+                        {/* 대표 이미지 등록 */}
+                        <div>
+                          <Label className="text-base font-medium flex items-center gap-2 mb-3">
+                            <ImageIcon className="h-4 w-4" />
+                            대표 이미지
+                          </Label>
+                          <ImageUpload
+                            currentImageUrl={parsedData.image}
+                            onImageChange={(imageUrl) => handleFieldChange("image", imageUrl)}
+                            onImageRemove={() => handleFieldChange("image", undefined)}
+                          />
+                          <p className="text-xs text-gray-500 mt-2">
+                            비즈니스를 대표하는 이미지를 등록하세요. (로고, 매장 사진, 제품 이미지 등)
+                          </p>
+                        </div>
 
-                        {/* 나머지 필드들... (이전과 동일) */}
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label>카테고리</Label>
@@ -450,12 +480,22 @@ export default function AdminInterface() {
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label>웹사이트</Label>
+                            <Label>라인 ID</Label>
+                            <Input
+                              value={parsedData.lineId || ""}
+                              onChange={(e) => handleFieldChange("lineId", e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label>웹사이트/지도 링크</Label>
                             <Input
                               value={parsedData.website || ""}
                               onChange={(e) => handleFieldChange("website", e.target.value)}
                             />
                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label>영업시간</Label>
                             <Input
@@ -463,18 +503,25 @@ export default function AdminInterface() {
                               onChange={(e) => handleFieldChange("hours", e.target.value)}
                             />
                           </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label>가격</Label>
+                            <Label>가격 정보</Label>
                             <Input
                               value={parsedData.price || ""}
                               onChange={(e) => handleFieldChange("price", e.target.value)}
                             />
                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label>평점</Label>
+                            <Label>프로모션/특별혜택</Label>
+                            <Input
+                              value={parsedData.promotion || ""}
+                              onChange={(e) => handleFieldChange("promotion", e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <Label>평점 (0-5)</Label>
                             <Input
                               type="number"
                               min="0"
@@ -489,18 +536,11 @@ export default function AdminInterface() {
                         </div>
 
                         <div>
-                          <Label>프로모션</Label>
-                          <Input
-                            value={parsedData.promotion || ""}
-                            onChange={(e) => handleFieldChange("promotion", e.target.value)}
-                          />
-                        </div>
-
-                        <div>
                           <Label>태그 (쉼표로 구분)</Label>
                           <Input
                             value={parsedData.tags.join(", ")}
                             onChange={(e) => handleTagsChange(e.target.value)}
+                            placeholder="한식, 무한리필, 숯불구이, 단체예약"
                           />
                         </div>
 
@@ -511,71 +551,85 @@ export default function AdminInterface() {
                             checked={parsedData.isPromoted || false}
                             onChange={(e) => handleFieldChange("isPromoted", e.target.checked)}
                           />
-                          <Label htmlFor="promoted">추천 비즈니스</Label>
+                          <Label htmlFor="promoted">추천 비즈니스로 표시</Label>
                         </div>
                       </div>
                     ) : (
-                      // 미리보기 모드 (이전과 동일)
+                      // 미리보기 모드
                       <div className="space-y-4">
                         <div>
                           <h3 className="font-semibold text-lg">{parsedData.title}</h3>
-                          <Badge className="mt-1">{parsedData.category}</Badge>
-                          {parsedData.isPromoted && (
-                            <Badge variant="secondary" className="ml-2">
-                              추천
-                            </Badge>
-                          )}
+                          <div className="flex gap-2 mt-1">
+                            <Badge className="mt-1">{parsedData.category}</Badge>
+                            {parsedData.isPromoted && (
+                              <Badge variant="secondary" className="ml-2">
+                                추천
+                              </Badge>
+                            )}
+                          </div>
                         </div>
+
+                        {/* 대표 이미지 미리보기 */}
+                        {parsedData.image && (
+                          <div>
+                            <Label className="text-sm font-medium">대표 이미지</Label>
+                            <img
+                              src={parsedData.image || "/placeholder.svg"}
+                              alt="대표 이미지"
+                              className="w-full max-h-48 object-cover rounded-lg border mt-2"
+                            />
+                          </div>
+                        )}
 
                         <p className="text-gray-700">{parsedData.description}</p>
 
-                        {parsedData.location && (
-                          <p>
-                            <strong>위치:</strong> {parsedData.location}
-                          </p>
-                        )}
-
-                        {parsedData.phone && (
-                          <p>
-                            <strong>전화:</strong> {parsedData.phone}
-                          </p>
-                        )}
-
-                        {parsedData.kakaoId && (
-                          <p>
-                            <strong>카카오톡:</strong> {parsedData.kakaoId}
-                          </p>
-                        )}
-
-                        {parsedData.website && (
-                          <p>
-                            <strong>웹사이트:</strong> {parsedData.website}
-                          </p>
-                        )}
-
-                        {parsedData.hours && (
-                          <p>
-                            <strong>영업시간:</strong> {parsedData.hours}
-                          </p>
-                        )}
-
-                        {parsedData.price && (
-                          <p>
-                            <strong>가격:</strong> {parsedData.price}
-                          </p>
-                        )}
-
-                        {parsedData.promotion && (
-                          <p>
-                            <strong>프로모션:</strong> {parsedData.promotion}
-                          </p>
-                        )}
-
-                        {parsedData.rating && (
-                          <p>
-                            <strong>평점:</strong> {parsedData.rating}/5
-                          </p>
-                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          {parsedData.location && (
+                            <p>
+                              <strong>위치:</strong> {parsedData.location}
+                            </p>
+                          )}
+                          {parsedData.phone && (
+                            <p>
+                              <strong>전화:</strong> {parsedData.phone}
+                            </p>
+                          )}
+                          {parsedData.kakaoId && (
+                            <p>
+                              <strong>카카오톡:</strong> {parsedData.kakaoId}
+                            </p>
+                          )}
+                          {parsedData.lineId && (
+                            <p>
+                              <strong>라인:</strong> {parsedData.lineId}
+                            </p>
+                          )}
+                          {parsedData.website && (
+                            <p>
+                              <strong>웹사이트:</strong> {parsedData.website}
+                            </p>
+                          )}
+                          {parsedData.hours && (
+                            <p>
+                              <strong>영업시간:</strong> {parsedData.hours}
+                            </p>
+                          )}
+                          {parsedData.price && (
+                            <p>
+                              <strong>가격:</strong> {parsedData.price}
+                            </p>
+                          )}
+                          {parsedData.promotion && (
+                            <p>
+                              <strong>프로모션:</strong> {parsedData.promotion}
+                            </p>
+                          )}
+                          {parsedData.rating && (
+                            <p>
+                              <strong>평점:</strong> {parsedData.rating}/5
+                            </p>
+                          )}
+                        </div>
 
                         {parsedData.tags.length > 0 && (
                           <div>
@@ -679,6 +733,13 @@ export default function AdminInterface() {
                         </div>
                       </CardHeader>
                       <CardContent>
+                        {card.image && (
+                          <img
+                            src={card.image || "/placeholder.svg"}
+                            alt={card.title}
+                            className="w-full h-32 object-cover rounded-lg mb-3"
+                          />
+                        )}
                         <p className="text-sm text-gray-600 line-clamp-3 mb-3">{card.description}</p>
                         {card.location && <p className="text-xs text-gray-500 mb-1">📍 {card.location}</p>}
                         {card.phone && <p className="text-xs text-gray-500 mb-1">📞 {card.phone}</p>}
@@ -717,7 +778,6 @@ export default function AdminInterface() {
               </div>
             </CardHeader>
             <CardContent>
-              {/* 편집 폼 - parsedData와 동일한 구조 사용 */}
               <div className="space-y-4">
                 <div>
                   <Label>제목</Label>
@@ -736,91 +796,111 @@ export default function AdminInterface() {
                   />
                 </div>
 
-                <ImageUpload
-                  currentImageUrl={selectedCardForEdit.image}
-                  onImageChange={(imageUrl) => setSelectedCardForEdit({ ...selectedCardForEdit, image: imageUrl })}
-                  onImageRemove={() => setSelectedCardForEdit({ ...selectedCardForEdit, image: undefined })}
-                />
-
+                {/* 대표 이미지 편집 */}
                 <div>
-                  <Label>카테고리</Label>
-                  <Input
-                    value={selectedCardForEdit.category}
-                    onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, category: e.target.value })}
+                  <Label className="text-base font-medium flex items-center gap-2 mb-3">
+                    <ImageIcon className="h-4 w-4" />
+                    대표 이미지
+                  </Label>
+                  <ImageUpload
+                    currentImageUrl={selectedCardForEdit.image}
+                    onImageChange={(imageUrl) => setSelectedCardForEdit({ ...selectedCardForEdit, image: imageUrl })}
+                    onImageRemove={() => setSelectedCardForEdit({ ...selectedCardForEdit, image: undefined })}
                   />
                 </div>
 
-                <div>
-                  <Label>위치</Label>
-                  <Input
-                    value={selectedCardForEdit.location || ""}
-                    onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, location: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>카테고리</Label>
+                    <Input
+                      value={selectedCardForEdit.category}
+                      onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, category: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>위치</Label>
+                    <Input
+                      value={selectedCardForEdit.location || ""}
+                      onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, location: e.target.value })}
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <Label>전화번호</Label>
-                  <Input
-                    value={selectedCardForEdit.phone || ""}
-                    onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, phone: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>전화번호</Label>
+                    <Input
+                      value={selectedCardForEdit.phone || ""}
+                      onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, phone: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>카카오톡 ID</Label>
+                    <Input
+                      value={selectedCardForEdit.kakaoId || ""}
+                      onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, kakaoId: e.target.value })}
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <Label>카카오톡 ID</Label>
-                  <Input
-                    value={selectedCardForEdit.kakaoId || ""}
-                    onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, kakaoId: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>라인 ID</Label>
+                    <Input
+                      value={selectedCardForEdit.lineId || ""}
+                      onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, lineId: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>웹사이트/지도 링크</Label>
+                    <Input
+                      value={selectedCardForEdit.website || ""}
+                      onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, website: e.target.value })}
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <Label>웹사이트</Label>
-                  <Input
-                    value={selectedCardForEdit.website || ""}
-                    onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, website: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>영업시간</Label>
+                    <Input
+                      value={selectedCardForEdit.hours || ""}
+                      onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, hours: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>가격 정보</Label>
+                    <Input
+                      value={selectedCardForEdit.price || ""}
+                      onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, price: e.target.value })}
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <Label>영업시간</Label>
-                  <Input
-                    value={selectedCardForEdit.hours || ""}
-                    onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, hours: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>가격</Label>
-                  <Input
-                    value={selectedCardForEdit.price || ""}
-                    onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, price: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label>평점</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="5"
-                    step="0.1"
-                    value={selectedCardForEdit.rating || ""}
-                    onChange={(e) =>
-                      setSelectedCardForEdit({
-                        ...selectedCardForEdit,
-                        rating: Number.parseFloat(e.target.value) || undefined,
-                      })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <Label>프로모션</Label>
-                  <Input
-                    value={selectedCardForEdit.promotion || ""}
-                    onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, promotion: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>프로모션/특별혜택</Label>
+                    <Input
+                      value={selectedCardForEdit.promotion || ""}
+                      onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, promotion: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>평점 (0-5)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="5"
+                      step="0.1"
+                      value={selectedCardForEdit.rating || ""}
+                      onChange={(e) =>
+                        setSelectedCardForEdit({
+                          ...selectedCardForEdit,
+                          rating: Number.parseFloat(e.target.value) || undefined,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -840,11 +920,11 @@ export default function AdminInterface() {
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    id="promoted"
+                    id="promoted-edit"
                     checked={selectedCardForEdit.isPromoted || false}
                     onChange={(e) => setSelectedCardForEdit({ ...selectedCardForEdit, isPromoted: e.target.checked })}
                   />
-                  <Label htmlFor="promoted">추천 비즈니스</Label>
+                  <Label htmlFor="promoted-edit">추천 비즈니스로 표시</Label>
                 </div>
 
                 <div className="flex gap-3 pt-4">
