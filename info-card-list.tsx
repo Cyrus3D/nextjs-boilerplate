@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import GoogleAds from "./components/google-ads"
 import BusinessCardComponent from "./components/business-card"
 import BusinessDetailModal from "./components/business-detail-modal"
 import NativeAdCard from "./components/native-ad-card"
@@ -9,7 +8,6 @@ import InFeedAd from "./components/in-feed-ad"
 import { getBusinessCards, incrementViewCount, checkDatabaseStatus } from "./lib/api"
 import { isSupabaseConfigured } from "./lib/supabase"
 import type { BusinessCard } from "./types/business-card"
-import AdsenseBanner from "./components/adsense-banner"
 import React from "react"
 
 export default function InfoCardList() {
@@ -87,7 +85,7 @@ export default function InfoCardList() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">태국 한인 비즈니스 정보</h1>
             <p className="text-gray-600">태국 거주 한인들을 위한 다양한 비즈니스 정보를 확인해보세요</p>
 
-            {/* 데이터베이스 상태 표시 */}
+            {/* 데이터베이스 상태 표시 (개발 환경에서만) */}
             {process.env.NODE_ENV === "development" && (
               <div className="mt-2 space-y-2">
                 <div
@@ -121,16 +119,6 @@ export default function InfoCardList() {
               </div>
             )}
           </div>
-
-          {/* 상단 배너 광고 */}
-          <GoogleAds
-            adSlot={process.env.NEXT_PUBLIC_ADSENSE_BANNER_SLOT || "1234567890"}
-            style={{
-              display: "block",
-              width: "100%",
-              height: "90px",
-            }}
-          />
         </div>
       </div>
 
@@ -155,27 +143,16 @@ export default function InfoCardList() {
                   />
                 )}
 
-                {/* 6번째 카드 후에 배너 광고 삽입 */}
-                {index === 5 && (
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <AdsenseBanner
-                      slot={process.env.NEXT_PUBLIC_ADSENSE_BANNER_SLOT}
-                      format="horizontal"
-                      className="my-4"
-                    />
-                  </div>
-                )}
-
-                {/* 9번째 카드 후에 인피드 광고 삽입 */}
-                {index === 8 && (
+                {/* 7번째 카드 후에 인피드 광고 삽입 (기존 6번째에서 조정) */}
+                {index === 6 && (
                   <InFeedAd
                     adSlot={process.env.NEXT_PUBLIC_ADSENSE_INFEED_SLOT || "3456789012"}
                     className="md:col-span-1"
                   />
                 )}
 
-                {/* 15번째 카드 후에 또 다른 네이티브 광고 */}
-                {index === 14 && (
+                {/* 12번째 카드 후에 또 다른 네이티브 광고 (기존 15번째에서 조정) */}
+                {index === 11 && (
                   <NativeAdCard
                     adSlot={process.env.NEXT_PUBLIC_ADSENSE_NATIVE_SLOT_2 || "4567890123"}
                     style="card"
