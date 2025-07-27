@@ -1,430 +1,410 @@
 "use server"
 
-import { generateObject } from "ai"
+import { supabase } from "./supabase"
+import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
-import { z } from "zod"
-import { supabase, isSupabaseConfigured } from "./supabase"
+import { revalidatePath } from "next/cache"
 
-// 비즈니스 카드 데이터 스키마
-const BusinessCardSchema = z.object({
-  title: z.string().describe("비즈니스 이름 또는 제목"),
-  description: z.string().describe("비즈니스에 대한 상세 설명"),
-  category: z
-    .string()
-    .describe(
-      "비즈니스 카테고리 (음식점, 배송서비스, 여행서비스, 식품, 이벤트서비스, 방송서비스, 전자제품, 유흥업소, 교통서비스, 서비스 중 하나)",
-    ),
-  location: z.string().optional().describe("위치 정보"),
-  phone: z.string().optional().describe("전화번호"),
-  kakaoId: z.string().optional().describe("카카오톡 ID"),
-  lineId: z.string().optional().describe("라인 ID"),
-  website: z.string().optional().describe("웹사이트 URL 또는 지도 링크"),
-  hours: z.string().optional().describe("영업시간"),
-  price: z.string().optional().describe("가격 정보"),
-  promotion: z.string().optional().describe("프로모션 또는 특별 혜택"),
-  tags: z.array(z.string()).describe("관련 태그들"),
-  rating: z.number().min(0).max(5).optional().describe("평점 (0-5)"),
-  isPromoted: z.boolean().optional().describe("추천 비즈니스 여부"),
-  image: z.string().optional().describe("이미지 URL"),
-})
+export interface BusinessCardData {
+  title: string
+  description: string
+  category_id: number
+  location?: string | null
+  phone?: string | null
+  kakao_id?: string | null
+  line_id?: string | null
+  website?: string | null
+  map_url?: string | null
+  hours?: string | null
+  price?: string | null
+  promotion?: string | null
+  image_url?: string | null
+  rating?: number | null
+  is_promoted?: boolean
+  is_active?: boolean
+  is_premium?: boolean
+  premium_expires_at?: string | null
+  exposure_boost?: number
+  exposure_expires_at?: string | null
+  view_count?: number
+}
 
-export async function parseBusinessCardData(input: string, type: "text" | "image") {
+export interface AIStatusResult {
+  isActive: boolean
+  hasOpenAIKey: boolean
+  canGenerateText: boolean
+  lastChecked: string
+  error?: string
+}
+
+// AI 상태 확인 함수
+export async function checkAIStatus(): Promise<AIStatusResult> {
+  const lastChecked = new Date().toISOString()
+
   try {
-    let prompt = ""
+    // 1. OpenAI API 키 확인
+    const hasOpenAIKey = !!process.env.OPENAI_API_KEY
 
-    if (type === "text") {
-      prompt = `다음 텍스트에서 비즈니스 정보를 추출하여 구조화된 데이터로 변환해주세요:
-
-${input}
-
-다음 규칙을 따라주세요:
-1. 카테고리는 반드시 다음 중 하나여야 합니다: 음식점, 배송서비스, 여행서비스, 식품, 이벤트서비스, 방송서비스, 전자제품, 유흥업소, 교통서비스, 서비스
-2. 전화번호는 정확한 형식으로 추출해주세요
-3. 웹사이트나 지도 링크가 있으면 정확히 추출해주세요
-4. 태그는 비즈니스의 특성을 잘 나타내는 키워드들로 생성해주세요
-5. 프로모션 정보가 있으면 간결하게 요약해주세요
-6. 평점 정보가 명시되어 있으면 추출하고, 없으면 null로 설정해주세요`
-    } else {
-      prompt = `이미지에서 비즈니스 정보를 추출하여 구조화된 데이터로 변환해주세요.
-
-이미지 데이터: ${input}
-
-다음 규칙을 따라주세요:
-1. 이미지에서 텍스트를 읽어 비즈니스 정보를 추출해주세요
-2. 카테고리는 반드시 다음 중 하나여야 합니다: 음식점, 배송서비스, 여행서비스, 식품, 이벤트서비스, 방송서비스, 전자제품, 유흥업소, 교통서비스, 서비스
-3. 연락처 정보를 정확히 추출해주세요
-4. 태그는 이미지에서 파악할 수 있는 비즈니스 특성으로 생성해주세요`
+    if (!hasOpenAIKey) {
+      return {
+        isActive: false,
+        hasOpenAIKey: false,
+        canGenerateText: false,
+        lastChecked,
+        error: "OpenAI API 키가 설정되지 않았습니다.",
+      }
     }
 
-    const { object } = await generateObject({
+    // 2. 실제 AI 호출 테스트
+    const { text } = await generateText({
       model: openai("gpt-4o"),
-      schema: BusinessCardSchema,
-      prompt: prompt,
+      prompt: "Hello, respond with 'AI is working'",
+      temperature: 0,
     })
 
+    const canGenerateText = text.toLowerCase().includes("working")
+
     return {
-      success: true,
-      data: object,
+      isActive: canGenerateText,
+      hasOpenAIKey: true,
+      canGenerateText,
+      lastChecked,
+      error: canGenerateText ? undefined : "AI 텍스트 생성 테스트 실패",
     }
   } catch (error) {
-    console.error("Error parsing business card data:", error)
     return {
-      success: false,
-      error: "AI 분석 중 오류가 발생했습니다. API 키를 확인해주세요.",
+      isActive: false,
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      canGenerateText: false,
+      lastChecked,
+      error: `AI 상태 확인 중 오류: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
     }
   }
 }
 
-export async function saveBusinessCard(data: any) {
-  if (!isSupabaseConfigured() || !supabase) {
-    return {
-      success: false,
-      error: "데이터베이스가 설정되지 않았습니다.",
-    }
+// AI를 사용한 비즈니스 카드 데이터 파싱
+export async function parseBusinessCardData(text: string): Promise<Partial<BusinessCardData>> {
+  if (!text.trim()) {
+    throw new Error("분석할 텍스트가 없습니다.")
   }
 
   try {
-    // 1. 카테고리 ID 찾기 또는 생성
-    let categoryId = 10 // 기본값: 서비스
+    const { text: result } = await generateText({
+      model: openai("gpt-4o"),
+      prompt: `다음 텍스트에서 비즈니스 정보를 추출하여 JSON 형태로 반환해주세요. 
+      정보가 없는 필드는 null로 설정하세요.
 
-    const { data: categories, error: categoryError } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("name", data.category)
-      .single()
+      텍스트: "${text}"
 
-    if (categoryError && categoryError.code !== "PGRST116") {
-      console.error("Category query error:", categoryError)
-    } else if (categories) {
-      categoryId = categories.id
+      다음 형식으로 반환해주세요:
+      {
+        "title": "비즈니스 이름",
+        "description": "상세 설명",
+        "location": "위치/주소",
+        "phone": "전화번호",
+        "kakao_id": "카카오톡 ID",
+        "line_id": "라인 ID", 
+        "website": "웹사이트 URL",
+        "map_url": "지도 URL",
+        "hours": "운영시간",
+        "price": "가격 정보",
+        "promotion": "프로모션/할인 정보",
+        "rating": 평점(숫자)
+      }
+
+      JSON만 반환하고 다른 텍스트는 포함하지 마세요.`,
+      temperature: 0.3,
+    })
+
+    // JSON 파싱 시도
+    const cleanedResult = result.replace(/```json\n?|\n?```/g, "").trim()
+    const parsedData = JSON.parse(cleanedResult)
+
+    // 기본값 설정
+    const businessData: Partial<BusinessCardData> = {
+      title: parsedData.title || "제목 없음",
+      description: parsedData.description || "설명 없음",
+      location: parsedData.location || null,
+      phone: parsedData.phone || null,
+      kakao_id: parsedData.kakao_id || null,
+      line_id: parsedData.line_id || null,
+      website: parsedData.website || null,
+      map_url: parsedData.map_url || null,
+      hours: parsedData.hours || null,
+      price: parsedData.price || null,
+      promotion: parsedData.promotion || null,
+      rating: parsedData.rating ? Number(parsedData.rating) : null,
+      is_active: true,
+      is_promoted: false,
+      is_premium: false,
+      exposure_boost: 0,
     }
 
-    // 2. 비즈니스 카드 저장
-    const { data: savedCard, error: cardError } = await supabase
+    return businessData
+  } catch (error) {
+    console.error("AI 파싱 오류:", error)
+    throw new Error(`AI 분석 중 오류가 발생했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`)
+  }
+}
+
+// 비즈니스 카드 생성
+export async function createBusinessCard(data: BusinessCardData) {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
+  }
+
+  try {
+    const { data: result, error } = await supabase
       .from("business_cards")
-      .insert({
-        title: data.title,
-        description: data.description,
-        category_id: categoryId,
-        location: data.location,
-        phone: data.phone,
-        kakao_id: data.kakaoId,
-        line_id: data.lineId,
-        website: data.website,
-        hours: data.hours,
-        price: data.price,
-        promotion: data.promotion,
-        rating: data.rating,
-        is_promoted: data.isPromoted || false,
-        image_url: data.image || "/placeholder.svg?height=200&width=400",
-      })
+      .insert([
+        {
+          ...data,
+          view_count: 0,
+          exposure_count: 0,
+          exposure_weight: 1.0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ])
       .select()
       .single()
 
-    if (cardError) {
-      console.error("Card insert error:", cardError)
-      return {
-        success: false,
-        error: "비즈니스 카드 저장 중 오류가 발생했습니다.",
-      }
+    if (error) {
+      throw new Error(`카드 생성 실패: ${error.message}`)
     }
 
-    // 3. 태그 처리
-    if (data.tags && data.tags.length > 0) {
-      for (const tagName of data.tags) {
-        // 태그 찾기 또는 생성
-        let { data: tag, error: tagError } = await supabase.from("tags").select("id").eq("name", tagName).single()
+    revalidatePath("/dashboard-mgmt-2024")
+    revalidatePath("/")
 
-        if (tagError && tagError.code === "PGRST116") {
-          // 태그가 없으면 생성
-          const { data: newTag, error: createTagError } = await supabase
-            .from("tags")
-            .insert({ name: tagName })
-            .select()
-            .single()
-
-          if (createTagError) {
-            console.error("Tag creation error:", createTagError)
-            continue
-          }
-          tag = newTag
-        }
-
-        if (tag) {
-          // 비즈니스 카드와 태그 연결
-          await supabase.from("business_card_tags").insert({
-            business_card_id: savedCard.id,
-            tag_id: tag.id,
-          })
-        }
-      }
-    }
-
-    return {
-      success: true,
-      data: savedCard,
-    }
+    return result
   } catch (error) {
-    console.error("Error saving business card:", error)
-    return {
-      success: false,
-      error: "저장 중 오류가 발생했습니다.",
-    }
+    console.error("카드 생성 오류:", error)
+    throw error
   }
 }
 
-export async function updateBusinessCard(card: any) {
-  if (!isSupabaseConfigured() || !supabase) {
-    return {
-      success: false,
-      error: "데이터베이스가 설정되지 않았습니다.",
-    }
+// 비즈니스 카드 업데이트
+export async function updateBusinessCard(id: number, data: Partial<BusinessCardData>) {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
   }
 
   try {
-    // 1. 카테고리 ID 찾기
-    let categoryId = 10 // 기본값: 서비스
-
-    const { data: categories, error: categoryError } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("name", card.category)
+    const { data: result, error } = await supabase
+      .from("business_cards")
+      .update({ ...data, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
       .single()
 
-    if (categories) {
-      categoryId = categories.id
+    if (error) {
+      throw new Error(`카드 업데이트 실패: ${error.message}`)
     }
 
-    // 2. 비즈니스 카드 업데이트
-    const { error: cardError } = await supabase
-      .from("business_cards")
-      .update({
-        title: card.title,
-        description: card.description,
-        category_id: categoryId,
-        location: card.location,
-        phone: card.phone,
-        kakao_id: card.kakaoId,
-        line_id: card.lineId,
-        website: card.website,
-        hours: card.hours,
-        price: card.price,
-        promotion: card.promotion,
-        rating: card.rating,
-        is_promoted: card.isPromoted || false,
-        image_url: card.image || "/placeholder.svg?height=200&width=400",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", card.id)
+    revalidatePath("/dashboard-mgmt-2024")
+    revalidatePath("/")
 
-    if (cardError) {
-      console.error("Card update error:", cardError)
-      return {
-        success: false,
-        error: "비즈니스 카드 업데이트 중 오류가 발생했습니다.",
-      }
-    }
-
-    // 3. 기존 태그 연결 삭제
-    await supabase.from("business_card_tags").delete().eq("business_card_id", card.id)
-
-    // 4. 새 태그 처리
-    if (card.tags && card.tags.length > 0) {
-      for (const tagName of card.tags) {
-        // 태그 찾기 또는 생성
-        let { data: tag, error: tagError } = await supabase.from("tags").select("id").eq("name", tagName).single()
-
-        if (tagError && tagError.code === "PGRST116") {
-          // 태그가 없으면 생성
-          const { data: newTag, error: createTagError } = await supabase
-            .from("tags")
-            .insert({ name: tagName })
-            .select()
-            .single()
-
-          if (createTagError) {
-            console.error("Tag creation error:", createTagError)
-            continue
-          }
-          tag = newTag
-        }
-
-        if (tag) {
-          // 비즈니스 카드와 태그 연결
-          await supabase.from("business_card_tags").insert({
-            business_card_id: card.id,
-            tag_id: tag.id,
-          })
-        }
-      }
-    }
-
-    return {
-      success: true,
-    }
+    return result
   } catch (error) {
-    console.error("Error updating business card:", error)
-    return {
-      success: false,
-      error: "업데이트 중 오류가 발생했습니다.",
-    }
+    console.error("카드 업데이트 오류:", error)
+    throw error
   }
 }
 
-export async function deleteBusinessCard(cardId: number) {
-  if (!isSupabaseConfigured() || !supabase) {
-    return {
-      success: false,
-      error: "데이터베이스가 설정되지 않았습니다.",
-    }
+// 비즈니스 카드 삭제
+export async function deleteBusinessCard(id: number) {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
   }
 
   try {
-    // 1. 태그 연결 삭제 (CASCADE로 자동 삭제되지만 명시적으로)
-    await supabase.from("business_card_tags").delete().eq("business_card_id", cardId)
+    const { error } = await supabase.from("business_cards").delete().eq("id", id)
 
-    // 2. 비즈니스 카드 삭제
-    const { error: cardError } = await supabase.from("business_cards").delete().eq("id", cardId)
-
-    if (cardError) {
-      console.error("Card delete error:", cardError)
-      return {
-        success: false,
-        error: "비즈니스 카드 삭제 중 오류가 발생했습니다.",
-      }
+    if (error) {
+      throw new Error(`카드 삭제 실패: ${error.message}`)
     }
 
-    return {
-      success: true,
-    }
+    revalidatePath("/dashboard-mgmt-2024")
+    revalidatePath("/")
+
+    return { success: true }
   } catch (error) {
-    console.error("Error deleting business card:", error)
-    return {
-      success: false,
-      error: "삭제 중 오류가 발생했습니다.",
-    }
+    console.error("카드 삭제 오류:", error)
+    throw error
   }
 }
 
-// 여러 카드 일괄 삭제 함수 추가
-export async function deleteMultipleBusinessCards(cardIds: number[]) {
-  if (!isSupabaseConfigured() || !supabase) {
-    return {
-      success: false,
-      error: "데이터베이스가 설정되지 않았습니다.",
-    }
+// 다중 비즈니스 카드 삭제
+export async function deleteMultipleBusinessCards(ids: number[]) {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
+  }
+
+  if (!ids.length) {
+    throw new Error("삭제할 카드가 선택되지 않았습니다.")
   }
 
   try {
-    // 1. 태그 연결 삭제
-    const { error: tagError } = await supabase.from("business_card_tags").delete().in("business_card_id", cardIds)
+    const { error } = await supabase.from("business_cards").delete().in("id", ids)
 
-    if (tagError) {
-      console.error("Tag deletion error:", tagError)
+    if (error) {
+      throw new Error(`카드 삭제 실패: ${error.message}`)
     }
 
-    // 2. 비즈니스 카드들 일괄 삭제
-    const { error: cardError } = await supabase.from("business_cards").delete().in("id", cardIds)
+    revalidatePath("/dashboard-mgmt-2024")
+    revalidatePath("/")
 
-    if (cardError) {
-      console.error("Cards delete error:", cardError)
-      return {
-        success: false,
-        error: "비즈니스 카드 일괄 삭제 중 오류가 발생했습니다.",
-      }
-    }
-
-    return {
-      success: true,
-      deletedCount: cardIds.length,
-    }
+    return { success: true, deletedCount: ids.length }
   } catch (error) {
-    console.error("Error deleting multiple business cards:", error)
-    return {
-      success: false,
-      error: "일괄 삭제 중 오류가 발생했습니다.",
-    }
+    console.error("다중 카드 삭제 오류:", error)
+    throw error
   }
 }
 
-export async function getBusinessCards() {
-  if (!isSupabaseConfigured() || !supabase) {
-    return []
+// 카테고리 목록 가져오기
+export async function getCategories() {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
   }
 
   try {
-    // 비즈니스 카드 조회 (카테고리 정보 포함)
-    const { data: cards, error: cardsError } = await supabase
+    const { data, error } = await supabase.from("categories").select("*").order("name")
+
+    if (error) {
+      throw new Error(`카테고리 조회 실패: ${error.message}`)
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("카테고리 조회 오류:", error)
+    throw error
+  }
+}
+
+// 태그 목록 가져오기
+export async function getTags() {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
+  }
+
+  try {
+    const { data, error } = await supabase.from("tags").select("*").order("name")
+
+    if (error) {
+      throw new Error(`태그 조회 실패: ${error.message}`)
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("태그 조회 오류:", error)
+    throw error
+  }
+}
+
+// 비즈니스 카드 목록 가져오기 (관리자용)
+export async function getBusinessCardsForAdmin() {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
+  }
+
+  try {
+    const { data, error } = await supabase
       .from("business_cards")
       .select(`
         *,
         categories (
-          name
+          id,
+          name,
+          color_class
         )
       `)
-      .eq("is_active", true)
       .order("created_at", { ascending: false })
 
-    if (cardsError) {
-      console.error("Cards query error:", cardsError)
-      return []
+    if (error) {
+      throw new Error(`카드 목록 조회 실패: ${error.message}`)
     }
 
-    if (!cards || cards.length === 0) {
-      return []
-    }
-
-    // 각 카드의 태그 정보 조회
-    const cardsWithTags = await Promise.all(
-      cards.map(async (card) => {
-        let tags: string[] = []
-
-        try {
-          const { data: tagData } = await supabase
-            .from("business_card_tags")
-            .select(`
-              tags (
-                name
-              )
-            `)
-            .eq("business_card_id", card.id)
-
-          if (tagData) {
-            tags = tagData.map((item: any) => item.tags?.name).filter(Boolean)
-          }
-        } catch (error) {
-          console.warn("Tags query failed for card", card.id)
-        }
-
-        return {
-          id: card.id,
-          title: card.title,
-          description: card.description,
-          category: card.categories?.name || "기타",
-          location: card.location,
-          phone: card.phone,
-          kakaoId: card.kakao_id,
-          lineId: card.line_id,
-          website: card.website,
-          hours: card.hours,
-          price: card.price,
-          promotion: card.promotion,
-          tags: tags,
-          rating: card.rating,
-          isPromoted: card.is_promoted,
-          image: card.image_url,
-          isPremium: card.is_premium,
-          premiumExpiresAt: card.premium_expires_at,
-          exposureCount: card.exposure_count,
-          lastExposedAt: card.last_exposed_at,
-          exposureWeight: card.exposure_weight,
-        }
-      }),
-    )
-
-    return cardsWithTags
+    return data || []
   } catch (error) {
-    console.error("Error fetching business cards:", error)
-    return []
+    console.error("카드 목록 조회 오류:", error)
+    throw error
+  }
+}
+
+// 프리미엄 설정 업데이트
+export async function updatePremiumStatus(id: number, isPremium: boolean, expiresAt?: string) {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
+  }
+
+  try {
+    const updateData: any = {
+      is_premium: isPremium,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (isPremium && expiresAt) {
+      updateData.premium_expires_at = expiresAt
+    } else if (!isPremium) {
+      updateData.premium_expires_at = null
+    }
+
+    const { data: result, error } = await supabase
+      .from("business_cards")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(`프리미엄 상태 업데이트 실패: ${error.message}`)
+    }
+
+    revalidatePath("/dashboard-mgmt-2024")
+    revalidatePath("/")
+
+    return result
+  } catch (error) {
+    console.error("프리미엄 상태 업데이트 오류:", error)
+    throw error
+  }
+}
+
+// 노출 부스트 설정
+export async function updateExposureBoost(id: number, boostLevel: number, expiresAt?: string) {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
+  }
+
+  try {
+    const updateData: any = {
+      exposure_boost: boostLevel,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (boostLevel > 0 && expiresAt) {
+      updateData.exposure_expires_at = expiresAt
+    } else if (boostLevel === 0) {
+      updateData.exposure_expires_at = null
+    }
+
+    const { data: result, error } = await supabase
+      .from("business_cards")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (error) {
+      throw new Error(`노출 부스트 업데이트 실패: ${error.message}`)
+    }
+
+    revalidatePath("/dashboard-mgmt-2024")
+    revalidatePath("/")
+
+    return result
+  } catch (error) {
+    console.error("노출 부스트 업데이트 오류:", error)
+    throw error
   }
 }
