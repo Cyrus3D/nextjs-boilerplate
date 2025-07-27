@@ -3,8 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Phone, Clock, Star, MessageCircle, Globe, Zap, Map } from "lucide-react"
+import { MapPin, Phone, Clock, Star, MessageCircle, Globe, Zap, Map, Search } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
+import { isValidLocation } from "../lib/utils"
 
 interface BusinessCardProps {
   card: BusinessCard
@@ -118,10 +119,18 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
                 <span className="text-xs">카톡</span>
               </div>
             )}
+            {/* 직접 지도 링크가 있는 경우 */}
             {card.mapUrl && (
               <div className="flex items-center space-x-1">
                 <Map className="h-4 w-4" />
                 <span className="text-xs">지도</span>
+              </div>
+            )}
+            {/* 위치 정보로 검색 가능한 경우 */}
+            {!card.mapUrl && isValidLocation(card.location) && (
+              <div className="flex items-center space-x-1">
+                <Search className="h-4 w-4" />
+                <span className="text-xs">검색</span>
               </div>
             )}
             {card.website && (

@@ -4,8 +4,22 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { MapPin, Phone, Clock, Star, MessageCircle, Globe, Zap, ExternalLink, Copy, Share2, Map } from "lucide-react"
+import {
+  MapPin,
+  Phone,
+  Clock,
+  Star,
+  MessageCircle,
+  Globe,
+  Zap,
+  ExternalLink,
+  Copy,
+  Share2,
+  Map,
+  Search,
+} from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
+import { generateGoogleMapsSearchUrl, isValidLocation, cleanLocationForSearch } from "../lib/utils"
 
 interface BusinessDetailModalProps {
   card: BusinessCard | null
@@ -45,6 +59,15 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
         text: card.description,
         url: window.location.href,
       })
+    }
+  }
+
+  // 지도 검색 링크 생성
+  const handleMapSearch = () => {
+    if (card.location) {
+      const cleanedLocation = cleanLocationForSearch(card.location)
+      const mapUrl = generateGoogleMapsSearchUrl(cleanedLocation, card.title)
+      window.open(mapUrl, "_blank")
     }
   }
 
@@ -124,17 +147,27 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                 <MapPin className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-gray-900">{card.location}</p>
-                  {card.mapUrl && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="p-0 h-auto text-blue-600"
-                      onClick={() => window.open(card.mapUrl, "_blank")}
-                    >
-                      <Map className="h-3 w-3 mr-1" />
-                      지도에서 보기 <ExternalLink className="h-3 w-3 ml-1" />
-                    </Button>
-                  )}
+                  <div className="flex gap-2 mt-2">
+                    {/* 직접 지도 링크가 있는 경우 */}
+                    {card.mapUrl && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="p-0 h-auto text-blue-600"
+                        onClick={() => window.open(card.mapUrl, "_blank")}
+                      >
+                        <Map className="h-3 w-3 mr-1" />
+                        정확한 위치 보기 <ExternalLink className="h-3 w-3 ml-1" />
+                      </Button>
+                    )}
+                    {/* 위치 정보로 구글 맵 검색 */}
+                    {isValidLocation(card.location) && (
+                      <Button variant="link" size="sm" className="p-0 h-auto text-green-600" onClick={handleMapSearch}>
+                        <Search className="h-3 w-3 mr-1" />
+                        지도에서 검색 <ExternalLink className="h-3 w-3 ml-1" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
