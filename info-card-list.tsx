@@ -1,21 +1,26 @@
 "use client"
+
+import { useState } from "react"
 import GoogleAds from "./components/google-ads"
 import BusinessCardComponent from "./components/business-card"
+import BusinessDetailModal from "./components/business-detail-modal"
 import { sampleBusinessCards } from "./data/sample-cards"
-
-const getCategoryColor = (category: string) => {
-  const colors = {
-    개발: "bg-blue-100 text-blue-800",
-    운동: "bg-green-100 text-green-800",
-    문화: "bg-purple-100 text-purple-800",
-    취미: "bg-orange-100 text-orange-800",
-    예술: "bg-pink-100 text-pink-800",
-    교육: "bg-indigo-100 text-indigo-800",
-  }
-  return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
-}
+import type { BusinessCard } from "./types/business-card"
 
 export default function InfoCardList() {
+  const [selectedCard, setSelectedCard] = useState<BusinessCard | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const handleDetailClick = (card: BusinessCard) => {
+    setSelectedCard(card)
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedCard(null)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 고정 헤더 영역 */}
@@ -42,10 +47,13 @@ export default function InfoCardList() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {sampleBusinessCards.map((card) => (
-            <BusinessCardComponent key={card.id} card={card} />
+            <BusinessCardComponent key={card.id} card={card} onDetailClick={handleDetailClick} />
           ))}
         </div>
       </div>
+
+      {/* 상세 정보 모달 */}
+      <BusinessDetailModal card={selectedCard} isOpen={isModalOpen} onClose={handleCloseModal} />
     </div>
   )
 }

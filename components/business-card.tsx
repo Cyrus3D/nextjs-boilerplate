@@ -8,6 +8,7 @@ import type { BusinessCard } from "../types/business-card"
 
 interface BusinessCardProps {
   card: BusinessCard
+  onDetailClick: (card: BusinessCard) => void
 }
 
 const getCategoryColor = (category: string) => {
@@ -26,10 +27,11 @@ const getCategoryColor = (category: string) => {
   return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
 }
 
-export default function BusinessCardComponent({ card }: BusinessCardProps) {
+export default function BusinessCardComponent({ card, onDetailClick }: BusinessCardProps) {
   return (
     <Card
-      className={`overflow-hidden hover:shadow-lg transition-shadow duration-300 ${card.isPromoted ? "ring-2 ring-yellow-400" : ""}`}
+      className={`overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer ${card.isPromoted ? "ring-2 ring-yellow-400" : ""}`}
+      onClick={() => onDetailClick(card)}
     >
       <div className="relative">
         <img
@@ -123,7 +125,14 @@ export default function BusinessCardComponent({ card }: BusinessCardProps) {
               </div>
             )}
           </div>
-          <Button size="sm" variant="outline">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDetailClick(card)
+            }}
+          >
             자세히 보기
           </Button>
         </div>
