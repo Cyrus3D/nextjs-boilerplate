@@ -306,6 +306,47 @@ export async function deleteBusinessCard(cardId: number) {
   }
 }
 
+// 여러 카드 일괄 삭제 함수 추가
+export async function deleteMultipleBusinessCards(cardIds: number[]) {
+  if (!isSupabaseConfigured() || !supabase) {
+    return {
+      success: false,
+      error: "데이터베이스가 설정되지 않았습니다.",
+    }
+  }
+
+  try {
+    // 1. 태그 연결 삭제
+    const { error: tagError } = await supabase.from("business_card_tags").delete().in("business_card_id", cardIds)
+
+    if (tagError) {
+      console.error("Tag deletion error:", tagError)
+    }
+
+    // 2. 비즈니스 카드들 일괄 삭제
+    const { error: cardError } = await supabase.from("business_cards").delete().in("id", cardIds)
+
+    if (cardError) {
+      console.error("Cards delete error:", cardError)
+      return {
+        success: false,
+        error: "비즈니스 카드 일괄 삭제 중 오류가 발생했습니다.",
+      }
+    }
+
+    return {
+      success: true,
+      deletedCount: cardIds.length,
+    }
+  } catch (error) {
+    console.error("Error deleting multiple business cards:", error)
+    return {
+      success: false,
+      error: "일괄 삭제 중 오류가 발생했습니다.",
+    }
+  }
+}
+
 export async function getBusinessCards() {
   if (!isSupabaseConfigured() || !supabase) {
     return []
@@ -372,6 +413,11 @@ export async function getBusinessCards() {
           rating: card.rating,
           isPromoted: card.is_promoted,
           image: card.image_url,
+          isPremium: card.is_premium,
+          premiumExpiresAt: card.premium_expires_at,
+          exposureCount: card.exposure_count,
+          lastExposedAt: card.last_exposed_at,
+          exposureWeight: card.exposure_weight,
         }
       }),
     )

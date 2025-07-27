@@ -9,13 +9,27 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Wand2, Check, X, RefreshCw, AlertCircle, FileText, ImageIcon, Loader2, Crown, Camera } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Wand2,
+  Check,
+  X,
+  RefreshCw,
+  AlertCircle,
+  FileText,
+  ImageIcon,
+  Loader2,
+  Crown,
+  Camera,
+  Trash2,
+} from "lucide-react"
 import {
   parseBusinessCardData,
   saveBusinessCard,
   getBusinessCards,
   updateBusinessCard,
   deleteBusinessCard,
+  deleteMultipleBusinessCards,
 } from "../lib/admin-actions"
 import ImageUpload from "./image-upload"
 import PremiumManagement from "./admin-premium-management"
@@ -44,6 +58,88 @@ interface BusinessCard extends ParsedBusinessData {
   exposureCount?: number
   lastExposedAt?: string
   exposureWeight?: number
+  similarityGroup?: number
+  similarityColor?: string
+}
+
+// 유사도 계산 함수 - 제목과 내용만 사용
+function calculateSimilarity(card1: BusinessCard, card2: BusinessCard): number {
+  let score = 0
+
+  // 제목 유사도 (가중치: 60%)
+  const titleSimilarity = getTextSimilarity(card1.title, card2.title)
+  score += titleSimilarity * 0.6
+
+  // 설명 유사도 (가중치: 40%)
+  const descSimilarity = getTextSimilarity(card1.description, card2.description)
+  score += descSimilarity * 0.4
+
+  return score
+}
+
+// 텍스트 유사도 계산 (간단한 단어 기반)
+function getTextSimilarity(text1: string, text2: string): number {
+  const words1 = text1.toLowerCase().split(/\s+/)
+  const words2 = text2.toLowerCase().split(/\s+/)
+
+  const commonWords = words1.filter((word) => words2.includes(word))
+  return commonWords.length / Math.max(words1.length, words2.length, 1)
+}
+
+// 유사도 그룹 생성
+function createSimilarityGroups(cards: BusinessCard[]): BusinessCard[] {
+  const threshold = 0.3 // 유사도 임계값
+  const groups: BusinessCard[][] = []
+  const colors = [
+    "border-red-300 bg-red-50",
+    "border-blue-300 bg-blue-50",
+    "border-green-300 bg-green-50",
+    "border-yellow-300 bg-yellow-50",
+    "border-purple-300 bg-purple-50",
+    "border-pink-300 bg-pink-50",
+    "border-indigo-300 bg-indigo-50",
+    "border-orange-300 bg-orange-50",
+  ]
+
+  const processedCards = [...cards]
+
+  // 각 카드에 대해 유사한 카드들을 찾아 그룹화
+  for (let i = 0; i < processedCards.length; i++) {
+    if (processedCards[i].similarityGroup !== undefined) continue
+
+    const currentGroup: BusinessCard[] = [processedCards[i]]
+
+    for (let j = i + 1; j < processedCards.length; j++) {
+      if (processedCards[j].similarityGroup !== undefined) continue
+
+      const similarity = calculateSimilarity(processedCards[i], processedCards[j])
+      if (similarity >= threshold) {
+        currentGroup.push(processedCards[j])
+      }
+    }
+
+    // 그룹이 2개 이상의 카드를 가지면 유사 그룹으로 처리
+    if (currentGroup.length > 1) {
+      const groupIndex = groups.length
+      const groupColor = colors[groupIndex % colors.length]
+
+      currentGroup.forEach((card) => {
+        card.similarityGroup = groupIndex
+        card.similarityColor = groupColor
+      })
+
+      groups.push(currentGroup)
+    }
+  }
+
+  // 유사 그룹이 있는 카드들을 상단으로 정렬
+  const similarCards = processedCards.filter((card) => card.similarityGroup !== undefined)
+  const regularCards = processedCards.filter((card) => card.similarityGroup === undefined)
+
+  // 유사 카드들을 그룹별로 정렬
+  similarCards.sort((a, b) => (a.similarityGroup || 0) - (b.similarityGroup || 0))
+
+  return [...similarCards, ...regularCards]
 }
 
 export default function AdminInterface() {
@@ -60,6 +156,8 @@ export default function AdminInterface() {
   const [selectedCardForEdit, setSelectedCardForEdit] = useState<BusinessCard | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoadingCards, setIsLoadingCards] = useState(false)
+  const [selectedCards, setSelectedCards] = useState<Set<number>>(new Set())
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleDataExtraction = async () => {
     if (inputMethod === "text" && !inputText.trim()) {
@@ -162,7 +260,9 @@ export default function AdminInterface() {
     setIsLoadingCards(true)
     try {
       const cards = await getBusinessCards()
-      setExistingCards(cards)
+      // 유사도 그룹 생성 및 정렬
+      const cardsWithSimilarity = createSimilarityGroups(cards)
+      setExistingCards(cardsWithSimilarity)
     } catch (error) {
       setMessage({ type: "error", text: "기존 카드를 불러오는 중 오류가 발생했습니다." })
     } finally {
@@ -213,6 +313,66 @@ export default function AdminInterface() {
       setIsSaving(false)
     }
   }
+
+  // 체크박스 선택 처리
+  const handleCardSelect = (cardId: number, checked: boolean) => {
+    const newSelected = new Set(selectedCards)
+    if (checked) {
+      newSelected.add(cardId)
+    } else {
+      newSelected.delete(cardId)
+    }
+    setSelectedCards(newSelected)
+  }
+
+  // 전체 선택/해제
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const filteredCards = existingCards.filter(
+        (card) =>
+          card.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          card.description.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+      setSelectedCards(new Set(filteredCards.map((card) => card.id)))
+    } else {
+      setSelectedCards(new Set())
+    }
+  }
+
+  // 선택된 카드들 일괄 삭제
+  const handleDeleteSelected = async () => {
+    if (selectedCards.size === 0) return
+
+    if (!confirm(`선택된 ${selectedCards.size}개의 카드를 정말로 삭제하시겠습니까?`)) return
+
+    setIsDeleting(true)
+    try {
+      const result = await deleteMultipleBusinessCards(Array.from(selectedCards))
+      if (result.success) {
+        setMessage({
+          type: "success",
+          text: `${selectedCards.size}개의 카드가 성공적으로 삭제되었습니다!`,
+        })
+        setSelectedCards(new Set())
+        loadExistingCards()
+      } else {
+        setMessage({ type: "error", text: result.error || "일괄 삭제 중 오류가 발생했습니다." })
+      }
+    } catch (error) {
+      setMessage({ type: "error", text: "일괄 삭제 중 오류가 발생했습니다." })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const filteredCards = existingCards.filter(
+    (card) =>
+      card.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      card.description.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
+
+  const isAllSelected = filteredCards.length > 0 && filteredCards.every((card) => selectedCards.has(card.id))
+  const isPartiallySelected = filteredCards.some((card) => selectedCards.has(card.id)) && !isAllSelected
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -677,6 +837,47 @@ export default function AdminInterface() {
                     {isLoadingCards ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                   </Button>
                 </div>
+
+                {/* 일괄 선택 및 삭제 컨트롤 */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      checked={isAllSelected}
+                      onCheckedChange={handleSelectAll}
+                      className={isPartiallySelected ? "data-[state=checked]:bg-blue-600" : ""}
+                    />
+                    <span className="text-sm font-medium">
+                      {selectedCards.size > 0 ? `${selectedCards.size}개 선택됨` : "전체 선택"}
+                    </span>
+                  </div>
+
+                  {selectedCards.size > 0 && (
+                    <Button variant="destructive" size="sm" onClick={handleDeleteSelected} disabled={isDeleting}>
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          삭제 중...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          선택 삭제 ({selectedCards.size})
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {/* 유사도 그룹 안내 */}
+                {existingCards.some((card) => card.similarityGroup !== undefined) && (
+                  <Alert className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>유사한 카드 그룹:</strong> 비슷한 내용의 카드들이 상단에 그룹화되어 표시됩니다. 같은
+                      색상의 테두리는 유사한 카드들을 나타냅니다.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </CardContent>
             </Card>
 
@@ -688,17 +889,22 @@ export default function AdminInterface() {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {existingCards
-                  .filter(
-                    (card) =>
-                      card.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      card.description.toLowerCase().includes(searchTerm.toLowerCase()),
-                  )
-                  .map((card) => (
-                    <Card key={card.id} className="relative">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <div>
+                {filteredCards.map((card) => (
+                  <Card
+                    key={card.id}
+                    className={`relative transition-all duration-200 ${
+                      card.similarityColor || "border-gray-200"
+                    } ${selectedCards.has(card.id) ? "ring-2 ring-blue-500" : ""}`}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3 flex-1">
+                          <Checkbox
+                            checked={selectedCards.has(card.id)}
+                            onCheckedChange={(checked) => handleCardSelect(card.id, checked as boolean)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
                             <CardTitle className="text-lg">{card.title}</CardTitle>
                             <div className="flex gap-2 mt-1 flex-wrap">
                               {card.isPremium && (
@@ -708,39 +914,45 @@ export default function AdminInterface() {
                                 </Badge>
                               )}
                               <Badge className="mt-1">{card.category}</Badge>
+                              {card.similarityGroup !== undefined && (
+                                <Badge variant="outline" className="text-xs">
+                                  그룹 {card.similarityGroup + 1}
+                                </Badge>
+                              )}
                             </div>
                           </div>
-                          <div className="flex gap-1">
-                            <Button size="sm" variant="outline" onClick={() => setSelectedCardForEdit(card)}>
-                              수정
-                            </Button>
-                          </div>
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        {card.image && (
-                          <img
-                            src={card.image || "/placeholder.svg"}
-                            alt={card.title}
-                            className="w-full h-32 object-cover rounded-lg mb-3"
-                          />
-                        )}
-                        <p className="text-sm text-gray-600 line-clamp-3 mb-3">{card.description}</p>
-                        {card.location && <p className="text-xs text-gray-500 mb-1">📍 {card.location}</p>}
-                        {card.phone && <p className="text-xs text-gray-500 mb-1">📞 {card.phone}</p>}
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {card.tags.slice(0, 3).map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline" onClick={() => setSelectedCardForEdit(card)}>
+                            수정
+                          </Button>
                         </div>
-                        <div className="text-xs text-gray-400 mt-2">
-                          노출: {card.exposureCount || 0}회 | 가중치: {(card.exposureWeight || 1.0).toFixed(2)}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {card.image && (
+                        <img
+                          src={card.image || "/placeholder.svg"}
+                          alt={card.title}
+                          className="w-full h-32 object-cover rounded-lg mb-3"
+                        />
+                      )}
+                      <p className="text-sm text-gray-600 line-clamp-3 mb-3">{card.description}</p>
+                      {card.location && <p className="text-xs text-gray-500 mb-1">📍 {card.location}</p>}
+                      {card.phone && <p className="text-xs text-gray-500 mb-1">📞 {card.phone}</p>}
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {card.tags.slice(0, 3).map((tag, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-2">
+                        노출: {card.exposureCount || 0}회 | 가중치: {(card.exposureWeight || 1.0).toFixed(2)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </div>
