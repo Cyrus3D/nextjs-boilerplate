@@ -17,9 +17,18 @@ import {
   Share2,
   Map,
   Search,
+  Facebook,
+  Instagram,
+  Youtube,
 } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
-import { generateGoogleMapsSearchUrl, isValidLocation, cleanLocationForSearch, getUrlType } from "../lib/utils"
+import {
+  generateGoogleMapsSearchUrl,
+  isValidLocation,
+  cleanLocationForSearch,
+  getUrlType,
+  getLinkPlatform,
+} from "../lib/utils"
 
 interface BusinessDetailModalProps {
   card: BusinessCard | null
@@ -41,6 +50,18 @@ const getCategoryColor = (category: string) => {
     서비스: "bg-gray-100 text-gray-800",
   }
   return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
+}
+
+// 링크 타입별 아이콘 반환
+const getLinkIcon = (type: string) => {
+  const icons = {
+    website: Globe,
+    map: Map,
+    facebook: Facebook,
+    instagram: Instagram,
+    youtube: Youtube,
+  }
+  return icons[type as keyof typeof icons] || Globe
 }
 
 export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessDetailModalProps) {
@@ -71,8 +92,38 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
     }
   }
 
-  // URL 타입 확인
-  const urlType = getUrlType(card.website)
+  // 현재 링크들 정리 (향후 확장 대비)
+  const links = []
+
+  // 기본 웹사이트/지도 링크
+  if (card.website) {
+    const urlType = getUrlType(card.website)
+    links.push({
+      type: urlType,
+      url: card.website,
+      platform: getLinkPlatform(card.website),
+    })
+  }
+
+  // 향후 추가될 수 있는 별도 지도 링크
+  if (card.mapUrl && card.mapUrl !== card.website) {
+    links.push({
+      type: "map",
+      url: card.mapUrl,
+      platform: getLinkPlatform(card.mapUrl),
+    })
+  }
+
+  // 향후 소셜 링크들 (확장 시)
+  if (card.socialLinks) {
+    card.socialLinks.forEach((link) => {
+      links.push({
+        type: link.type,
+        url: link.url,
+        platform: link.displayName || getLinkPlatform(link.url),
+      })
+    })
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -151,19 +202,7 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                 <div className="flex-1">
                   <p className="text-gray-900">{card.location}</p>
                   <div className="flex gap-2 mt-2">
-                    {/* URL이 지도 링크인 경우 */}
-                    {urlType === "map" && (
-                      <Button
-                        variant="link"
-                        size="sm"
-                        className="p-0 h-auto text-blue-600"
-                        onClick={() => window.open(card.website, "_blank")}
-                      >
-                        <Map className="h-3 w-3 mr-1" />
-                        정확한 위치 보기 <ExternalLink className="h-3 w-3 ml-1" />
-                      </Button>
-                    )}
-                    {/* 위치 정보로 구글 맵 검색 (지도 링크가 없거나 추가 검색이 필요한 경우) */}
+                    {/* 위치 정보로 구글 맵 검색 */}
                     {isValidLocation(card.location) && (
                       <Button variant="link" size="sm" className="p-0 h-auto text-green-600" onClick={handleMapSearch}>
                         <Search className="h-3 w-3 mr-1" />
@@ -232,17 +271,25 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
               </div>
             )}
 
-            {/* 웹사이트 (지도가 아닌 경우만) */}
-            {card.website && urlType === "website" && (
-              <div className="flex items-center gap-3">
-                <Globe className="h-5 w-5 text-gray-500 flex-shrink-0" />
-                <div className="flex-1 flex items-center justify-between">
-                  <span className="text-gray-900 truncate">웹사이트</span>
-                  <Button variant="outline" size="sm" onClick={() => window.open(card.website, "_blank")}>
-                    <Globe className="h-3 w-3 mr-1" />
-                    웹사이트 방문 <ExternalLink className="h-3 w-3 ml-1" />
-                  </Button>
-                </div>
+            {/* 웹사이트 및 링크들 */}
+            {links.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900">웹사이트 및 링크</h4>
+                {links.map((link, index) => {
+                  const IconComponent = getLinkIcon(link.type)
+                  return (
+                    <div key={index} className="flex items-center gap-3">
+                      <IconComponent className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                      <div className="flex-1 flex items-center justify-between">
+                        <span className="text-gray-900">{link.platform}</span>
+                        <Button variant="outline" size="sm" onClick={() => window.open(link.url, "_blank")}>
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          방문하기
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
