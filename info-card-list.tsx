@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { CalendarDays, MapPin, Users, Star, Heart, MessageCircle, Share2 } from "lucide-react"
+import GoogleAds from "./components/google-ads"
 
 // 샘플 데이터
 const infoCards = [
@@ -137,6 +138,18 @@ export default function InfoCardList() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">정보카드 리스트</h1>
           <p className="text-gray-600">다양한 모임과 활동 정보를 확인해보세요</p>
+        </div>
+
+        {/* 구글 광고 배너 */}
+        <div className="mb-8">
+          <GoogleAds
+            adSlot="1234567890"
+            style={{
+              display: "block",
+              width: "100%",
+              height: "90px",
+            }}
+          />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
