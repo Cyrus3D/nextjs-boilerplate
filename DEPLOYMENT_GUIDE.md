@@ -165,7 +165,7 @@ Supabase SQL Editor에서 다음 순서로 실행:
 **🎉 축하합니다! 태국-한국 비즈니스 디렉토리가 성공적으로 배포되었습니다!**
 \`\`\`
 
-```plaintext file="README.md"
+\`\`\`plaintext file="README.md"
 # 🇹🇭🇰🇷 Thai-Korean Business Directory
 
 태국 거주 한국인을 위한 비즈니스 카드 디렉토리 서비스
@@ -343,7 +343,7 @@ git push origin main
 **🎉 태국에서의 성공적인 비즈니스를 응원합니다!**
 \`\`\`
 
-```plaintext file=".env.example"
+\`\`\`plaintext file=".env.example"
 # Supabase 설정
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
