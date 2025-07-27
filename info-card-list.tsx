@@ -17,15 +17,16 @@ const getCategoryColor = (category: string) => {
 
 export default function InfoCardList() {
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">태국 한인 비즈니스 정보</h1>
-          <p className="text-gray-600">태국 거주 한인들을 위한 다양한 비즈니스 정보를 확인해보세요</p>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* 고정 헤더 영역 */}
+      <div className="sticky top-0 z-50 bg-white shadow-sm border-b">
+        <div className="container mx-auto px-4 py-6">
+          <div className="mb-4">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">태국 한인 비즈니스 정보</h1>
+            <p className="text-gray-600">태국 거주 한인들을 위한 다양한 비즈니스 정보를 확인해보세요</p>
+          </div>
 
-        {/* 구글 광고 배너 */}
-        <div className="mb-8">
+          {/* 구글 광고 배너 */}
           <GoogleAds
             adSlot="1234567890"
             style={{
@@ -35,7 +36,10 @@ export default function InfoCardList() {
             }}
           />
         </div>
+      </div>
 
+      {/* 스크롤 가능한 콘텐츠 영역 */}
+      <div className="container mx-auto px-4 py-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {sampleBusinessCards.map((card) => (
             <BusinessCardComponent key={card.id} card={card} />
