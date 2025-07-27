@@ -93,6 +93,7 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
           kakaoId: card.kakao_id,
           lineId: card.line_id,
           website: card.website,
+          mapUrl: card.map_url, // 데이터베이스 필드 추가
           hours: card.hours,
           price: card.price,
           promotion: card.promotion,

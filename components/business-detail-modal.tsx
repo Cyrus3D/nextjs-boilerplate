@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { MapPin, Phone, Clock, Star, MessageCircle, Globe, Zap, ExternalLink, Copy, Share2 } from "lucide-react"
+import { MapPin, Phone, Clock, Star, MessageCircle, Globe, Zap, ExternalLink, Copy, Share2, Map } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
 
 interface BusinessDetailModalProps {
@@ -124,13 +124,14 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                 <MapPin className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-gray-900">{card.location}</p>
-                  {card.website && (
+                  {card.mapUrl && (
                     <Button
                       variant="link"
                       size="sm"
                       className="p-0 h-auto text-blue-600"
-                      onClick={() => window.open(card.website, "_blank")}
+                      onClick={() => window.open(card.mapUrl, "_blank")}
                     >
+                      <Map className="h-3 w-3 mr-1" />
                       지도에서 보기 <ExternalLink className="h-3 w-3 ml-1" />
                     </Button>
                   )}
@@ -201,7 +202,8 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                 <div className="flex-1 flex items-center justify-between">
                   <span className="text-gray-900 truncate">웹사이트</span>
                   <Button variant="outline" size="sm" onClick={() => window.open(card.website, "_blank")}>
-                    방문하기 <ExternalLink className="h-3 w-3 ml-1" />
+                    <Globe className="h-3 w-3 mr-1" />
+                    웹사이트 방문 <ExternalLink className="h-3 w-3 ml-1" />
                   </Button>
                 </div>
               </div>

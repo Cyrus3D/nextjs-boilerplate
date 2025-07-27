@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Phone, Clock, Star, MessageCircle, Globe, Zap } from "lucide-react"
+import { MapPin, Phone, Clock, Star, MessageCircle, Globe, Zap, Map } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
 
 interface BusinessCardProps {
@@ -116,6 +116,12 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
               <div className="flex items-center space-x-1">
                 <MessageCircle className="h-4 w-4" />
                 <span className="text-xs">카톡</span>
+              </div>
+            )}
+            {card.mapUrl && (
+              <div className="flex items-center space-x-1">
+                <Map className="h-4 w-4" />
+                <span className="text-xs">지도</span>
               </div>
             )}
             {card.website && (
