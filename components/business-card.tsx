@@ -63,54 +63,56 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
         <CardDescription className="text-sm line-clamp-3">{card.description}</CardDescription>
       </CardHeader>
 
-      <CardContent className="pt-0 space-y-3">
-        {card.location && (
-          <div className="flex items-center text-sm text-gray-600">
-            <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span className="line-clamp-1">{card.location}</span>
-          </div>
-        )}
-
-        {card.phone && (
-          <div className="flex items-center text-sm text-gray-600">
-            <Phone className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span>{card.phone}</span>
-          </div>
-        )}
-
-        {card.hours && (
-          <div className="flex items-center text-sm text-gray-600">
-            <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
-            <span>{card.hours}</span>
-          </div>
-        )}
-
-        {card.price && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-2">
-            <span className="text-sm font-medium text-green-800">{card.price}</span>
-          </div>
-        )}
-
-        {card.promotion && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
-            <span className="text-sm font-medium text-yellow-800">🎉 {card.promotion}</span>
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-1">
-          {card.tags.slice(0, 4).map((tag, index) => (
-            <Badge key={index} variant="outline" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
-          {card.tags.length > 4 && (
-            <Badge variant="outline" className="text-xs">
-              +{card.tags.length - 4}
-            </Badge>
+      <CardContent className="pt-0 space-y-3 flex-1 flex flex-col">
+        <div className="flex-1 space-y-3">
+          {card.location && (
+            <div className="flex items-center text-sm text-gray-600">
+              <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span className="line-clamp-1">{card.location}</span>
+            </div>
           )}
+
+          {card.phone && (
+            <div className="flex items-center text-sm text-gray-600">
+              <Phone className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span>{card.phone}</span>
+            </div>
+          )}
+
+          {card.hours && (
+            <div className="flex items-center text-sm text-gray-600">
+              <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span>{card.hours}</span>
+            </div>
+          )}
+
+          {card.price && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-2">
+              <span className="text-sm font-medium text-green-800 line-clamp-1">{card.price}</span>
+            </div>
+          )}
+
+          {card.promotion && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+              <span className="text-sm font-medium text-yellow-800 line-clamp-1">🎉 {card.promotion}</span>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-1">
+            {card.tags.slice(0, 4).map((tag, index) => (
+              <Badge key={index} variant="outline" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+            {card.tags.length > 4 && (
+              <Badge variant="outline" className="text-xs">
+                +{card.tags.length - 4}
+              </Badge>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t">
+        <div className="flex items-center justify-between pt-2 border-t mt-auto">
           <div className="flex items-center space-x-3 text-gray-500">
             {card.kakaoId && (
               <div className="flex items-center space-x-1">

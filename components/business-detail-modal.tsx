@@ -123,8 +123,8 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
             {/* 연락처 정보 */}
             <div className="space-y-3">
               {card.location && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-gray-500 flex-shrink-0" />
                   <div>
                     <span className="text-gray-900">{card.location}</span>
                     {isValidLocation(card.location) && (

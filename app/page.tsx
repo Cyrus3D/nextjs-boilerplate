@@ -1,7 +1,5 @@
-"use client"
-
 import InfoCardList from "../info-card-list"
 
-export default function Page() {
+export default function HomePage() {
   return <InfoCardList />
 }
