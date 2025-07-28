@@ -225,7 +225,7 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
 
                 {card.promotion && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-yellow-800 mb-1">🎉 특별 혜택</h4>
+                    <h4 className="font-semibold text-yellow-800 mb-1">🎉 추가 정보</h4>
                     <p className="text-yellow-700">{card.promotion}</p>
                   </div>
                 )}
