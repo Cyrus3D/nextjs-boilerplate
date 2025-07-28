@@ -69,8 +69,8 @@ export default function InfoCardList() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">핫한 정보를 불러오는 중...</p>
         </div>
       </div>
     )
@@ -81,13 +81,29 @@ export default function InfoCardList() {
       {/* 고정 헤더 영역 */}
       <div className="sticky top-0 z-50 bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-6">
-          <div className="mb-4">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">태국 한인 비즈니스 정보</h1>
-            <p className="text-gray-600">태국 거주 한인들을 위한 다양한 비즈니스 정보를 확인해보세요</p>
+          <div className="mb-4 text-center">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              🔥 핫타이 <span className="text-red-500">HOT THAI</span>
+            </h1>
+            <p className="text-lg md:text-xl text-gray-600 mb-4 leading-relaxed">태국 생활의 모든 것을 한눈에! 🇹🇭</p>
+            <p className="text-base text-gray-700 mb-6">
+              <span className="font-semibold text-gray-800">맛집 · 쇼핑 · 서비스 · 숙박 · 관광</span>까지
+              <br />
+              태국 거주자와 여행자가 꼭 알아야 할 <span className="text-red-500 font-bold">핫한 정보</span>를 제공합니다
+            </p>
+
+            {/* 카테고리 태그 */}
+            <div className="flex flex-wrap justify-center gap-2 text-sm mb-6">
+              <span className="bg-red-50 text-red-600 px-3 py-1 rounded-full">🍜 맛집 정보</span>
+              <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full">🏨 숙박 정보</span>
+              <span className="bg-green-50 text-green-600 px-3 py-1 rounded-full">🛍️ 쇼핑 정보</span>
+              <span className="bg-purple-50 text-purple-600 px-3 py-1 rounded-full">🎯 서비스 정보</span>
+              <span className="bg-orange-50 text-orange-600 px-3 py-1 rounded-full">🎪 관광 정보</span>
+            </div>
 
             {/* 데이터베이스 상태 표시 (개발 환경에서만) */}
             {process.env.NODE_ENV === "development" && (
-              <div className="mt-2 space-y-2">
+              <div className="mt-4 space-y-2">
                 <div
                   className={`p-2 border rounded text-sm ${
                     dataSource === "database"
@@ -126,7 +142,8 @@ export default function InfoCardList() {
       <div className="container mx-auto px-4 py-8">
         {businessCards.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">등록된 비즈니스 정보가 없습니다.</p>
+            <p className="text-gray-500 text-lg">아직 등록된 핫한 정보가 없습니다.</p>
+            <p className="text-gray-400 text-sm mt-2">곧 다양한 태국 정보를 만나보실 수 있습니다!</p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -143,7 +160,7 @@ export default function InfoCardList() {
                   />
                 )}
 
-                {/* 7번째 카드 후에 인피드 광고 삽입 (기존 6번째에서 조정) */}
+                {/* 7번째 카드 후에 인피드 광고 삽입 */}
                 {index === 6 && (
                   <InFeedAd
                     adSlot={process.env.NEXT_PUBLIC_ADSENSE_INFEED_SLOT || "3456789012"}
@@ -151,7 +168,7 @@ export default function InfoCardList() {
                   />
                 )}
 
-                {/* 12번째 카드 후에 또 다른 네이티브 광고 (기존 15번째에서 조정) */}
+                {/* 12번째 카드 후에 또 다른 네이티브 광고 */}
                 {index === 11 && (
                   <NativeAdCard
                     adSlot={process.env.NEXT_PUBLIC_ADSENSE_NATIVE_SLOT_2 || "4567890123"}
