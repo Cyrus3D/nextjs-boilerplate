@@ -79,6 +79,7 @@ export default function AdminInterface() {
   const [checkingAI, setCheckingAI] = useState(false)
   const [analyzingText, setAnalyzingText] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [updating, setUpdating] = useState(false)
 
   // 새 카드 폼 상태 - rating 제거
   const [newCard, setNewCard] = useState<Partial<BusinessCardData>>({
@@ -282,22 +283,72 @@ export default function AdminInterface() {
   }
 
   const handleUpdateCard = async () => {
-    if (!editingCard) return
-
-    try {
-      await updateBusinessCard(editingCard.id, editingCard)
-      toast({
-        title: "성공",
-        description: "카드가 업데이트되었습니다.",
-      })
-      setEditingCard(null)
-      loadData()
-    } catch (error) {
+    if (!editingCard) {
       toast({
         title: "오류",
+        description: "편집할 카드가 선택되지 않았습니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // 필수 필드 검증
+    if (!editingCard.title || !editingCard.description || !editingCard.category_id) {
+      toast({
+        title: "오류",
+        description: "제목, 설명, 카테고리는 필수 입력 항목입니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setUpdating(true)
+    try {
+      console.log("handleUpdateCard 호출됨:", editingCard)
+
+      // 업데이트할 데이터 준비 - categories 필드 제외
+      const updateData: Partial<BusinessCardData> = {
+        title: editingCard.title,
+        description: editingCard.description,
+        category_id: editingCard.category_id,
+        location: editingCard.location,
+        phone: editingCard.phone,
+        kakao_id: editingCard.kakao_id,
+        line_id: editingCard.line_id,
+        website: editingCard.website,
+        hours: editingCard.hours,
+        price: editingCard.price,
+        promotion: editingCard.promotion,
+        image_url: editingCard.image_url,
+        is_promoted: editingCard.is_promoted,
+        is_active: editingCard.is_active,
+        is_premium: editingCard.is_premium,
+        premium_expires_at: editingCard.premium_expires_at,
+        exposure_count: editingCard.exposure_count,
+        last_exposed_at: editingCard.last_exposed_at,
+        exposure_weight: editingCard.exposure_weight,
+        view_count: editingCard.view_count,
+      }
+
+      const result = await updateBusinessCard(editingCard.id, updateData)
+      console.log("updateBusinessCard 결과:", result)
+
+      toast({
+        title: "성공",
+        description: "카드가 성공적으로 업데이트되었습니다.",
+      })
+
+      setEditingCard(null)
+      await loadData()
+    } catch (error) {
+      console.error("카드 업데이트 오류:", error)
+      toast({
+        title: "업데이트 실패",
         description: error instanceof Error ? error.message : "카드 업데이트 중 오류가 발생했습니다.",
         variant: "destructive",
       })
+    } finally {
+      setUpdating(false)
     }
   }
 
@@ -869,7 +920,7 @@ export default function AdminInterface() {
         </DialogContent>
       </Dialog>
 
-      {/* 편집 다이얼로그 - rating 필드 제거 */}
+      {/* 편집 다이얼로그 - rating 필드 제거 및 수정 기능 개선 */}
       <Dialog open={!!editingCard} onOpenChange={() => setEditingCard(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -879,16 +930,17 @@ export default function AdminInterface() {
           {editingCard && (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-title">제목</Label>
+                <Label htmlFor="edit-title">제목 *</Label>
                 <Input
                   id="edit-title"
                   value={editingCard.title || ""}
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, title: e.target.value } : null))}
+                  placeholder="비즈니스 이름"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-category">카테고리</Label>
+                <Label htmlFor="edit-category">카테고리 *</Label>
                 <Select
                   value={(editingCard.category_id || 0).toString()}
                   onValueChange={(value) =>
@@ -896,7 +948,7 @@ export default function AdminInterface() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="카테고리 선택" />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
@@ -909,11 +961,12 @@ export default function AdminInterface() {
               </div>
 
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="edit-description">설명</Label>
+                <Label htmlFor="edit-description">설명 *</Label>
                 <Textarea
                   id="edit-description"
                   value={editingCard.description || ""}
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, description: e.target.value } : null))}
+                  placeholder="비즈니스 설명"
                   rows={3}
                 />
               </div>
@@ -924,6 +977,7 @@ export default function AdminInterface() {
                   id="edit-location"
                   value={editingCard.location || ""}
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, location: e.target.value } : null))}
+                  placeholder="주소 또는 위치"
                 />
               </div>
 
@@ -933,6 +987,7 @@ export default function AdminInterface() {
                   id="edit-phone"
                   value={editingCard.phone || ""}
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, phone: e.target.value } : null))}
+                  placeholder="전화번호"
                 />
               </div>
 
@@ -942,6 +997,7 @@ export default function AdminInterface() {
                   id="edit-kakao_id"
                   value={editingCard.kakao_id || ""}
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, kakao_id: e.target.value } : null))}
+                  placeholder="카카오톡 ID"
                 />
               </div>
 
@@ -951,6 +1007,7 @@ export default function AdminInterface() {
                   id="edit-line_id"
                   value={editingCard.line_id || ""}
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, line_id: e.target.value } : null))}
+                  placeholder="라인 ID"
                 />
               </div>
 
@@ -960,6 +1017,7 @@ export default function AdminInterface() {
                   id="edit-website"
                   value={editingCard.website || ""}
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, website: e.target.value } : null))}
+                  placeholder="웹사이트 URL"
                 />
               </div>
 
@@ -969,6 +1027,7 @@ export default function AdminInterface() {
                   id="edit-hours"
                   value={editingCard.hours || ""}
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, hours: e.target.value } : null))}
+                  placeholder="운영시간"
                 />
               </div>
 
@@ -978,6 +1037,7 @@ export default function AdminInterface() {
                   id="edit-price"
                   value={editingCard.price || ""}
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, price: e.target.value } : null))}
+                  placeholder="가격 정보"
                 />
               </div>
 
@@ -987,6 +1047,7 @@ export default function AdminInterface() {
                   id="edit-promotion"
                   value={editingCard.promotion || ""}
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, promotion: e.target.value } : null))}
+                  placeholder="프로모션 또는 할인 정보"
                   rows={2}
                 />
               </div>
@@ -1029,12 +1090,21 @@ export default function AdminInterface() {
           )}
 
           <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={() => setEditingCard(null)}>
+            <Button variant="outline" onClick={() => setEditingCard(null)} disabled={updating}>
               취소
             </Button>
-            <Button onClick={handleUpdateCard}>
-              <Save className="mr-2 h-4 w-4" />
-              저장
+            <Button onClick={handleUpdateCard} disabled={updating}>
+              {updating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  업데이트 중...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  저장
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>

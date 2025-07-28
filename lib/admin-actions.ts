@@ -207,24 +207,75 @@ export async function createBusinessCard(data: BusinessCardData) {
   }
 }
 
-// 비즈니스 카드 업데이트
+// 비즈니스 카드 업데이트 - 수정된 버전
 export async function updateBusinessCard(id: number, data: Partial<BusinessCardData>) {
+  console.log("updateBusinessCard 호출됨:", { id, data })
+
   if (!supabase) {
+    console.error("Supabase 클라이언트가 없습니다")
     throw new Error("Supabase가 설정되지 않았습니다.")
   }
 
+  if (!id || id <= 0) {
+    throw new Error("유효하지 않은 카드 ID입니다.")
+  }
+
   try {
+    // 업데이트할 데이터 준비 - 빈 문자열을 null로 변환
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    }
+
+    // 각 필드를 안전하게 처리
+    if (data.title !== undefined) updateData.title = data.title || null
+    if (data.description !== undefined) updateData.description = data.description || null
+    if (data.category_id !== undefined) updateData.category_id = data.category_id
+    if (data.location !== undefined) updateData.location = data.location || null
+    if (data.phone !== undefined) updateData.phone = data.phone || null
+    if (data.kakao_id !== undefined) updateData.kakao_id = data.kakao_id || null
+    if (data.line_id !== undefined) updateData.line_id = data.line_id || null
+    if (data.website !== undefined) updateData.website = data.website || null
+    if (data.hours !== undefined) updateData.hours = data.hours || null
+    if (data.price !== undefined) updateData.price = data.price || null
+    if (data.promotion !== undefined) updateData.promotion = data.promotion || null
+    if (data.image_url !== undefined) updateData.image_url = data.image_url || null
+    if (data.is_promoted !== undefined) updateData.is_promoted = Boolean(data.is_promoted)
+    if (data.is_active !== undefined) updateData.is_active = Boolean(data.is_active)
+    if (data.is_premium !== undefined) updateData.is_premium = Boolean(data.is_premium)
+    if (data.premium_expires_at !== undefined) updateData.premium_expires_at = data.premium_expires_at
+    if (data.exposure_count !== undefined) updateData.exposure_count = Number(data.exposure_count) || 0
+    if (data.last_exposed_at !== undefined) updateData.last_exposed_at = data.last_exposed_at
+    if (data.exposure_weight !== undefined) updateData.exposure_weight = Number(data.exposure_weight) || 1.0
+    if (data.view_count !== undefined) updateData.view_count = Number(data.view_count) || 0
+
+    console.log("업데이트할 데이터:", updateData)
+
     const { data: result, error } = await supabase
       .from("business_cards")
-      .update({ ...data, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq("id", id)
-      .select()
+      .select(`
+        *,
+        categories (
+          id,
+          name,
+          color_class
+        )
+      `)
       .single()
 
     if (error) {
+      console.error("Supabase 업데이트 오류:", error)
       throw new Error(`카드 업데이트 실패: ${error.message}`)
     }
 
+    if (!result) {
+      throw new Error("업데이트된 카드를 찾을 수 없습니다.")
+    }
+
+    console.log("카드 업데이트 성공:", result)
+
+    // 페이지 재검증
     revalidatePath("/dashboard-mgmt-2024")
     revalidatePath("/")
 
