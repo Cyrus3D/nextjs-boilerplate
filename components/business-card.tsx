@@ -112,7 +112,7 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t mt-auto">
+        <div className="pt-2 border-t mt-auto space-y-2">
           <div className="flex items-center space-x-3 text-gray-500">
             {card.kakaoId && (
               <div className="flex items-center space-x-1">
@@ -141,16 +141,18 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
               </div>
             )}
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDetailClick(card)
-            }}
-          >
-            자세히 보기
-          </Button>
+          <div className="flex justify-center">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDetailClick(card)
+              }}
+            >
+              자세히 보기
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
