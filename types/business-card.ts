@@ -19,6 +19,12 @@ export interface BusinessCard {
   exposureCount: number
   lastExposedAt?: string | null
   exposureWeight: number
+  // 소셜 미디어 필드 추가
+  facebookUrl?: string | null
+  instagramUrl?: string | null
+  tiktokUrl?: string | null
+  threadsUrl?: string | null
+  youtubeUrl?: string | null
 }
 
 export interface BusinessCardData {
@@ -41,6 +47,12 @@ export interface BusinessCardData {
   exposure_count?: number
   last_exposed_at?: string | null
   exposure_weight?: number
+  // 소셜 미디어 필드 추가
+  facebook_url?: string | null
+  instagram_url?: string | null
+  tiktok_url?: string | null
+  threads_url?: string | null
+  youtube_url?: string | null
 }
 
 export interface Category {

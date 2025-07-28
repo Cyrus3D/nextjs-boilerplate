@@ -9,16 +9,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
     {
-      url: "https://hotthai.info/admin",
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.5,
-    },
-    {
       url: "https://hotthai.info/dashboard-mgmt-2024",
       lastModified: new Date(),
       changeFrequency: "weekly",
-      priority: 0.3,
+      priority: 0.5,
     },
   ]
 }

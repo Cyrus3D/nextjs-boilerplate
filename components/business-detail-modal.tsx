@@ -1,6 +1,6 @@
 "use client"
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -10,25 +10,15 @@ import {
   Clock,
   MessageCircle,
   Globe,
-  Zap,
-  ExternalLink,
-  Copy,
-  Share2,
   Map,
-  Search,
+  Crown,
   Facebook,
   Instagram,
   Youtube,
-  Crown,
+  MessageSquare,
 } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
-import {
-  generateGoogleMapsSearchUrl,
-  isValidLocation,
-  cleanLocationForSearch,
-  getUrlType,
-  getLinkPlatform,
-} from "../lib/utils"
+import { isValidLocation, getUrlType } from "../lib/utils"
 
 interface BusinessDetailModalProps {
   card: BusinessCard | null
@@ -53,101 +43,53 @@ const getCategoryColor = (category: string) => {
   return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
 }
 
-// 링크 타입별 아이콘 반환
-const getLinkIcon = (type: string) => {
-  const icons = {
-    website: Globe,
-    map: Map,
-    facebook: Facebook,
-    instagram: Instagram,
-    youtube: Youtube,
+const getSocialIcon = (platform: string) => {
+  switch (platform.toLowerCase()) {
+    case "facebook":
+      return <Facebook className="h-4 w-4" />
+    case "instagram":
+      return <Instagram className="h-4 w-4" />
+    case "youtube":
+      return <Youtube className="h-4 w-4" />
+    case "tiktok":
+      return <MessageSquare className="h-4 w-4" />
+    case "threads":
+      return <MessageSquare className="h-4 w-4" />
+    default:
+      return <Globe className="h-4 w-4" />
   }
-  return icons[type as keyof typeof icons] || Globe
+}
+
+const getSocialColor = (platform: string) => {
+  const colors = {
+    facebook: "bg-blue-600 hover:bg-blue-700",
+    instagram: "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600",
+    youtube: "bg-red-600 hover:bg-red-700",
+    tiktok: "bg-black hover:bg-gray-800",
+    threads: "bg-gray-800 hover:bg-gray-900",
+  }
+  return colors[platform.toLowerCase() as keyof typeof colors] || "bg-gray-600 hover:bg-gray-700"
 }
 
 export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessDetailModalProps) {
   if (!card) return null
 
-  const handleCopyPhone = () => {
-    if (card.phone) {
-      navigator.clipboard.writeText(card.phone)
-    }
-  }
+  const urlType = getUrlType(card.website)
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: card.title,
-        text: card.description,
-        url: window.location.href,
-      })
-    }
-  }
-
-  // 지도 검색 링크 생성
-  const handleMapSearch = () => {
-    if (card.location) {
-      const cleanedLocation = cleanLocationForSearch(card.location)
-      const mapUrl = generateGoogleMapsSearchUrl(cleanedLocation, card.title)
-      window.open(mapUrl, "_blank")
-    }
-  }
-
-  // 현재 링크들 정리 (향후 확장 대비)
-  const links = []
-
-  // 기본 웹사이트/지도 링크
-  if (card.website) {
-    const urlType = getUrlType(card.website)
-    links.push({
-      type: urlType,
-      url: card.website,
-      platform: getLinkPlatform(card.website),
-    })
-  }
-
-  // 향후 추가될 수 있는 별도 지도 링크
-  if (card.mapUrl && card.mapUrl !== card.website) {
-    links.push({
-      type: "map",
-      url: card.mapUrl,
-      platform: getLinkPlatform(card.mapUrl),
-    })
-  }
-
-  // 향후 소셜 링크들 (확장 시)
-  if (card.socialLinks) {
-    card.socialLinks.forEach((link) => {
-      links.push({
-        type: link.type,
-        url: link.url,
-        platform: link.displayName || getLinkPlatform(link.url),
-      })
-    })
-  }
+  // 소셜 미디어 링크들을 배열로 정리
+  const socialLinks = [
+    { platform: "facebook", url: card.facebook_url, label: "Facebook" },
+    { platform: "instagram", url: card.instagram_url, label: "Instagram" },
+    { platform: "youtube", url: card.youtube_url, label: "YouTube" },
+    { platform: "tiktok", url: card.tiktok_url, label: "TikTok" },
+    { platform: "threads", url: card.threads_url, label: "Threads" },
+  ].filter((link) => link.url && link.url.trim() !== "")
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                {/* 프리미엄 카테고리를 가장 먼저 표시 */}
-                {card.isPremium && (
-                  <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1" variant="secondary">
-                    <Crown className="h-3 w-3" />
-                    프리미엄
-                  </Badge>
-                )}
-                {/* 기본 카테고리 */}
-                <Badge className={getCategoryColor(card.category)} variant="secondary">
-                  {card.category}
-                </Badge>
-              </div>
-              <DialogTitle className="text-2xl">{card.title}</DialogTitle>
-            </div>
-          </div>
+          <DialogTitle className="text-2xl font-bold">{card.title}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -158,162 +100,151 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
               alt={card.title}
               className="w-full h-64 object-cover rounded-lg"
             />
+            <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
+              {card.isPremium && (
+                <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1" variant="secondary">
+                  <Crown className="h-3 w-3" />
+                  프리미엄
+                </Badge>
+              )}
+              <Badge className={getCategoryColor(card.category)} variant="secondary">
+                {card.category}
+              </Badge>
+            </div>
           </div>
 
-          {/* 설명 */}
-          <div>
-            <h3 className="font-semibold text-lg mb-2">상세 정보</h3>
-            <DialogDescription className="text-base leading-relaxed">{card.description}</DialogDescription>
-          </div>
-
-          {/* 프로모션 정보 */}
-          {card.promotion && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Zap className="h-4 w-4 text-yellow-600" />
-                <span className="font-medium text-yellow-800">특별 혜택</span>
-              </div>
-              <p className="text-yellow-700">{card.promotion}</p>
-            </div>
-          )}
-
-          {/* 가격 정보 */}
-          {card.price && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium text-green-800">가격 정보</span>
-              </div>
-              <p className="text-green-700 text-lg font-semibold">{card.price}</p>
-            </div>
-          )}
-
-          <Separator />
-
-          {/* 연락처 및 기본 정보 */}
+          {/* 기본 정보 */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">연락처 및 정보</h3>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">상세 정보</h3>
+              <p className="text-gray-700 leading-relaxed">{card.description}</p>
+            </div>
 
-            {card.location && (
-              <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-gray-900">{card.location}</p>
-                  <div className="flex gap-2 mt-2">
-                    {/* 위치 정보로 구글 맵 검색 */}
+            {/* 연락처 정보 */}
+            <div className="space-y-3">
+              {card.location && (
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-gray-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-gray-900">{card.location}</span>
                     {isValidLocation(card.location) && (
-                      <Button variant="link" size="sm" className="p-0 h-auto text-green-600" onClick={handleMapSearch}>
-                        <Search className="h-3 w-3 mr-1" />
-                        지도에서 검색 <ExternalLink className="h-3 w-3 ml-1" />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="ml-2 bg-transparent"
+                        onClick={() => {
+                          const query = encodeURIComponent(card.location)
+                          window.open(`https://maps.google.com/maps?q=${query}`, "_blank")
+                        }}
+                      >
+                        <Map className="h-4 w-4 mr-1" />
+                        지도 보기
                       </Button>
                     )}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {card.phone && (
-              <div className="flex items-center gap-3">
-                <Phone className="h-5 w-5 text-gray-500 flex-shrink-0" />
-                <div className="flex-1 flex items-center justify-between">
+              {card.phone && (
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-gray-500 flex-shrink-0" />
                   <span className="text-gray-900">{card.phone}</span>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleCopyPhone}>
-                      <Copy className="h-3 w-3 mr-1" />
-                      복사
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => window.open(`tel:${card.phone}`)}>
-                      전화걸기
-                    </Button>
-                  </div>
+                  <Button size="sm" variant="outline" onClick={() => window.open(`tel:${card.phone}`, "_self")}>
+                    전화걸기
+                  </Button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {card.hours && (
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-gray-500 flex-shrink-0" />
-                <span className="text-gray-900">{card.hours}</span>
-              </div>
-            )}
+              {card.hours && (
+                <div className="flex items-center gap-3">
+                  <Clock className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                  <span className="text-gray-900">{card.hours}</span>
+                </div>
+              )}
 
-            {card.kakaoId && (
-              <div className="flex items-center gap-3">
-                <MessageCircle className="h-5 w-5 text-gray-500 flex-shrink-0" />
-                <div className="flex-1 flex items-center justify-between">
+              {card.kakaoId && (
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="h-5 w-5 text-gray-500 flex-shrink-0" />
                   <span className="text-gray-900">카카오톡: {card.kakaoId}</span>
                   <Button
-                    variant="outline"
                     size="sm"
-                    onClick={() => window.open(`https://open.kakao.com/o/${card.kakaoId}`)}
+                    variant="outline"
+                    onClick={() => window.open(`https://open.kakao.com/o/${card.kakaoId}`, "_blank")}
                   >
-                    카톡 연결
+                    카톡 열기
                   </Button>
                 </div>
-              </div>
-            )}
+              )}
 
-            {card.lineId && (
-              <div className="flex items-center gap-3">
-                <MessageCircle className="h-5 w-5 text-gray-500 flex-shrink-0" />
-                <div className="flex-1 flex items-center justify-between">
-                  <span className="text-gray-900">라인: {card.lineId}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(`https://line.me/ti/p/${card.lineId}`)}
-                  >
-                    라인 연결
+              {card.website && (
+                <div className="flex items-center gap-3">
+                  {urlType === "map" ? (
+                    <Map className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                  ) : (
+                    <Globe className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                  )}
+                  <span className="text-gray-900 truncate flex-1">{card.website}</span>
+                  <Button size="sm" variant="outline" onClick={() => window.open(card.website, "_blank")}>
+                    {urlType === "map" ? "지도 보기" : "웹사이트 방문"}
                   </Button>
                 </div>
-              </div>
-            )}
-
-            {/* 웹사이트 및 링크들 */}
-            {links.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-medium text-gray-900">웹사이트 및 링크</h4>
-                {links.map((link, index) => {
-                  const IconComponent = getLinkIcon(link.type)
-                  return (
-                    <div key={index} className="flex items-center gap-3">
-                      <IconComponent className="h-5 w-5 text-gray-500 flex-shrink-0" />
-                      <div className="flex-1 flex items-center justify-between">
-                        <span className="text-gray-900">{link.platform}</span>
-                        <Button variant="outline" size="sm" onClick={() => window.open(link.url, "_blank")}>
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          방문하기
-                        </Button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* 태그 */}
-          <div>
-            <h3 className="font-semibold text-lg mb-3">태그</h3>
-            <div className="flex flex-wrap gap-2">
-              {card.tags.map((tag, index) => (
-                <Badge key={index} variant="outline">
-                  {tag}
-                </Badge>
-              ))}
+              )}
             </div>
-          </div>
 
-          {/* 액션 버튼 */}
-          <div className="flex gap-3 pt-4">
-            <Button onClick={handleShare} variant="outline" className="flex-1 bg-transparent">
-              <Share2 className="h-4 w-4 mr-2" />
-              공유하기
-            </Button>
-            <Button onClick={onClose} className="flex-1">
-              닫기
-            </Button>
+            {/* 소셜 미디어 링크 */}
+            {socialLinks.length > 0 && (
+              <div>
+                <h4 className="text-md font-semibold mb-3">소셜 미디어</h4>
+                <div className="flex flex-wrap gap-2">
+                  {socialLinks.map((social) => (
+                    <Button
+                      key={social.platform}
+                      size="sm"
+                      className={`text-white ${getSocialColor(social.platform)}`}
+                      onClick={() => window.open(social.url, "_blank")}
+                    >
+                      {getSocialIcon(social.platform)}
+                      <span className="ml-2">{social.label} 팔로우</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* 가격 및 프로모션 */}
+            {(card.price || card.promotion) && (
+              <div className="space-y-3">
+                {card.price && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-green-800 mb-1">가격 정보</h4>
+                    <p className="text-green-700">{card.price}</p>
+                  </div>
+                )}
+
+                {card.promotion && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-yellow-800 mb-1">🎉 특별 혜택</h4>
+                    <p className="text-yellow-700">{card.promotion}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 태그 */}
+            {card.tags.length > 0 && (
+              <div>
+                <h4 className="text-md font-semibold mb-3">관련 태그</h4>
+                <div className="flex flex-wrap gap-2">
+                  {card.tags.map((tag, index) => (
+                    <Badge key={index} variant="outline" className="text-sm">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

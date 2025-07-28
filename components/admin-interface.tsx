@@ -31,6 +31,10 @@ import {
   Database,
   Weight,
   ImageIcon,
+  Facebook,
+  Instagram,
+  Youtube,
+  MessageSquare,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import {
@@ -83,7 +87,7 @@ export default function AdminInterface() {
   const [creating, setCreating] = useState(false)
   const [updating, setUpdating] = useState(false)
 
-  // 새 카드 폼 상태 - rating 제거
+  // 새 카드 폼 상태 - 소셜 미디어 필드 추가
   const [newCard, setNewCard] = useState<Partial<BusinessCardData>>({
     title: "",
     description: "",
@@ -97,6 +101,11 @@ export default function AdminInterface() {
     price: "",
     promotion: "",
     image_url: "",
+    facebook_url: "",
+    instagram_url: "",
+    tiktok_url: "",
+    threads_url: "",
+    youtube_url: "",
     is_promoted: false,
     is_active: true,
     is_premium: false,
@@ -285,7 +294,7 @@ export default function AdminInterface() {
         description: "새 카드가 생성되었습니다.",
       })
 
-      // 폼 초기화 - rating 제거
+      // 폼 초기화 - 소셜 미디어 필드 포함
       setIsCreating(false)
       setNewCard({
         title: "",
@@ -300,6 +309,11 @@ export default function AdminInterface() {
         price: "",
         promotion: "",
         image_url: "",
+        facebook_url: "",
+        instagram_url: "",
+        tiktok_url: "",
+        threads_url: "",
+        youtube_url: "",
         is_promoted: false,
         is_active: true,
         is_premium: false,
@@ -346,7 +360,7 @@ export default function AdminInterface() {
     try {
       console.log("handleUpdateCard 호출됨:", editingCard)
 
-      // 업데이트할 데이터 준비 - categories 필드 제외
+      // 업데이트할 데이터 준비 - categories 필드 제외, 소셜 미디어 필드 포함
       const updateData: Partial<BusinessCardData> = {
         title: editingCard.title,
         description: editingCard.description,
@@ -360,6 +374,11 @@ export default function AdminInterface() {
         price: editingCard.price,
         promotion: editingCard.promotion,
         image_url: editingCard.image_url,
+        facebook_url: editingCard.facebook_url,
+        instagram_url: editingCard.instagram_url,
+        tiktok_url: editingCard.tiktok_url,
+        threads_url: editingCard.threads_url,
+        youtube_url: editingCard.youtube_url,
         is_promoted: editingCard.is_promoted,
         is_active: editingCard.is_active,
         is_premium: editingCard.is_premium,
@@ -671,6 +690,40 @@ export default function AdminInterface() {
                         )}
                       </div>
                       <p className="text-sm text-gray-600 mb-2">{card.description}</p>
+
+                      {/* 소셜 미디어 링크 표시 */}
+                      <div className="flex items-center gap-2 mb-2">
+                        {card.facebook_url && (
+                          <Badge variant="outline" className="text-blue-600">
+                            <Facebook className="h-3 w-3 mr-1" />
+                            Facebook
+                          </Badge>
+                        )}
+                        {card.instagram_url && (
+                          <Badge variant="outline" className="text-pink-600">
+                            <Instagram className="h-3 w-3 mr-1" />
+                            Instagram
+                          </Badge>
+                        )}
+                        {card.tiktok_url && (
+                          <Badge variant="outline" className="text-black">
+                            TikTok
+                          </Badge>
+                        )}
+                        {card.threads_url && (
+                          <Badge variant="outline" className="text-gray-600">
+                            <MessageSquare className="h-3 w-3 mr-1" />
+                            Threads
+                          </Badge>
+                        )}
+                        {card.youtube_url && (
+                          <Badge variant="outline" className="text-red-600">
+                            <Youtube className="h-3 w-3 mr-1" />
+                            YouTube
+                          </Badge>
+                        )}
+                      </div>
+
                       <div className="flex items-center gap-4 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                           <Eye className="h-3 w-3" />
@@ -741,9 +794,9 @@ export default function AdminInterface() {
         </CardContent>
       </Card>
 
-      {/* 새 카드 생성 다이얼로그 - 이미지 업로드 필드 추가 */}
+      {/* 새 카드 생성 다이얼로그 - 소셜 미디어 필드 추가 */}
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>새 카드 추가</DialogTitle>
           </DialogHeader>
@@ -844,7 +897,7 @@ export default function AdminInterface() {
               />
             </div>
 
-            {/* 이미지 업로드 섹션 추가 */}
+            {/* 이미지 업로드 섹션 */}
             <div className="col-span-2 space-y-2">
               <Label className="flex items-center gap-2">
                 <ImageIcon className="h-4 w-4" />
@@ -915,6 +968,79 @@ export default function AdminInterface() {
                 onChange={(e) => setNewCard((prev) => ({ ...prev, hours: e.target.value }))}
                 placeholder="운영시간"
               />
+            </div>
+
+            {/* 소셜 미디어 필드 추가 */}
+            <div className="col-span-2">
+              <Label className="text-lg font-semibold mb-4 block">소셜 미디어</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="facebook_url" className="flex items-center gap-2">
+                    <Facebook className="h-4 w-4 text-blue-600" />
+                    페이스북 URL
+                  </Label>
+                  <Input
+                    id="facebook_url"
+                    value={newCard.facebook_url || ""}
+                    onChange={(e) => setNewCard((prev) => ({ ...prev, facebook_url: e.target.value }))}
+                    placeholder="https://facebook.com/..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="instagram_url" className="flex items-center gap-2">
+                    <Instagram className="h-4 w-4 text-pink-600" />
+                    인스타그램 URL
+                  </Label>
+                  <Input
+                    id="instagram_url"
+                    value={newCard.instagram_url || ""}
+                    onChange={(e) => setNewCard((prev) => ({ ...prev, instagram_url: e.target.value }))}
+                    placeholder="https://instagram.com/..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="tiktok_url" className="flex items-center gap-2">
+                    <span className="w-4 h-4 bg-black rounded text-white text-xs flex items-center justify-center">
+                      T
+                    </span>
+                    틱톡 URL
+                  </Label>
+                  <Input
+                    id="tiktok_url"
+                    value={newCard.tiktok_url || ""}
+                    onChange={(e) => setNewCard((prev) => ({ ...prev, tiktok_url: e.target.value }))}
+                    placeholder="https://tiktok.com/@..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="threads_url" className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-gray-600" />
+                    쓰레드 URL
+                  </Label>
+                  <Input
+                    id="threads_url"
+                    value={newCard.threads_url || ""}
+                    onChange={(e) => setNewCard((prev) => ({ ...prev, threads_url: e.target.value }))}
+                    placeholder="https://threads.net/@..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="youtube_url" className="flex items-center gap-2">
+                    <Youtube className="h-4 w-4 text-red-600" />
+                    유튜브 URL
+                  </Label>
+                  <Input
+                    id="youtube_url"
+                    value={newCard.youtube_url || ""}
+                    onChange={(e) => setNewCard((prev) => ({ ...prev, youtube_url: e.target.value }))}
+                    placeholder="https://youtube.com/..."
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -989,9 +1115,9 @@ export default function AdminInterface() {
         </DialogContent>
       </Dialog>
 
-      {/* 편집 다이얼로그 - 이미지 업로드 필드 추가 */}
+      {/* 편집 다이얼로그 - 소셜 미디어 필드 추가 */}
       <Dialog open={!!editingCard} onOpenChange={() => setEditingCard(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>카드 편집</DialogTitle>
           </DialogHeader>
@@ -1040,7 +1166,7 @@ export default function AdminInterface() {
                 />
               </div>
 
-              {/* 편집용 이미지 업로드 섹션 추가 */}
+              {/* 편집용 이미지 업로드 섹션 */}
               <div className="col-span-2 space-y-2">
                 <Label className="flex items-center gap-2">
                   <ImageIcon className="h-4 w-4" />
@@ -1111,6 +1237,89 @@ export default function AdminInterface() {
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, hours: e.target.value } : null))}
                   placeholder="운영시간"
                 />
+              </div>
+
+              {/* 편집용 소셜 미디어 필드 */}
+              <div className="col-span-2">
+                <Label className="text-lg font-semibold mb-4 block">소셜 미디어</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-facebook_url" className="flex items-center gap-2">
+                      <Facebook className="h-4 w-4 text-blue-600" />
+                      페이스북 URL
+                    </Label>
+                    <Input
+                      id="edit-facebook_url"
+                      value={editingCard.facebook_url || ""}
+                      onChange={(e) =>
+                        setEditingCard((prev) => (prev ? { ...prev, facebook_url: e.target.value } : null))
+                      }
+                      placeholder="https://facebook.com/..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-instagram_url" className="flex items-center gap-2">
+                      <Instagram className="h-4 w-4 text-pink-600" />
+                      인스타그램 URL
+                    </Label>
+                    <Input
+                      id="edit-instagram_url"
+                      value={editingCard.instagram_url || ""}
+                      onChange={(e) =>
+                        setEditingCard((prev) => (prev ? { ...prev, instagram_url: e.target.value } : null))
+                      }
+                      placeholder="https://instagram.com/..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-tiktok_url" className="flex items-center gap-2">
+                      <span className="w-4 h-4 bg-black rounded text-white text-xs flex items-center justify-center">
+                        T
+                      </span>
+                      틱톡 URL
+                    </Label>
+                    <Input
+                      id="edit-tiktok_url"
+                      value={editingCard.tiktok_url || ""}
+                      onChange={(e) =>
+                        setEditingCard((prev) => (prev ? { ...prev, tiktok_url: e.target.value } : null))
+                      }
+                      placeholder="https://tiktok.com/@..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-threads_url" className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-gray-600" />
+                      쓰레드 URL
+                    </Label>
+                    <Input
+                      id="edit-threads_url"
+                      value={editingCard.threads_url || ""}
+                      onChange={(e) =>
+                        setEditingCard((prev) => (prev ? { ...prev, threads_url: e.target.value } : null))
+                      }
+                      placeholder="https://threads.net/@..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-youtube_url" className="flex items-center gap-2">
+                      <Youtube className="h-4 w-4 text-red-600" />
+                      유튜브 URL
+                    </Label>
+                    <Input
+                      id="edit-youtube_url"
+                      value={editingCard.youtube_url || ""}
+                      onChange={(e) =>
+                        setEditingCard((prev) => (prev ? { ...prev, youtube_url: e.target.value } : null))
+                      }
+                      placeholder="https://youtube.com/..."
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">

@@ -5,7 +5,7 @@ import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { revalidatePath } from "next/cache"
 
-// 실제 데이터베이스 스키마에 맞게 수정된 인터페이스 (rating 제거)
+// 실제 데이터베이스 스키마에 맞게 수정된 인터페이스 (소셜 미디어 필드 추가)
 export interface BusinessCardData {
   title: string
   description: string
@@ -27,6 +27,12 @@ export interface BusinessCardData {
   last_exposed_at?: string | null
   exposure_weight?: number
   view_count?: number
+  // 소셜 미디어 필드 추가
+  facebook_url?: string | null
+  instagram_url?: string | null
+  tiktok_url?: string | null
+  threads_url?: string | null
+  youtube_url?: string | null
 }
 
 export interface AIStatusResult {
@@ -82,7 +88,7 @@ export async function checkAIStatus(): Promise<AIStatusResult> {
   }
 }
 
-// AI를 사용한 비즈니스 카드 데이터 파싱 (rating 제거)
+// AI를 사용한 비즈니스 카드 데이터 파싱 (소셜 미디어 필드 추가)
 export async function parseBusinessCardData(text: string): Promise<Partial<BusinessCardData>> {
   if (!text.trim()) {
     throw new Error("분석할 텍스트가 없습니다.")
@@ -107,7 +113,12 @@ export async function parseBusinessCardData(text: string): Promise<Partial<Busin
         "website": "웹사이트 URL",
         "hours": "운영시간",
         "price": "가격 정보",
-        "promotion": "프로모션/할인 정보"
+        "promotion": "프로모션/할인 정보",
+        "facebook_url": "페이스북 URL",
+        "instagram_url": "인스타그램 URL",
+        "tiktok_url": "틱톡 URL",
+        "threads_url": "쓰레드 URL",
+        "youtube_url": "유튜브 URL"
       }
 
       JSON만 반환하고 다른 텍스트는 포함하지 마세요.`,
@@ -118,7 +129,7 @@ export async function parseBusinessCardData(text: string): Promise<Partial<Busin
     const cleanedResult = result.replace(/```json\n?|\n?```/g, "").trim()
     const parsedData = JSON.parse(cleanedResult)
 
-    // 기본값 설정 (rating 제거)
+    // 기본값 설정 (소셜 미디어 필드 포함)
     const businessData: Partial<BusinessCardData> = {
       title: parsedData.title || "제목 없음",
       description: parsedData.description || "설명 없음",
@@ -130,6 +141,11 @@ export async function parseBusinessCardData(text: string): Promise<Partial<Busin
       hours: parsedData.hours || null,
       price: parsedData.price || null,
       promotion: parsedData.promotion || null,
+      facebook_url: parsedData.facebook_url || null,
+      instagram_url: parsedData.instagram_url || null,
+      tiktok_url: parsedData.tiktok_url || null,
+      threads_url: parsedData.threads_url || null,
+      youtube_url: parsedData.youtube_url || null,
       is_active: true,
       is_promoted: false,
       is_premium: false,
@@ -144,7 +160,7 @@ export async function parseBusinessCardData(text: string): Promise<Partial<Busin
   }
 }
 
-// 비즈니스 카드 생성 (rating 제거)
+// 비즈니스 카드 생성 (소셜 미디어 필드 포함)
 export async function createBusinessCard(data: BusinessCardData) {
   console.log("createBusinessCard 호출됨:", data)
 
@@ -159,7 +175,7 @@ export async function createBusinessCard(data: BusinessCardData) {
   }
 
   try {
-    // 데이터베이스에 삽입할 데이터 준비 - rating 제거
+    // 데이터베이스에 삽입할 데이터 준비 (소셜 미디어 필드 포함)
     const insertData = {
       title: data.title,
       description: data.description,
@@ -173,6 +189,11 @@ export async function createBusinessCard(data: BusinessCardData) {
       price: data.price || null,
       promotion: data.promotion || null,
       image_url: data.image_url || null,
+      facebook_url: data.facebook_url || null,
+      instagram_url: data.instagram_url || null,
+      tiktok_url: data.tiktok_url || null,
+      threads_url: data.threads_url || null,
+      youtube_url: data.youtube_url || null,
       is_promoted: data.is_promoted || false,
       is_active: data.is_active !== false,
       is_premium: data.is_premium || false,
@@ -207,7 +228,7 @@ export async function createBusinessCard(data: BusinessCardData) {
   }
 }
 
-// 비즈니스 카드 업데이트 - 수정된 버전
+// 비즈니스 카드 업데이트 - 소셜 미디어 필드 포함
 export async function updateBusinessCard(id: number, data: Partial<BusinessCardData>) {
   console.log("updateBusinessCard 호출됨:", { id, data })
 
@@ -226,7 +247,7 @@ export async function updateBusinessCard(id: number, data: Partial<BusinessCardD
       updated_at: new Date().toISOString(),
     }
 
-    // 각 필드를 안전하게 처리
+    // 각 필드를 안전하게 처리 (소셜 미디어 필드 포함)
     if (data.title !== undefined) updateData.title = data.title || null
     if (data.description !== undefined) updateData.description = data.description || null
     if (data.category_id !== undefined) updateData.category_id = data.category_id
@@ -239,6 +260,11 @@ export async function updateBusinessCard(id: number, data: Partial<BusinessCardD
     if (data.price !== undefined) updateData.price = data.price || null
     if (data.promotion !== undefined) updateData.promotion = data.promotion || null
     if (data.image_url !== undefined) updateData.image_url = data.image_url || null
+    if (data.facebook_url !== undefined) updateData.facebook_url = data.facebook_url || null
+    if (data.instagram_url !== undefined) updateData.instagram_url = data.instagram_url || null
+    if (data.tiktok_url !== undefined) updateData.tiktok_url = data.tiktok_url || null
+    if (data.threads_url !== undefined) updateData.threads_url = data.threads_url || null
+    if (data.youtube_url !== undefined) updateData.youtube_url = data.youtube_url || null
     if (data.is_promoted !== undefined) updateData.is_promoted = Boolean(data.is_promoted)
     if (data.is_active !== undefined) updateData.is_active = Boolean(data.is_active)
     if (data.is_premium !== undefined) updateData.is_premium = Boolean(data.is_premium)

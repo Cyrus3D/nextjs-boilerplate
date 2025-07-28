@@ -1,16 +1,14 @@
-import { supabase, isSupabaseConfigured } from "./supabase"
-import { sampleBusinessCards, sampleCategories } from "../data/sample-cards"
-import { updateExposureStats } from "./card-rotation"
-import type { BusinessCard, Category } from "../types/business-card"
+import { supabase } from "./supabase"
+import type { BusinessCard } from "@/types/business-card"
 
-export async function getBusinessCards(): Promise<BusinessCard[]> {
-  if (!isSupabaseConfigured() || !supabase) {
-    console.log("Supabase not configured, returning sample data")
-    return sampleBusinessCards
-  }
-
+export async function getBusinessCards(
+  category?: string,
+  searchTerm?: string,
+  limit = 20,
+  offset = 0,
+): Promise<BusinessCard[]> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("business_cards")
       .select(`
         *,
@@ -23,16 +21,28 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
       .eq("is_active", true)
       .order("created_at", { ascending: false })
 
-    if (error) {
-      console.error("Supabase error:", error)
-      return sampleBusinessCards
+    if (category && category !== "전체") {
+      query = query.eq("categories.name", category)
     }
 
-    const cards = (data || []).map((card) => ({
+    if (searchTerm) {
+      query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+    }
+
+    query = query.range(offset, offset + limit - 1)
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error("비즈니스 카드 조회 오류:", error)
+      throw error
+    }
+
+    return (data || []).map((card: any) => ({
       id: card.id,
       title: card.title,
       description: card.description,
-      category: card.categories?.name || "Unknown",
+      category: card.categories?.name || "기타",
       location: card.location,
       phone: card.phone,
       kakaoId: card.kakao_id,
@@ -41,7 +51,7 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
       hours: card.hours,
       price: card.price,
       promotion: card.promotion,
-      tags: [], // Tags would need separate query
+      tags: [], // 태그는 별도 조회 필요
       image: card.image_url,
       isPromoted: card.is_promoted || false,
       isPremium: card.is_premium || false,
@@ -49,167 +59,68 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
       exposureCount: card.exposure_count || 0,
       lastExposedAt: card.last_exposed_at,
       exposureWeight: card.exposure_weight || 1.0,
+      // 소셜 미디어 필드 추가
+      facebook_url: card.facebook_url,
+      instagram_url: card.instagram_url,
+      tiktok_url: card.tiktok_url,
+      threads_url: card.threads_url,
+      youtube_url: card.youtube_url,
     }))
-
-    // Update exposure stats for displayed cards
-    const cardIds = cards.slice(0, 12).map((card) => card.id)
-    await updateExposureStats(cardIds)
-
-    return cards
   } catch (error) {
-    console.error("Error fetching business cards:", error)
-    return sampleBusinessCards
+    console.error("getBusinessCards 오류:", error)
+    return []
   }
 }
 
-export async function getCategories(): Promise<Category[]> {
-  if (!isSupabaseConfigured() || !supabase) {
-    return sampleCategories
-  }
-
+export async function getCategories() {
   try {
     const { data, error } = await supabase.from("categories").select("*").order("name")
 
     if (error) {
-      console.error("Error fetching categories:", error)
-      return sampleCategories
+      console.error("카테고리 조회 오류:", error)
+      throw error
     }
 
-    return data || sampleCategories
+    return data || []
   } catch (error) {
-    console.error("Error fetching categories:", error)
-    return sampleCategories
+    console.error("getCategories 오류:", error)
+    return []
   }
 }
 
-export async function getBusinessCardsByCategory(categoryName: string): Promise<BusinessCard[]> {
-  const allCards = await getBusinessCards()
-  return allCards.filter((card) => card.category === categoryName)
-}
-
-export async function searchBusinessCards(query: string): Promise<BusinessCard[]> {
-  const allCards = await getBusinessCards()
-  const lowercaseQuery = query.toLowerCase()
-
-  return allCards.filter(
-    (card) =>
-      card.title.toLowerCase().includes(lowercaseQuery) ||
-      card.description.toLowerCase().includes(lowercaseQuery) ||
-      card.category.toLowerCase().includes(lowercaseQuery) ||
-      card.tags.some((tag) => tag.toLowerCase().includes(lowercaseQuery)),
-  )
-}
-
-export async function getPremiumCards(): Promise<BusinessCard[]> {
-  const allCards = await getBusinessCards()
-  return allCards.filter((card) => card.isPremium)
-}
-
-export async function getPromotedCards(): Promise<BusinessCard[]> {
-  const allCards = await getBusinessCards()
-  return allCards.filter((card) => card.isPromoted)
-}
-
-export async function incrementViewCount(cardId: number): Promise<void> {
-  if (!isSupabaseConfigured() || !supabase) {
-    return
-  }
-
+export async function incrementViewCount(cardId: number) {
   try {
-    // First get the current view count
-    const { data: currentData, error: fetchError } = await supabase
+    // 현재 조회수 가져오기
+    const { data: currentCard, error: fetchError } = await supabase
       .from("business_cards")
       .select("view_count")
       .eq("id", cardId)
       .single()
 
     if (fetchError) {
-      console.error("Error fetching current view count:", fetchError)
+      console.error("조회수 조회 오류:", fetchError)
       return
     }
 
-    const currentViewCount = currentData?.view_count || 0
+    const currentCount = currentCard?.view_count || 0
 
-    // Then update with incremented value
-    const { error } = await supabase
+    // 조회수 증가
+    const { error: updateError } = await supabase
       .from("business_cards")
       .update({
-        view_count: currentViewCount + 1,
+        view_count: currentCount + 1,
         updated_at: new Date().toISOString(),
       })
       .eq("id", cardId)
 
-    if (error) {
-      console.error("Error incrementing view count:", error)
+    if (updateError) {
+      console.error("조회수 업데이트 오류:", updateError)
+      throw updateError
     }
+
+    return { success: true }
   } catch (error) {
-    console.error("Error incrementing view count:", error)
-  }
-}
-
-export async function checkDatabaseStatus() {
-  if (!isSupabaseConfigured() || !supabase) {
-    return { status: "not_configured" }
-  }
-
-  try {
-    const tables = ["business_cards", "categories", "tags", "business_card_tags"]
-    const tableStatus: Record<string, boolean> = {}
-
-    for (const table of tables) {
-      try {
-        const { error } = await supabase.from(table).select("*").limit(1)
-        tableStatus[table] = !error
-      } catch {
-        tableStatus[table] = false
-      }
-    }
-
-    return {
-      status: "configured",
-      tables: tableStatus,
-      allTablesExist: Object.values(tableStatus).every(Boolean),
-    }
-  } catch (error) {
-    return { status: "error", error }
-  }
-}
-
-export async function getExposureStats() {
-  if (!isSupabaseConfigured() || !supabase) {
-    return {
-      totalExposures: 0,
-      averageExposures: 0,
-      lastUpdated: new Date().toISOString(),
-    }
-  }
-
-  try {
-    const { data, error } = await supabase.from("business_cards").select("exposure_count").eq("is_active", true)
-
-    if (error) {
-      console.error("Error fetching exposure stats:", error)
-      return {
-        totalExposures: 0,
-        averageExposures: 0,
-        lastUpdated: new Date().toISOString(),
-      }
-    }
-
-    const totalExposures = data.reduce((sum, card) => sum + (card.exposure_count || 0), 0)
-    const averageExposures = data.length > 0 ? totalExposures / data.length : 0
-
-    return {
-      totalExposures,
-      averageExposures: Math.round(averageExposures * 100) / 100,
-      lastUpdated: new Date().toISOString(),
-    }
-  } catch (error) {
-    console.error("Error calculating exposure stats:", error)
-    return {
-      totalExposures: 0,
-      averageExposures: 0,
-      lastUpdated: new Date().toISOString(),
-    }
+    console.error("조회수 증가 중 오류:", error)
+    throw error
   }
 }
