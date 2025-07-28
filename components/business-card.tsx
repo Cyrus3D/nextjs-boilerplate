@@ -3,9 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { MapPin, Phone, Clock, MessageCircle, Globe, Map, Search, Crown } from "lucide-react"
+import { MapPin, Phone, Clock, MessageCircle, Globe, Map, Crown } from "lucide-react"
 import type { BusinessCard } from "../types/business-card"
-import { isValidLocation, getUrlType } from "../lib/utils"
+import { getUrlType } from "../lib/utils"
 
 interface BusinessCardProps {
   card: BusinessCard
@@ -113,33 +113,64 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
         </div>
 
         <div className="pt-2 border-t mt-auto space-y-2">
-          <div className="flex items-center space-x-3 text-gray-500">
-            {card.kakaoId && (
-              <div className="flex items-center space-x-1">
-                <MessageCircle className="h-4 w-4" />
-                <span className="text-xs">카톡</span>
-              </div>
-            )}
-            {/* URL 타입에 따라 아이콘 표시 */}
-            {urlType === "map" && (
-              <div className="flex items-center space-x-1">
-                <Map className="h-4 w-4" />
-                <span className="text-xs">지도</span>
-              </div>
-            )}
-            {urlType === "website" && (
-              <div className="flex items-center space-x-1">
-                <Globe className="h-4 w-4" />
-                <span className="text-xs">웹사이트</span>
-              </div>
-            )}
-            {/* 위치 정보로 검색 가능한 경우 */}
-            {isValidLocation(card.location) && (
-              <div className="flex items-center space-x-1">
-                <Search className="h-4 w-4" />
-                <span className="text-xs">검색</span>
-              </div>
-            )}
+          <div className="space-y-2">
+            {/* 첫 번째 줄부터 순서대로 채우기 */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-gray-500 min-h-[20px]">
+              {card.kakaoId && (
+                <div className="flex items-center space-x-1">
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="text-xs">카톡</span>
+                </div>
+              )}
+              {card.lineId && (
+                <div className="flex items-center space-x-1">
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="text-xs">라인</span>
+                </div>
+              )}
+              {card.phone && (
+                <div className="flex items-center space-x-1">
+                  <Phone className="h-4 w-4" />
+                  <span className="text-xs">전화</span>
+                </div>
+              )}
+              {card.facebookUrl && (
+                <div className="flex items-center space-x-1">
+                  <Globe className="h-4 w-4" />
+                  <span className="text-xs">페북</span>
+                </div>
+              )}
+              {card.instagramUrl && (
+                <div className="flex items-center space-x-1">
+                  <Globe className="h-4 w-4" />
+                  <span className="text-xs">인스타</span>
+                </div>
+              )}
+              {card.youtubeUrl && (
+                <div className="flex items-center space-x-1">
+                  <Globe className="h-4 w-4" />
+                  <span className="text-xs">유튜브</span>
+                </div>
+              )}
+              {card.tiktokUrl && (
+                <div className="flex items-center space-x-1">
+                  <Globe className="h-4 w-4" />
+                  <span className="text-xs">틱톡</span>
+                </div>
+              )}
+              {getUrlType(card.website) === "website" && (
+                <div className="flex items-center space-x-1">
+                  <Globe className="h-4 w-4" />
+                  <span className="text-xs">웹사이트</span>
+                </div>
+              )}
+              {getUrlType(card.website) === "map" && (
+                <div className="flex items-center space-x-1">
+                  <Map className="h-4 w-4" />
+                  <span className="text-xs">지도</span>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex justify-center">
             <Button
