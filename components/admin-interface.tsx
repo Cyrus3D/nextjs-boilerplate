@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import ImageUpload from "@/components/image-upload"
 import {
   Trash2,
   Edit,
@@ -29,6 +30,7 @@ import {
   Calendar,
   Database,
   Weight,
+  ImageIcon,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import {
@@ -94,6 +96,7 @@ export default function AdminInterface() {
     hours: "",
     price: "",
     promotion: "",
+    image_url: "",
     is_promoted: false,
     is_active: true,
     is_premium: false,
@@ -221,6 +224,42 @@ export default function AdminInterface() {
     }
   }
 
+  // 새 카드 이미지 변경 핸들러
+  const handleNewCardImageChange = (imageUrl: string) => {
+    setNewCard((prev) => ({ ...prev, image_url: imageUrl }))
+    toast({
+      title: "이미지 설정 완료",
+      description: "대표 이미지가 설정되었습니다.",
+    })
+  }
+
+  // 새 카드 이미지 제거 핸들러
+  const handleNewCardImageRemove = () => {
+    setNewCard((prev) => ({ ...prev, image_url: "" }))
+    toast({
+      title: "이미지 제거 완료",
+      description: "대표 이미지가 제거되었습니다.",
+    })
+  }
+
+  // 편집 카드 이미지 변경 핸들러
+  const handleEditCardImageChange = (imageUrl: string) => {
+    setEditingCard((prev) => (prev ? { ...prev, image_url: imageUrl } : null))
+    toast({
+      title: "이미지 설정 완료",
+      description: "대표 이미지가 설정되었습니다.",
+    })
+  }
+
+  // 편집 카드 이미지 제거 핸들러
+  const handleEditCardImageRemove = () => {
+    setEditingCard((prev) => (prev ? { ...prev, image_url: "" } : null))
+    toast({
+      title: "이미지 제거 완료",
+      description: "대표 이미지가 제거되었습니다.",
+    })
+  }
+
   const handleCreateCard = async () => {
     console.log("handleCreateCard 호출됨")
     console.log("newCard 데이터:", newCard)
@@ -260,6 +299,7 @@ export default function AdminInterface() {
         hours: "",
         price: "",
         promotion: "",
+        image_url: "",
         is_promoted: false,
         is_active: true,
         is_premium: false,
@@ -584,6 +624,22 @@ export default function AdminInterface() {
                       checked={selectedCards.has(card.id)}
                       onCheckedChange={(checked) => handleSelectCard(card.id, checked as boolean)}
                     />
+
+                    {/* 카드 이미지 표시 */}
+                    <div className="flex-shrink-0">
+                      {card.image_url ? (
+                        <img
+                          src={card.image_url || "/placeholder.svg"}
+                          alt={card.title}
+                          className="w-16 h-16 object-cover rounded-lg border"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg border flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-semibold">{card.title}</h3>
@@ -685,9 +741,9 @@ export default function AdminInterface() {
         </CardContent>
       </Card>
 
-      {/* 새 카드 생성 다이얼로그 - rating 필드 제거 */}
+      {/* 새 카드 생성 다이얼로그 - 이미지 업로드 필드 추가 */}
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>새 카드 추가</DialogTitle>
           </DialogHeader>
@@ -785,6 +841,19 @@ export default function AdminInterface() {
                 onChange={(e) => setNewCard((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="비즈니스 설명"
                 rows={3}
+              />
+            </div>
+
+            {/* 이미지 업로드 섹션 추가 */}
+            <div className="col-span-2 space-y-2">
+              <Label className="flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" />
+                대표 이미지
+              </Label>
+              <ImageUpload
+                currentImageUrl={newCard.image_url || ""}
+                onImageChange={handleNewCardImageChange}
+                onImageRemove={handleNewCardImageRemove}
               />
             </div>
 
@@ -920,9 +989,9 @@ export default function AdminInterface() {
         </DialogContent>
       </Dialog>
 
-      {/* 편집 다이얼로그 - rating 필드 제거 및 수정 기능 개선 */}
+      {/* 편집 다이얼로그 - 이미지 업로드 필드 추가 */}
       <Dialog open={!!editingCard} onOpenChange={() => setEditingCard(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>카드 편집</DialogTitle>
           </DialogHeader>
@@ -968,6 +1037,19 @@ export default function AdminInterface() {
                   onChange={(e) => setEditingCard((prev) => (prev ? { ...prev, description: e.target.value } : null))}
                   placeholder="비즈니스 설명"
                   rows={3}
+                />
+              </div>
+
+              {/* 편집용 이미지 업로드 섹션 추가 */}
+              <div className="col-span-2 space-y-2">
+                <Label className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  대표 이미지
+                </Label>
+                <ImageUpload
+                  currentImageUrl={editingCard.image_url || ""}
+                  onImageChange={handleEditCardImageChange}
+                  onImageRemove={handleEditCardImageRemove}
                 />
               </div>
 
