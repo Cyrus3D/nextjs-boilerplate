@@ -246,6 +246,12 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
               </div>
             )}
           </div>
+          {/* 닫기 버튼 */}
+          <div className="flex justify-center pt-4 border-t border-gray-200">
+            <Button onClick={onClose} variant="outline" className="px-8 bg-transparent">
+              닫기
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
