@@ -61,6 +61,12 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
+        {/* AdSense Verification Code - Must be in head for Google crawler */}
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2092124280694668"
+          crossOrigin="anonymous"
+        />
         <AdSenseScript />
       </head>
       <body className={inter.className}>
