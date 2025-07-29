@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Search, Filter } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Skeleton } from "@/components/ui/skeleton"
 import BusinessCard from "@/components/business-card"
 import BusinessDetailModal from "@/components/business-detail-modal"
 import NativeAd from "@/components/native-ad"
@@ -12,10 +13,59 @@ import InFeedAd from "@/components/in-feed-ad"
 import { getBusinessCards, getCategories, incrementViewCount } from "@/lib/api"
 import type { BusinessCard as BusinessCardType, Category } from "@/types/business-card"
 
+// 스켈레톤 컴포넌트들
+function WeatherSkeleton() {
+  return (
+    <div className="flex items-center justify-center space-x-3">
+      <Skeleton className="h-8 w-8 rounded-full" />
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-3 w-28" />
+      </div>
+    </div>
+  )
+}
+
+function ExchangeRateSkeleton() {
+  return (
+    <div className="flex items-center justify-center space-x-3">
+      <Skeleton className="h-8 w-8 rounded-full" />
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+    </div>
+  )
+}
+
+function CardSkeleton() {
+  return (
+    <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <Skeleton className="w-full h-48" />
+      <div className="p-4 space-y-3">
+        <Skeleton className="h-6 w-3/4" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-4 w-1/3" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-6 w-16" />
+          <Skeleton className="h-6 w-20" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function InfoCardList() {
   const [businessCards, setBusinessCards] = useState<BusinessCardType[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const [cardsLoading, setCardsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [selectedCard, setSelectedCard] = useState<BusinessCardType | null>(null)
@@ -27,52 +77,79 @@ export default function InfoCardList() {
     humidity: 65,
     wind: "약함",
     icon: "☀️",
-    loading: false,
+    loading: true,
   })
   const [exchangeRate, setExchangeRate] = useState({
     rate: 37.7,
     change: -0.1,
     trend: "↘️",
     lastUpdate: "2025년 1월 29일 14:30 (KST)",
-    loading: false,
+    loading: true,
   })
 
+  // 캐시된 데이터 확인
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [cardsData, categoriesData] = await Promise.all([getBusinessCards(), getCategories()])
-        setBusinessCards(cardsData)
-        setCategories(categoriesData)
-      } catch (error) {
-        console.error("데이터 로드 오류:", error)
-      } finally {
-        setLoading(false)
+    const cachedWeather = localStorage.getItem("weather-data")
+    const cachedExchange = localStorage.getItem("exchange-data")
+
+    if (cachedWeather) {
+      const weatherCache = JSON.parse(cachedWeather)
+      const isWeatherFresh = Date.now() - weatherCache.timestamp < 6 * 60 * 60 * 1000 // 6시간
+      if (isWeatherFresh) {
+        setWeatherData({ ...weatherCache.data, loading: false })
       }
     }
 
-    loadData()
+    if (cachedExchange) {
+      const exchangeCache = JSON.parse(cachedExchange)
+      const isExchangeFresh = Date.now() - exchangeCache.timestamp < 12 * 60 * 60 * 1000 // 12시간
+      if (isExchangeFresh) {
+        setExchangeRate({ ...exchangeCache.data, loading: false })
+      }
+    }
   }, [])
 
-  // 날씨 및 환율 데이터 주기적 업데이트
+  // 우선순위별 데이터 로딩
+  useEffect(() => {
+    const loadCriticalData = async () => {
+      try {
+        // 1단계: 카테고리 먼저 로드 (빠름)
+        const categoriesData = await getCategories()
+        setCategories(categoriesData)
+        setLoading(false) // UI 먼저 표시
+
+        // 2단계: 비즈니스 카드 로드
+        const cardsData = await getBusinessCards()
+        setBusinessCards(cardsData)
+        setCardsLoading(false)
+      } catch (error) {
+        console.error("데이터 로드 오류:", error)
+        setLoading(false)
+        setCardsLoading(false)
+      }
+    }
+
+    loadCriticalData()
+  }, [])
+
+  // 날씨 데이터 로딩 (백그라운드)
   useEffect(() => {
     const fetchWeatherData = async () => {
-      setWeatherData((prev) => ({ ...prev, loading: true }))
+      // 캐시된 데이터가 있으면 백그라운드에서만 업데이트
+      const cachedWeather = localStorage.getItem("weather-data")
+      const shouldUpdate = !cachedWeather || Date.now() - JSON.parse(cachedWeather).timestamp > 6 * 60 * 60 * 1000
+
+      if (!shouldUpdate) return
+
       try {
-        // 실제 OpenWeatherMap API 호출
         const response = await fetch(
           `https://api.openweathermap.org/data/2.5/weather?q=Bangkok&appid=0e37172b550acf74ed81a76db7f4c89f&units=metric&lang=en`,
         )
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
 
         const data = await response.json()
-        console.log("Weather API Response:", data) // 디버깅용
-
-        if (data.cod !== 200) {
-          throw new Error(`API Error: ${data.message || "Unknown error"}`)
-        }
+        if (data.cod !== 200) throw new Error(`API Error: ${data.message || "Unknown error"}`)
 
         const getWeatherIcon = (weatherMain: string) => {
           switch (weatherMain.toLowerCase()) {
@@ -120,32 +197,48 @@ export default function InfoCardList() {
           }
         }
 
-        setWeatherData({
+        const newWeatherData = {
           temperature: Math.round(data.main.temp),
           condition: getWeatherCondition(data.weather[0].main),
           humidity: data.main.humidity,
           wind: data.wind?.speed > 5 ? "강함" : data.wind?.speed > 2 ? "보통" : "약함",
           icon: getWeatherIcon(data.weather[0].main),
           loading: false,
-        })
+        }
+
+        setWeatherData(newWeatherData)
+
+        // 캐시에 저장
+        localStorage.setItem(
+          "weather-data",
+          JSON.stringify({
+            data: newWeatherData,
+            timestamp: Date.now(),
+          }),
+        )
       } catch (error) {
         console.error("날씨 데이터 로드 실패:", error)
-        // 오류 시 기본값으로 설정
-        setWeatherData({
-          temperature: 32,
+        setWeatherData((prev) => ({
+          ...prev,
           condition: "정보 없음",
-          humidity: 65,
-          wind: "정보 없음",
-          icon: "🌤️",
           loading: false,
-        })
+        }))
       }
     }
 
+    // 초기 로딩 후 백그라운드에서 실행
+    setTimeout(fetchWeatherData, 1000)
+  }, [])
+
+  // 환율 데이터 로딩 (백그라운드)
+  useEffect(() => {
     const fetchExchangeRate = async () => {
-      setExchangeRate((prev) => ({ ...prev, loading: true }))
+      const cachedExchange = localStorage.getItem("exchange-data")
+      const shouldUpdate = !cachedExchange || Date.now() - JSON.parse(cachedExchange).timestamp > 12 * 60 * 60 * 1000
+
+      if (!shouldUpdate) return
+
       try {
-        // 실제 Exchange Rate API 호출
         const response = await fetch(`https://v6.exchangerate-api.com/v6/10ce062894c8596c1f22fb81/pair/THB/KRW`)
         const data = await response.json()
 
@@ -153,7 +246,7 @@ export default function InfoCardList() {
           const newRate = Math.round(data.conversion_rate * 10) / 10
           const change = Math.round((newRate - exchangeRate.rate) * 10) / 10
 
-          setExchangeRate({
+          const newExchangeData = {
             rate: newRate,
             change: change,
             trend: change > 0 ? "↗️" : change < 0 ? "↘️" : "→",
@@ -166,36 +259,33 @@ export default function InfoCardList() {
               timeZoneName: "short",
             }),
             loading: false,
-          })
-        } else {
-          throw new Error("API 응답 오류")
+          }
+
+          setExchangeRate(newExchangeData)
+
+          // 캐시에 저장
+          localStorage.setItem(
+            "exchange-data",
+            JSON.stringify({
+              data: newExchangeData,
+              timestamp: Date.now(),
+            }),
+          )
         }
       } catch (error) {
         console.error("환율 데이터 로드 실패:", error)
-        // 오류 시 기본값 유지
         setExchangeRate((prev) => ({ ...prev, loading: false }))
       }
     }
 
-    // 초기 데이터 로드
-    fetchWeatherData()
-    fetchExchangeRate()
-
-    // 날씨는 6시간마다 (하루 4회), 환율은 12시간마다 (하루 2회)
-    const weatherInterval = setInterval(fetchWeatherData, 6 * 60 * 60 * 1000) // 6시간마다
-    const exchangeInterval = setInterval(fetchExchangeRate, 12 * 60 * 60 * 1000) // 12시간마다
-
-    return () => {
-      clearInterval(weatherInterval)
-      clearInterval(exchangeInterval)
-    }
+    // 초기 로딩 후 백그라운드에서 실행
+    setTimeout(fetchExchangeRate, 1500)
   }, [])
 
   const handleDetailClick = async (card: BusinessCardType) => {
     setSelectedCard(card)
     setIsModalOpen(true)
 
-    // 조회수 증가
     try {
       await incrementViewCount(card.id)
     } catch (error) {
@@ -208,32 +298,77 @@ export default function InfoCardList() {
     setSelectedCard(null)
   }
 
-  // 필터링된 카드들
-  const filteredCards = businessCards.filter((card) => {
-    const matchesSearch =
-      card.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      card.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      card.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+  // 메모이제이션으로 필터링 성능 최적화
+  const filteredCards = useMemo(() => {
+    return businessCards.filter((card) => {
+      const matchesSearch =
+        card.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    const matchesCategory = selectedCategory === "all" || card.category === selectedCategory
+      const matchesCategory = selectedCategory === "all" || card.category === selectedCategory
 
-    return matchesSearch && matchesCategory
-  })
+      return matchesSearch && matchesCategory
+    })
+  }, [businessCards, searchTerm, selectedCategory])
 
-  // 프리미엄 카드를 먼저 정렬
-  const sortedCards = [...filteredCards].sort((a, b) => {
-    if (a.isPremium && !b.isPremium) return -1
-    if (!a.isPremium && b.isPremium) return 1
-    return 0
-  })
+  // 프리미엄 카드 정렬 최적화
+  const sortedCards = useMemo(() => {
+    return [...filteredCards].sort((a, b) => {
+      if (a.isPremium && !b.isPremium) return -1
+      if (!a.isPremium && b.isPremium) return 1
+      return 0
+    })
+  }, [filteredCards])
 
+  // 초기 로딩 상태 (카테고리 로딩 중)
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-red-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">핫한 정보를 불러오는 중...</p>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="text-center mb-6">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                🔥 핫타이 <span className="text-red-500">HOT THAI</span>
+              </h1>
+              <p className="text-xl text-gray-600 mb-2">태국 생활의 모든 것을 한눈에! 🇹🇭</p>
+              <p className="text-gray-500">
+                맛집 · 쇼핑 · 서비스 · 숙박 · 관광까지
+                <br />
+                태국 거주자와 여행자가 꼭 알아야 할 핫한 정보를 제공합니다
+              </p>
+
+              {/* 날씨 및 환율 스켈레톤 */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 max-w-4xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                  <WeatherSkeleton />
+                  <ExchangeRateSkeleton />
+                </div>
+              </div>
+            </div>
+
+            {/* 카테고리 스켈레톤 */}
+            <div className="flex flex-wrap justify-center gap-2 mb-6">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-6 w-20" />
+              ))}
+            </div>
+
+            {/* 검색 스켈레톤 */}
+            <div className="flex flex-col sm:flex-row gap-4 max-w-2xl mx-auto">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-full sm:w-48" />
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+        </main>
       </div>
     )
   }
@@ -257,51 +392,39 @@ export default function InfoCardList() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 max-w-4xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
                 {/* 방콕 날씨 */}
-                <div className="flex items-center justify-center space-x-3">
-                  <div className="text-2xl">
-                    {weatherData.loading ? (
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                    ) : (
-                      weatherData.icon
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">방콕 오늘 날씨</p>
-                    {weatherData.loading ? (
-                      <p className="font-semibold text-blue-800">로딩중...</p>
-                    ) : (
+                {weatherData.loading ? (
+                  <WeatherSkeleton />
+                ) : (
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="text-2xl">{weatherData.icon}</div>
+                    <div>
+                      <p className="text-sm text-gray-600">방콕 오늘 날씨</p>
                       <p className="font-semibold text-blue-800">
                         {weatherData.temperature}°C / {weatherData.condition}
                       </p>
-                    )}
-                    <p className="text-xs text-gray-500">
-                      습도 {weatherData.humidity}% · 바람 {weatherData.wind}
-                    </p>
+                      <p className="text-xs text-gray-500">
+                        습도 {weatherData.humidity}% · 바람 {weatherData.wind}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* 환율 정보 */}
-                <div className="flex items-center justify-center space-x-3">
-                  <div className="text-2xl">
-                    {exchangeRate.loading ? (
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
-                    ) : (
-                      "💱"
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">바트/원 환율</p>
-                    {exchangeRate.loading ? (
-                      <p className="font-semibold text-green-800">로딩중...</p>
-                    ) : (
+                {exchangeRate.loading ? (
+                  <ExchangeRateSkeleton />
+                ) : (
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="text-2xl">💱</div>
+                    <div>
+                      <p className="text-sm text-gray-600">바트/원 환율</p>
                       <p className="font-semibold text-green-800">1바트 = {exchangeRate.rate}원</p>
-                    )}
-                    <p className="text-xs text-gray-500">
-                      전일 대비 {exchangeRate.change > 0 ? "+" : ""}
-                      {exchangeRate.change}원 {exchangeRate.trend}
-                    </p>
+                      <p className="text-xs text-gray-500">
+                        전일 대비 {exchangeRate.change > 0 ? "+" : ""}
+                        {exchangeRate.change}원 {exchangeRate.trend}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               <div className="text-xs text-gray-400 text-center mt-3 border-t pt-2">
                 출처: OpenWeatherMap, ExchangeRate-API | 업데이트: {exchangeRate.lastUpdate}
@@ -359,7 +482,13 @@ export default function InfoCardList() {
 
       {/* 메인 콘텐츠 */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {sortedCards.length === 0 ? (
+        {cardsLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+        ) : sortedCards.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">아직 등록된 핫한 정보가 없습니다.</p>
             <p className="text-gray-400 text-sm mt-2">곧 다양한 태국 정보를 만나보실 수 있습니다!</p>
