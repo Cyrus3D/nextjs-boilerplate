@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, Suspense, lazy } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +16,9 @@ import {
   getCachedData,
   setCachedData,
 } from "@/lib/optimized-api"
+
+// Lazy load components for better performance
+const BusinessDetailModal = lazy(() => import("@/components/business-detail-modal"))
 
 // Weather and exchange rate interfaces
 interface WeatherData {
@@ -94,6 +97,8 @@ export default function InfoCardList() {
   const [categories, setCategories] = useState<Category[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState<string>("")
+  const [selectedCard, setSelectedCard] = useState<BusinessCardType | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Loading states
   const [isLoading, setIsLoading] = useState(true)
@@ -277,10 +282,9 @@ export default function InfoCardList() {
 
   // Handle card detail click
   const handleDetailClick = (card: BusinessCardType) => {
-    // Increment view count when card is clicked
+    setSelectedCard(card)
+    setIsModalOpen(true)
     incrementViewCount(card.id)
-    // For now, just log the card details - you can implement your own detail view
-    console.log("Card details:", card)
   }
 
   // Handle load more
@@ -488,6 +492,18 @@ export default function InfoCardList() {
           <p className="text-sm text-gray-500 mt-2">로딩 중...</p>
         </div>
       )}
+
+      {/* Business Detail Modal */}
+      <Suspense fallback={<div>Loading modal...</div>}>
+        <BusinessDetailModal
+          card={selectedCard}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false)
+            setSelectedCard(null)
+          }}
+        />
+      </Suspense>
     </div>
   )
 }
