@@ -301,15 +301,17 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                 <h2 className="text-lg font-semibold mb-4 text-gray-900">📞 연락처 정보</h2>
                 <div className="space-y-3">
                   {card.location && (
-                    <div className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors border border-blue-200">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <MapPin className="h-5 w-5 text-blue-600" />
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors border border-blue-200">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <MapPin className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-blue-900 mb-1">위치</h3>
+                          <p className="text-blue-800 break-all">{card.location}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-blue-900 mb-1">위치</h3>
-                        <p className="text-blue-800 mb-2 break-all">{card.location}</p>
-                      </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 sm:flex-shrink-0">
                         <Button
                           size="sm"
                           onClick={() => handleMapClick(card.location!)}
@@ -325,15 +327,17 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                   )}
 
                   {card.phone && (
-                    <div className="flex items-center gap-4 p-4 rounded-xl bg-green-50 hover:bg-green-100 transition-colors border border-green-200">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <Phone className="h-5 w-5 text-green-600" />
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-green-50 hover:bg-green-100 transition-colors border border-green-200">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <Phone className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-green-900 mb-1">전화번호</h3>
+                          <p className="text-green-800 font-mono break-all">{card.phone}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-green-900 mb-1">전화번호</h3>
-                        <p className="text-green-800 mb-2 font-mono break-all">{card.phone}</p>
-                      </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 sm:flex-shrink-0">
                         <Button
                           size="sm"
                           onClick={() => handlePhoneClick(card.phone!)}
@@ -361,17 +365,19 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                   )}
 
                   {card.website && (
-                    <div className="flex items-center gap-4 p-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition-colors border border-indigo-200">
-                      <div className="p-2 bg-indigo-100 rounded-lg">
-                        <Globe className="h-5 w-5 text-indigo-600" />
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition-colors border border-indigo-200">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="p-2 bg-indigo-100 rounded-lg">
+                          <Globe className="h-5 w-5 text-indigo-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-indigo-900 mb-1">
+                            {urlType === "map" ? "지도 링크" : "웹사이트"}
+                          </h3>
+                          <p className="text-indigo-800 break-all text-sm">{card.website}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-indigo-900 mb-1">
-                          {urlType === "map" ? "지도 링크" : "웹사이트"}
-                        </h3>
-                        <p className="text-indigo-800 mb-2 break-all text-sm">{card.website}</p>
-                      </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 sm:flex-shrink-0">
                         <Button
                           size="sm"
                           onClick={() => handleWebsiteClick(card.website!)}
@@ -397,15 +403,17 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                     <h2 className="text-lg font-semibold mb-4 text-gray-900">💬 메신저</h2>
                     <div className="space-y-3">
                       {card.kakaoId && (
-                        <div className="flex items-center gap-4 p-4 rounded-xl bg-yellow-50 border border-yellow-200">
-                          <div className="p-2 bg-yellow-100 rounded-lg">
-                            <MessageCircle className="h-5 w-5 text-yellow-600" />
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-yellow-50 border border-yellow-200">
+                          <div className="flex items-center gap-4 flex-1 min-w-0">
+                            <div className="p-2 bg-yellow-100 rounded-lg">
+                              <MessageCircle className="h-5 w-5 text-yellow-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium text-yellow-900 mb-1">카카오톡 ID</h3>
+                              <p className="text-yellow-800 font-mono break-all">{card.kakaoId}</p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-yellow-900 mb-1">카카오톡 ID</h3>
-                            <p className="text-yellow-800 font-mono break-all">{card.kakaoId}</p>
-                          </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 sm:flex-shrink-0">
                             <Button
                               size="sm"
                               onClick={() => handleKakaoClick(card.kakaoId!)}
@@ -420,15 +428,17 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                         </div>
                       )}
                       {card.lineId && (
-                        <div className="flex items-center gap-4 p-4 rounded-xl bg-green-50 border border-green-200">
-                          <div className="p-2 bg-green-100 rounded-lg">
-                            <MessageCircle className="h-5 w-5 text-green-600" />
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-green-50 border border-green-200">
+                          <div className="flex items-center gap-4 flex-1 min-w-0">
+                            <div className="p-2 bg-green-100 rounded-lg">
+                              <MessageCircle className="h-5 w-5 text-green-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-medium text-green-900 mb-1">라인 ID</h3>
+                              <p className="text-green-800 font-mono break-all">{card.lineId}</p>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-green-900 mb-1">라인 ID</h3>
-                            <p className="text-green-800 font-mono break-all">{card.lineId}</p>
-                          </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 sm:flex-shrink-0">
                             <Button
                               size="sm"
                               onClick={() => handleLineClick(card.lineId!)}
