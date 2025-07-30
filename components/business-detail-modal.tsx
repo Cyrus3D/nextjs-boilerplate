@@ -143,10 +143,10 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl w-[95vw] sm:w-[85vw] lg:w-[75vw] max-h-[85vh] p-0 gap-0 rounded-xl">
-        <div className="flex flex-col max-h-[85vh] rounded-xl overflow-hidden">
+      <DialogContent className="max-w-3xl w-[95vw] sm:w-[85vw] lg:w-[75vw] max-h-[90vh] p-0 gap-0 rounded-xl">
+       <div className="flex flex-col h-[90vh] rounded-xl overflow-hidden">
           {/* Header with Hero Image */}
-          <div className="relative h-40 sm:h-48 lg:h-52 flex-shrink-0">
+          <div className="relative h-60 sm:h-48 lg:h-52 flex-shrink-0">
             <img
               src={card.image || "/placeholder.svg?height=256&width=800"}
               alt={card.title}
