@@ -87,6 +87,10 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
     window.open(`https://open.kakao.com/o/${kakaoId}`, "_blank")
   }
 
+  const handleLineClick = (lineId: string) => {
+    window.open(`https://line.me/ti/p/${lineId}`, "_blank")
+  }
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -144,7 +148,7 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl w-[95vw] sm:w-[85vw] lg:w-[75vw] max-h-[90vh] p-0 gap-0 rounded-xl">
-       <div className="flex flex-col h-[90vh] rounded-xl overflow-hidden">
+        <div className="flex flex-col h-[90vh] rounded-xl overflow-hidden">
           {/* Header with Hero Image */}
           <div className="relative h-60 sm:h-48 lg:h-52 flex-shrink-0">
             <img
@@ -237,7 +241,7 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto min-h-0">
             <div className="p-3 sm:p-4 space-y-4">
               {/* Description */}
               <div>
@@ -260,7 +264,7 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-green-700 border-green-300 hover:bg-green-100 bg-transparent"
+                            className="text-green-700 border-green-300 hover:bg-green-100 bg-transparent w-12"
                             onClick={() => handleCopy(card.price!, "price")}
                           >
                             {copiedField === "price" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -278,7 +282,7 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                           <Button
                             variant="outline"
                             size="sm"
-                            className="text-orange-700 border-orange-300 hover:bg-orange-100 bg-transparent"
+                            className="text-orange-700 border-orange-300 hover:bg-orange-100 bg-transparent w-12"
                             onClick={() => handleCopy(card.promotion!, "promotion")}
                           >
                             {copiedField === "promotion" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -297,88 +301,88 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                 <h2 className="text-lg font-semibold mb-4 text-gray-900">📞 연락처 정보</h2>
                 <div className="space-y-3">
                   {card.location && (
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors border border-blue-200">
                       <div className="p-2 bg-blue-100 rounded-lg">
                         <MapPin className="h-5 w-5 text-blue-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 mb-1">위치</h3>
-                        <p className="text-gray-700 mb-2 break-words">{card.location}</p>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleMapClick(card.location!)}
-                            className="bg-blue-500 hover:bg-blue-600"
-                          >
-                            지도에서 보기
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleCopy(card.location!, "location")}>
-                            {copiedField === "location" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                          </Button>
-                        </div>
+                        <h3 className="font-medium text-blue-900 mb-1">위치</h3>
+                        <p className="text-blue-800 mb-2 break-all">{card.location}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleMapClick(card.location!)}
+                          className="bg-blue-500 hover:bg-blue-600 w-28"
+                        >
+                          지도에서 보기
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleCopy(card.location!, "location")} className="w-12">
+                          {copiedField === "location" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
                       </div>
                     </div>
                   )}
 
                   {card.phone && (
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-green-50 hover:bg-green-100 transition-colors border border-green-200">
                       <div className="p-2 bg-green-100 rounded-lg">
                         <Phone className="h-5 w-5 text-green-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 mb-1">전화번호</h3>
-                        <p className="text-gray-700 mb-2 font-mono">{card.phone}</p>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handlePhoneClick(card.phone!)}
-                            className="bg-green-500 hover:bg-green-600"
-                          >
-                            전화하기
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleCopy(card.phone!, "phone")}>
-                            {copiedField === "phone" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                          </Button>
-                        </div>
+                        <h3 className="font-medium text-green-900 mb-1">전화번호</h3>
+                        <p className="text-green-800 mb-2 font-mono break-all">{card.phone}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handlePhoneClick(card.phone!)}
+                          className="bg-green-500 hover:bg-green-600 w-28"
+                        >
+                          전화하기
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleCopy(card.phone!, "phone")} className="w-12">
+                          {copiedField === "phone" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
                       </div>
                     </div>
                   )}
 
                   {card.hours && (
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-50">
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-purple-50 border border-purple-200">
                       <div className="p-2 bg-purple-100 rounded-lg">
                         <Clock className="h-5 w-5 text-purple-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 mb-1">운영시간</h3>
-                        <p className="text-gray-700 whitespace-pre-line">{card.hours}</p>
+                        <h3 className="font-medium text-purple-900 mb-1">운영시간</h3>
+                        <p className="text-purple-800 whitespace-pre-line break-all">{card.hours}</p>
                       </div>
                     </div>
                   )}
 
                   {card.website && (
-                    <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition-colors border border-indigo-200">
                       <div className="p-2 bg-indigo-100 rounded-lg">
                         <Globe className="h-5 w-5 text-indigo-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900 mb-1">
+                        <h3 className="font-medium text-indigo-900 mb-1">
                           {urlType === "map" ? "지도 링크" : "웹사이트"}
                         </h3>
-                        <p className="text-gray-700 mb-2 break-all text-sm">{card.website}</p>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleWebsiteClick(card.website!)}
-                            className="bg-indigo-500 hover:bg-indigo-600"
-                          >
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            {urlType === "map" ? "지도 보기" : "사이트 방문"}
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleCopy(card.website!, "website")}>
-                            {copiedField === "website" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                          </Button>
-                        </div>
+                        <p className="text-indigo-800 mb-2 break-all text-sm">{card.website}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleWebsiteClick(card.website!)}
+                          className="bg-indigo-500 hover:bg-indigo-600 w-28"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          {urlType === "map" ? "지도 보기" : "사이트 방문"}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleCopy(card.website!, "website")} className="w-12">
+                          {copiedField === "website" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -405,11 +409,11 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                             <Button
                               size="sm"
                               onClick={() => handleKakaoClick(card.kakaoId!)}
-                              className="bg-yellow-500 hover:bg-yellow-600"
+                              className="bg-yellow-500 hover:bg-yellow-600 w-28"
                             >
                               카톡 열기
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleCopy(card.kakaoId!, "kakao")}>
+                            <Button variant="outline" size="sm" onClick={() => handleCopy(card.kakaoId!, "kakao")} className="w-12">
                               {copiedField === "kakao" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             </Button>
                           </div>
@@ -424,9 +428,18 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                             <h3 className="font-medium text-green-900 mb-1">라인 ID</h3>
                             <p className="text-green-800 font-mono break-all">{card.lineId}</p>
                           </div>
-                          <Button variant="outline" size="sm" onClick={() => handleCopy(card.lineId!, "line")}>
-                            {copiedField === "line" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleLineClick(card.lineId!)}
+                              className="bg-green-500 hover:bg-green-600 w-28"
+                            >
+                              라인 열기
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleCopy(card.lineId!, "line")} className="w-12">
+                              {copiedField === "line" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
