@@ -1,43 +1,45 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import Analytics from "@/components/analytics"
-import AdSenseScript from "@/components/adsense-script"
-import { Suspense } from "react"
-
-const inter = Inter({ subsets: ["latin"] })
+import ClientLayout from "./ClientLayout"
 
 export const metadata: Metadata = {
-  title: "핫타이 - 태국 한인 비즈니스 정보",
-  description: "태국 거주 한국인을 위한 최고의 비즈니스 정보 플랫폼. 맛집, 쇼핑, 서비스업체 정보를 한눈에!",
-  keywords: "태국, 한인, 비즈니스, 맛집, 쇼핑, 서비스, 방콕, 파타야, 치앙마이",
-  authors: [{ name: "핫타이" }],
-  creator: "핫타이",
-  publisher: "핫타이",
+  title: "태국 한인 정보 카드 | 태국 생활 필수 정보",
+  description:
+    "태국에서 필요한 모든 한인 업체 정보를 한 곳에서 찾아보세요. 음식점, 서비스, 쇼핑 등 다양한 카테고리의 업체 정보를 제공합니다.",
+  keywords: "태국, 한인, 업체, 정보, 음식점, 서비스, 방콕, 파타야, 치앙마이",
+  authors: [{ name: "태국 한인 정보 카드" }],
+  creator: "태국 한인 정보 카드",
+  publisher: "태국 한인 정보 카드",
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-  metadataBase: new URL("https://hotthai.info"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://hot-thai.vercel.app"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "핫타이 - 태국 한인 비즈니스 정보",
-    description: "태국 거주 한국인을 위한 최고의 비즈니스 정보 플랫폼",
-    url: "https://hotthai.info",
-    siteName: "핫타이",
+    title: "태국 한인 정보 카드",
+    description: "태국에서 필요한 모든 한인 업체 정보를 한 곳에서",
+    url: "/",
+    siteName: "태국 한인 정보 카드",
     locale: "ko_KR",
     type: "website",
+    images: [
+      {
+        url: "/placeholder.jpg",
+        width: 1200,
+        height: 630,
+        alt: "태국 한인 정보 카드",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "핫타이 - 태국 한인 비즈니스 정보",
-    description: "태국 거주 한국인을 위한 최고의 비즈니스 정보 플랫폼",
+    title: "태국 한인 정보 카드",
+    description: "태국에서 필요한 모든 한인 업체 정보를 한 곳에서",
+    images: ["/placeholder.jpg"],
   },
   robots: {
     index: true,
@@ -50,6 +52,19 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  verification: {
+    google: "ca-pub-1234567890123456",
+  },
+  manifest: "/manifest.json",
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
+    "apple-mobile-web-app-title": "한인정보",
+    "application-name": "태국 한인 정보 카드",
+    "msapplication-TileColor": "#3b82f6",
+    "theme-color": "#3b82f6",
+  },
     generator: 'v0.dev'
 }
 
@@ -58,26 +73,8 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <html lang="ko" suppressHydrationWarning>
-      <head>
-        {/* AdSense Verification Code - Must be in head for Google crawler */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2092124280694668"
-          crossOrigin="anonymous"
-        />
-        <AdSenseScript />
-      </head>
-      <body className={inter.className}>
-        <Suspense fallback={null}>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-            {children}
-            <Toaster />
-            <Analytics />
-          </ThemeProvider>
-        </Suspense>
-      </body>
-    </html>
-  )
+  return <ClientLayout>{children}</ClientLayout>
 }
+
+
+import './globals.css'
