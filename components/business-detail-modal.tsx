@@ -1,6 +1,6 @@
 "use client"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -10,14 +10,21 @@ import {
   Clock,
   MessageCircle,
   Globe,
-  Map,
   Crown,
   ExternalLink,
   Facebook,
   Instagram,
   Youtube,
   Hash,
+  X,
+  Share2,
+  Heart,
+  Copy,
+  Check,
+  Eye,
+  Calendar,
 } from "lucide-react"
+import { useState } from "react"
 import type { BusinessCard } from "@/types/business-card"
 import { getUrlType } from "@/lib/utils"
 
@@ -29,321 +36,450 @@ interface BusinessDetailModalProps {
 
 const getCategoryColor = (category: string) => {
   const colors = {
-    음식점: "bg-red-100 text-red-800",
-    배송서비스: "bg-blue-100 text-blue-800",
-    여행서비스: "bg-green-100 text-green-800",
-    식품: "bg-orange-100 text-orange-800",
-    이벤트서비스: "bg-purple-100 text-purple-800",
-    방송서비스: "bg-indigo-100 text-indigo-800",
-    전자제품: "bg-cyan-100 text-cyan-800",
-    유흥업소: "bg-pink-100 text-pink-800",
-    교통서비스: "bg-emerald-100 text-emerald-800",
-    서비스: "bg-gray-100 text-gray-800",
-    프리미엄: "bg-yellow-100 text-yellow-800",
+    음식점: "bg-red-500",
+    배송서비스: "bg-blue-500",
+    여행서비스: "bg-green-500",
+    식품: "bg-orange-500",
+    이벤트서비스: "bg-purple-500",
+    방송서비스: "bg-indigo-500",
+    전자제품: "bg-cyan-500",
+    유흥업소: "bg-pink-500",
+    교통서비스: "bg-emerald-500",
+    서비스: "bg-gray-500",
+    프리미엄: "bg-yellow-500",
   }
-  return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
+  return colors[category as keyof typeof colors] || "bg-gray-500"
 }
 
 export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessDetailModalProps) {
+  const [isFavorited, setIsFavorited] = useState(false)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
+
   if (!card) return null
 
   const urlType = getUrlType(card.website)
+
+  const handleCopy = async (text: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(null), 2000)
+    } catch (err) {
+      console.error("Failed to copy:", err)
+    }
+  }
 
   const handlePhoneClick = (phone: string) => {
     window.open(`tel:${phone}`, "_self")
   }
 
   const handleMapClick = (location: string) => {
-    const searchQuery = encodeURIComponent(location + " 방콕 태국")
+    const searchQuery = encodeURIComponent(`${card.title} ${location} 방콕 태국`)
     window.open(`https://www.google.com/maps/search/?api=1&query=${searchQuery}`, "_blank")
   }
 
   const handleWebsiteClick = (url: string) => {
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      window.open(url, "_blank")
+    const fullUrl = url.startsWith("http") ? url : `https://${url}`
+    window.open(fullUrl, "_blank")
+  }
+
+  const handleKakaoClick = (kakaoId: string) => {
+    window.open(`https://open.kakao.com/o/${kakaoId}`, "_blank")
+  }
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: card.title,
+          text: card.description,
+          url: window.location.href,
+        })
+      } catch (err) {
+        console.error("Error sharing:", err)
+      }
     } else {
-      window.open(`https://${url}`, "_blank")
+      handleCopy(window.location.href, "share")
     }
   }
 
-  const handleSocialClick = (url: string) => {
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      window.open(url, "_blank")
-    } else {
-      window.open(`https://${url}`, "_blank")
-    }
-  }
+  const quickActions = [
+    {
+      icon: Phone,
+      label: "전화하기",
+      action: () => card.phone && handlePhoneClick(card.phone),
+      available: !!card.phone,
+      color: "bg-green-500 hover:bg-green-600",
+    },
+    {
+      icon: MapPin,
+      label: "위치보기",
+      action: () => card.location && handleMapClick(card.location),
+      available: !!card.location,
+      color: "bg-blue-500 hover:bg-blue-600",
+    },
+    {
+      icon: MessageCircle,
+      label: "카카오톡",
+      action: () => card.kakaoId && handleKakaoClick(card.kakaoId),
+      available: !!card.kakaoId,
+      color: "bg-yellow-500 hover:bg-yellow-600",
+    },
+    {
+      icon: Globe,
+      label: "웹사이트",
+      action: () => card.website && handleWebsiteClick(card.website),
+      available: !!card.website,
+      color: "bg-purple-500 hover:bg-purple-600",
+    },
+  ]
+
+  const socialLinks = [
+    { platform: "facebook", url: card.facebookUrl, icon: Facebook, label: "Facebook", color: "bg-blue-600" },
+    { platform: "instagram", url: card.instagramUrl, icon: Instagram, label: "Instagram", color: "bg-pink-500" },
+    { platform: "youtube", url: card.youtubeUrl, icon: Youtube, label: "YouTube", color: "bg-red-600" },
+    { platform: "tiktok", url: card.tiktokUrl, icon: Hash, label: "TikTok", color: "bg-black" },
+  ].filter((link) => link.url && link.url.trim() !== "")
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto mx-auto">
-        <div className="relative w-full mx-auto">
-          {/* Hero Image Section */}
-          <div className="relative h-48 sm:h-64 lg:h-80 overflow-hidden rounded-t-lg">
+      <DialogContent className="max-w-3xl w-[95vw] sm:w-[85vw] lg:w-[75vw] max-h-[85vh] p-0 gap-0 rounded-xl">
+        <div className="flex flex-col max-h-[85vh] rounded-xl overflow-hidden">
+          {/* Header with Hero Image */}
+          <div className="relative h-40 sm:h-48 lg:h-52 flex-shrink-0">
             <img
-              src={card.image || "/placeholder.svg?height=320&width=800"}
+              src={card.image || "/placeholder.svg?height=256&width=800"}
               alt={card.title}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
 
-            {/* Badges Overlay */}
-            <div className="absolute top-4 left-4 flex gap-2 flex-wrap">
-              {card.isPremium && (
-                <Badge className="bg-yellow-500 text-white flex items-center gap-1 shadow-lg">
-                  <Crown className="h-3 w-3" />
-                  프리미엄
-                </Badge>
-              )}
-              <Badge className={`${getCategoryColor(card.category)} shadow-lg`} variant="secondary">
-                {card.category}
-              </Badge>
+            {/* Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+            {/* Close Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-3 right-3 h-8 w-8 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+
+            {/* Action Buttons */}
+            <div className="absolute top-3 left-3 flex gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full"
+                onClick={() => setIsFavorited(!isFavorited)}
+              >
+                <Heart className={`h-4 w-4 ${isFavorited ? "fill-red-500 text-red-500" : ""}`} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
             </div>
 
-            {/* Title Overlay */}
-            <div className="absolute bottom-4 left-4 right-4">
-              <DialogHeader className="text-left">
-                <DialogTitle className="text-white text-xl sm:text-2xl lg:text-3xl font-bold drop-shadow-lg">
-                  {card.title}
-                </DialogTitle>
-              </DialogHeader>
+            {/* Title and Category */}
+            <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    {card.isPremium && (
+                      <Badge className="bg-yellow-500 text-white flex items-center gap-1 shadow-lg">
+                        <Crown className="h-3 w-3" />
+                        프리미엄
+                      </Badge>
+                    )}
+                    <Badge className={`${getCategoryColor(card.category)} text-white shadow-lg`}>{card.category}</Badge>
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 leading-tight">{card.title}</h1>
+                  <div className="flex items-center gap-4 text-white/80 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Eye className="h-4 w-4" />
+                      <span>{card.exposureCount || 0}회 조회</span>
+                    </div>
+                    {card.lastExposedAt && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>{new Date(card.lastExposedAt).toLocaleDateString("ko-KR")}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Content Section */}
-          <div className="p-4 sm:p-6 space-y-6 w-full">
-            {/* Description */}
-            <div>
-              <h3 className="text-lg font-semibold mb-2">업체 소개</h3>
-              <p className="text-gray-700 leading-relaxed">{card.description}</p>
+          {/* Quick Actions Bar */}
+          <div className="flex-shrink-0 bg-white border-b p-3">
+            <div className="flex gap-2 overflow-x-auto">
+              {quickActions
+                .filter((action) => action.available)
+                .map((action, index) => (
+                  <Button
+                    key={index}
+                    onClick={action.action}
+                    className={`${action.color} text-white flex-shrink-0 min-w-[100px]`}
+                    size="sm"
+                  >
+                    <action.icon className="h-4 w-4 mr-2" />
+                    {action.label}
+                  </Button>
+                ))}
             </div>
+          </div>
 
-            {/* Special Offers */}
-            {(card.price || card.promotion) && (
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold">특별 혜택</h3>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {card.price && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-green-700 font-medium">💰 가격 정보</span>
-                      </div>
-                      <p className="text-green-800 font-semibold">{card.price}</p>
-                    </div>
-                  )}
-                  {card.promotion && (
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-orange-700 font-medium">🎉 프로모션</span>
-                      </div>
-                      <p className="text-orange-800 font-semibold">{card.promotion}</p>
-                    </div>
-                  )}
-                </div>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-3 sm:p-4 space-y-4">
+              {/* Description */}
+              <div>
+                <h2 className="text-lg font-semibold mb-2 text-gray-900">업체 소개</h2>
+                <p className="text-gray-700 leading-relaxed text-base">{card.description}</p>
               </div>
-            )}
 
-            <Separator />
-
-            {/* Contact Information */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">연락처 정보</h3>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {card.location && (
-                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    <MapPin className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900">위치</span>
-                      <p className="text-gray-700 break-words">{card.location}</p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mt-2 bg-transparent"
-                        onClick={() => handleMapClick(card.location!)}
-                      >
-                        <Map className="h-4 w-4 mr-1" />
-                        지도에서 보기
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {card.phone && (
-                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    <Phone className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900">전화번호</span>
-                      <p className="text-gray-700">{card.phone}</p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mt-2 bg-transparent"
-                        onClick={() => handlePhoneClick(card.phone!)}
-                      >
-                        <Phone className="h-4 w-4 mr-1" />
-                        전화하기
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {card.hours && (
-                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    <Clock className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900">운영시간</span>
-                      <p className="text-gray-700 whitespace-pre-line">{card.hours}</p>
-                    </div>
-                  </div>
-                )}
-
-                {card.website && (
-                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    {urlType === "map" ? (
-                      <Map className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
-                    ) : (
-                      <Globe className="h-5 w-5 text-gray-600 mt-0.5 flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900">
-                        {urlType === "map" ? "지도 링크" : "웹사이트"}
-                      </span>
-                      <p className="text-gray-700 break-all text-sm">{card.website}</p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mt-2 bg-transparent"
-                        onClick={() => handleWebsiteClick(card.website!)}
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        {urlType === "map" ? "지도 보기" : "사이트 방문"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Messaging Apps */}
-            {(card.kakaoId || card.lineId) && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">메신저 연락</h3>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {card.kakaoId && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-                        <MessageCircle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium text-yellow-900">카카오톡 ID</span>
-                          <p className="text-yellow-800 font-mono break-all">{card.kakaoId}</p>
+              {/* Special Offers */}
+              {(card.price || card.promotion) && (
+                <div className="space-y-3">
+                  <h2 className="text-lg font-semibold text-gray-900">💰 특별 혜택</h2>
+                  <div className="space-y-3">
+                    {card.price && (
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-green-800 mb-1">가격 정보</h3>
+                            <p className="text-green-700 text-lg font-medium">{card.price}</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-green-700 border-green-300 hover:bg-green-100 bg-transparent"
+                            onClick={() => handleCopy(card.price!, "price")}
+                          >
+                            {copiedField === "price" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          </Button>
                         </div>
                       </div>
                     )}
-                    {card.lineId && (
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 border border-green-200">
-                        <MessageCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium text-green-900">라인 ID</span>
-                          <p className="text-green-800 font-mono break-all">{card.lineId}</p>
+                    {card.promotion && (
+                      <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-semibold text-orange-800 mb-1">🎉 프로모션</h3>
+                            <p className="text-orange-700 text-lg font-medium">{card.promotion}</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-orange-700 border-orange-300 hover:bg-orange-100 bg-transparent"
+                            onClick={() => handleCopy(card.promotion!, "promotion")}
+                          >
+                            {copiedField === "promotion" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          </Button>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
-              </>
-            )}
+              )}
 
-            {/* Social Media */}
-            {(card.facebookUrl || card.instagramUrl || card.youtubeUrl || card.tiktokUrl) && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">소셜 미디어</h3>
-                  <div className="flex flex-wrap gap-3">
-                    {card.facebookUrl && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                        onClick={() => handleSocialClick(card.facebookUrl!)}
-                      >
-                        <Facebook className="h-4 w-4 mr-2" />
-                        Facebook
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </Button>
-                    )}
-                    {card.instagramUrl && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-100"
-                        onClick={() => handleSocialClick(card.instagramUrl!)}
-                      >
-                        <Instagram className="h-4 w-4 mr-2" />
-                        Instagram
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </Button>
-                    )}
-                    {card.youtubeUrl && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
-                        onClick={() => handleSocialClick(card.youtubeUrl!)}
-                      >
-                        <Youtube className="h-4 w-4 mr-2" />
-                        YouTube
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </Button>
-                    )}
-                    {card.tiktokUrl && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
-                        onClick={() => handleSocialClick(card.tiktokUrl!)}
-                      >
-                        <Hash className="h-4 w-4 mr-2" />
-                        TikTok
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
+              <Separator />
 
-            {/* Tags */}
-            {card.tags && card.tags.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">태그</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {card.tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-sm">
-                        #{tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+              {/* Contact Information */}
+              <div>
+                <h2 className="text-lg font-semibold mb-4 text-gray-900">📞 연락처 정보</h2>
+                <div className="space-y-3">
+                  {card.location && (
+                    <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <MapPin className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-gray-900 mb-1">위치</h3>
+                        <p className="text-gray-700 mb-2 break-words">{card.location}</p>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleMapClick(card.location!)}
+                            className="bg-blue-500 hover:bg-blue-600"
+                          >
+                            지도에서 보기
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleCopy(card.location!, "location")}>
+                            {copiedField === "location" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-            {/* Footer */}
-            <div className="pt-4 border-t bg-gray-50 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 rounded-b-lg">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="text-sm text-gray-600">
-                  <p>조회수: {card.exposureCount || 0}회</p>
-                  {card.lastExposedAt && (
-                    <p>마지막 업데이트: {new Date(card.lastExposedAt).toLocaleDateString("ko-KR")}</p>
+                  {card.phone && (
+                    <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <Phone className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-gray-900 mb-1">전화번호</h3>
+                        <p className="text-gray-700 mb-2 font-mono">{card.phone}</p>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handlePhoneClick(card.phone!)}
+                            className="bg-green-500 hover:bg-green-600"
+                          >
+                            전화하기
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleCopy(card.phone!, "phone")}>
+                            {copiedField === "phone" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {card.hours && (
+                    <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-50">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Clock className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-gray-900 mb-1">운영시간</h3>
+                        <p className="text-gray-700 whitespace-pre-line">{card.hours}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {card.website && (
+                    <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div className="p-2 bg-indigo-100 rounded-lg">
+                        <Globe className="h-5 w-5 text-indigo-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-gray-900 mb-1">
+                          {urlType === "map" ? "지도 링크" : "웹사이트"}
+                        </h3>
+                        <p className="text-gray-700 mb-2 break-all text-sm">{card.website}</p>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleWebsiteClick(card.website!)}
+                            className="bg-indigo-500 hover:bg-indigo-600"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            {urlType === "map" ? "지도 보기" : "사이트 방문"}
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleCopy(card.website!, "website")}>
+                            {copiedField === "website" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
-                <Button onClick={onClose} className="w-full sm:w-auto">
-                  닫기
-                </Button>
               </div>
+
+              {/* Messaging Apps */}
+              {(card.kakaoId || card.lineId) && (
+                <>
+                  <Separator />
+                  <div>
+                    <h2 className="text-lg font-semibold mb-4 text-gray-900">💬 메신저</h2>
+                    <div className="space-y-3">
+                      {card.kakaoId && (
+                        <div className="flex items-center gap-4 p-4 rounded-xl bg-yellow-50 border border-yellow-200">
+                          <div className="p-2 bg-yellow-100 rounded-lg">
+                            <MessageCircle className="h-5 w-5 text-yellow-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-yellow-900 mb-1">카카오톡 ID</h3>
+                            <p className="text-yellow-800 font-mono break-all">{card.kakaoId}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleKakaoClick(card.kakaoId!)}
+                              className="bg-yellow-500 hover:bg-yellow-600"
+                            >
+                              카톡 열기
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleCopy(card.kakaoId!, "kakao")}>
+                              {copiedField === "kakao" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      {card.lineId && (
+                        <div className="flex items-center gap-4 p-4 rounded-xl bg-green-50 border border-green-200">
+                          <div className="p-2 bg-green-100 rounded-lg">
+                            <MessageCircle className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-green-900 mb-1">라인 ID</h3>
+                            <p className="text-green-800 font-mono break-all">{card.lineId}</p>
+                          </div>
+                          <Button variant="outline" size="sm" onClick={() => handleCopy(card.lineId!, "line")}>
+                            {copiedField === "line" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Social Media */}
+              {socialLinks.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h2 className="text-lg font-semibold mb-4 text-gray-900">🌐 소셜 미디어</h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {socialLinks.map((social) => (
+                        <Button
+                          key={social.platform}
+                          variant="outline"
+                          className={`${social.color} text-white border-0 hover:opacity-90 h-12`}
+                          onClick={() => handleWebsiteClick(social.url!)}
+                        >
+                          <social.icon className="h-5 w-5 mr-2" />
+                          {social.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Tags */}
+              {card.tags && card.tags.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <h2 className="text-lg font-semibold mb-4 text-gray-900">🏷️ 태그</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {card.tags.map((tag, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="text-sm px-3 py-1 bg-gray-100 hover:bg-gray-200 cursor-pointer transition-colors"
+                        >
+                          #{tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Bottom Spacing */}
+              <div className="h-4" />
             </div>
           </div>
         </div>
