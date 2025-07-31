@@ -1,497 +1,457 @@
-import { supabase } from "./supabase"
-import { sampleBusinessCards, sampleCategories } from "../data/sample-cards"
-import type { BusinessCard, Category } from "../types/business-card"
+import { createClient } from "@supabase/supabase-js"
 
-// Cache for database schema check
-let socialMediaColumnsExist: boolean | null = null
-let schemaCheckTime = 0
-const SCHEMA_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Cache for API responses
-const apiCache = new Map<string, { data: any; timestamp: number }>()
-const CACHE_DURATION = 2 * 60 * 1000 // 2 minutes
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// Cache configuration
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+const cache = new Map<string, { data: any; timestamp: number }>()
 
 // Batch processing for view counts
-let viewCountBatch: { [key: string]: number } = {}
+const viewCountBatch = new Map<number, number>()
 let batchTimeout: NodeJS.Timeout | null = null
 
-async function checkSocialMediaColumns(): Promise<boolean> {
-  const now = Date.now()
-
-  // Return cached result if still valid
-  if (socialMediaColumnsExist !== null && now - schemaCheckTime < SCHEMA_CACHE_DURATION) {
-    return socialMediaColumnsExist
-  }
-
-  if (!supabase) {
-    socialMediaColumnsExist = false
-    schemaCheckTime = now
-    return false
-  }
-
-  try {
-    // Try to query with social media columns
-    const { error } = await supabase.from("business_cards").select("facebook_url").limit(1)
-
-    socialMediaColumnsExist = !error
-    schemaCheckTime = now
-
-    return socialMediaColumnsExist
-  } catch (error) {
-    console.warn("Social media columns check failed:", error)
-    socialMediaColumnsExist = false
-    schemaCheckTime = now
-    return false
+export interface BusinessCard {
+  id: number
+  title: string
+  description: string
+  category_id: number
+  location?: string
+  phone?: string
+  kakao_id?: string
+  line_id?: string
+  website?: string
+  hours?: string
+  price?: string
+  promotion?: string
+  image_url?: string
+  facebook_url?: string
+  instagram_url?: string
+  tiktok_url?: string
+  threads_url?: string
+  youtube_url?: string
+  is_promoted: boolean
+  is_active: boolean
+  is_premium: boolean
+  premium_expires_at?: string
+  exposure_count: number
+  last_exposed_at?: string
+  exposure_weight: number
+  view_count: number
+  created_at: string
+  updated_at: string
+  categories?: {
+    id: number
+    name: string
+    color_class: string
   }
 }
 
-export async function getBusinessCardsPaginated(
-  page = 1,
-  limit = 20,
-  category?: string,
-  searchTerm?: string,
-): Promise<{ cards: BusinessCard[]; hasMore: boolean; total: number }> {
-  const cacheKey = `cards-${page}-${limit}-${category || "all"}-${searchTerm || "none"}`
-  const cached = apiCache.get(cacheKey)
+export interface Category {
+  id: number
+  name: string
+  color_class: string
+  created_at: string
+}
 
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return cached.data
+export interface PaginationResult<T> {
+  data: T[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+// Cache utilities
+export function getCachedData<T>(key: string): T | null {
+  const cached = cache.get(key)
+  if (!cached) return null
+
+  if (Date.now() - cached.timestamp > CACHE_DURATION) {
+    cache.delete(key)
+    return null
   }
 
-  if (!supabase) {
-    console.log("Supabase not configured, returning sample data")
-    let filteredSampleCards = sampleBusinessCards
+  return cached.data as T
+}
 
-    // Apply category filter to sample data
-    if (category && category !== "all") {
-      filteredSampleCards = sampleBusinessCards.filter((card) => String(card.category) === String(category))
-    }
+export function setCachedData<T>(key: string, data: T): void {
+  cache.set(key, {
+    data,
+    timestamp: Date.now(),
+  })
+}
 
-    // Apply search filter to sample data
-    if (searchTerm) {
-      const searchLower = String(searchTerm).toLowerCase()
-      filteredSampleCards = filteredSampleCards.filter(
-        (card) =>
-          String(card.title).toLowerCase().includes(searchLower) ||
-          String(card.description).toLowerCase().includes(searchLower),
-      )
-    }
+export function clearApiCache(): void {
+  cache.clear()
+}
 
-    const startIndex = (Number(page) - 1) * Number(limit)
-    const endIndex = startIndex + Number(limit)
-    const paginatedCards = filteredSampleCards.slice(startIndex, endIndex)
-
-    const result = {
-      cards: paginatedCards,
-      hasMore: endIndex < filteredSampleCards.length,
-      total: filteredSampleCards.length,
-    }
-
-    apiCache.set(cacheKey, { data: result, timestamp: Date.now() })
-    return result
-  }
-
+// Database status check
+export async function checkDatabaseStatus() {
   try {
-    const hasSocialMedia = await checkSocialMediaColumns()
+    const { data, error } = await supabase.from("business_cards").select("count(*)").limit(1)
 
-    // Base fields that should exist in the database
-    let selectFields = `
-      id,
-      title,
-      description,
-      location,
-      phone,
-      kakao_id,
-      line_id,
-      website,
-      hours,
-      price,
-      promotion,
-      image_url,
-      is_promoted,
-      is_premium,
-      premium_expires_at,
-      exposure_count,
-      last_exposed_at,
-      exposure_weight,
-      view_count,
-      created_at,
-      updated_at,
-      categories (
-        id,
-        name,
-        color_class
-      )
-    `
-
-    // Add social media fields if they exist
-    if (hasSocialMedia) {
-      selectFields += `,
-        facebook_url,
-        instagram_url,
-        tiktok_url,
-        threads_url,
-        youtube_url
-      `
-    }
-
-    const query = supabase.from("business_cards").select(selectFields, { count: "exact" }).eq("is_active", true)
-
-    const { data, error, count } = await query
-      .order("is_premium", { ascending: false })
-      .order("is_promoted", { ascending: false })
-      .order("exposure_count", { ascending: false })
-      .order("created_at", { ascending: false })
-
-    if (error) {
-      console.error("Supabase error:", error)
-      // Return filtered sample data as fallback
-      let filteredSampleCards = sampleBusinessCards
-
-      if (category && category !== "all") {
-        filteredSampleCards = sampleBusinessCards.filter((card) => String(card.category) === String(category))
-      }
-
-      if (searchTerm) {
-        const searchLower = String(searchTerm).toLowerCase()
-        filteredSampleCards = filteredSampleCards.filter(
-          (card) =>
-            String(card.title).toLowerCase().includes(searchLower) ||
-            String(card.description).toLowerCase().includes(searchLower),
-        )
-      }
-
-      return {
-        cards: filteredSampleCards.slice(0, Number(limit)),
-        hasMore: false,
-        total: filteredSampleCards.length,
-      }
-    }
-
-    // Transform data to match BusinessCard interface
-    const allCards: BusinessCard[] = (data || []).map((card) => ({
-      id: Number(card.id),
-      title: String(card.title || ""),
-      description: String(card.description || ""),
-      category: String(card.categories?.name || "기타"),
-      location: card.location ? String(card.location) : null,
-      phone: card.phone ? String(card.phone) : null,
-      kakaoId: card.kakao_id ? String(card.kakao_id) : null,
-      lineId: card.line_id ? String(card.line_id) : null,
-      website: card.website ? String(card.website) : null,
-      hours: card.hours ? String(card.hours) : null,
-      price: card.price ? String(card.price) : null,
-      promotion: card.promotion ? String(card.promotion) : null,
-      tags: [], // Tags would need separate query
-      image: card.image_url ? String(card.image_url) : null,
-      isPromoted: Boolean(card.is_promoted),
-      isPremium: Boolean(card.is_premium),
-      premiumExpiresAt: card.premium_expires_at ? String(card.premium_expires_at) : null,
-      exposureCount: Number(card.exposure_count) || 0,
-      lastExposedAt: card.last_exposed_at ? String(card.last_exposed_at) : null,
-      exposureWeight: Number(card.exposure_weight) || 1.0,
-      // Social media fields (only if columns exist)
-      facebookUrl: hasSocialMedia && card.facebook_url ? String(card.facebook_url) : null,
-      instagramUrl: hasSocialMedia && card.instagram_url ? String(card.instagram_url) : null,
-      tiktokUrl: hasSocialMedia && card.tiktok_url ? String(card.tiktok_url) : null,
-      threadsUrl: hasSocialMedia && card.threads_url ? String(card.threads_url) : null,
-      youtubeUrl: hasSocialMedia && card.youtube_url ? String(card.youtube_url) : null,
-    }))
-
-    // Apply category filter after data transformation
-    let filteredCards = allCards
-    if (category && category !== "all") {
-      filteredCards = allCards.filter((card) => String(card.category) === String(category))
-    }
-
-    // Apply search filter
-    if (searchTerm) {
-      const searchLower = String(searchTerm).toLowerCase()
-      filteredCards = filteredCards.filter(
-        (card) =>
-          String(card.title).toLowerCase().includes(searchLower) ||
-          String(card.description).toLowerCase().includes(searchLower),
-      )
-    }
-
-    // Apply pagination to filtered results
-    const startIndex = (Number(page) - 1) * Number(limit)
-    const endIndex = startIndex + Number(limit)
-    const paginatedCards = filteredCards.slice(startIndex, endIndex)
-
-    const result = {
-      cards: paginatedCards,
-      hasMore: endIndex < filteredCards.length,
-      total: filteredCards.length,
-    }
-
-    // Cache the result
-    apiCache.set(cacheKey, { data: result, timestamp: Date.now() })
-
-    return result
-  } catch (error) {
-    console.error("Error fetching business cards:", error)
-    // Return filtered sample data as fallback
-    let filteredSampleCards = sampleBusinessCards
-
-    if (category && category !== "all") {
-      filteredSampleCards = sampleBusinessCards.filter((card) => String(card.category) === String(category))
-    }
-
-    if (searchTerm) {
-      const searchLower = String(searchTerm).toLowerCase()
-      filteredSampleCards = filteredSampleCards.filter(
-        (card) =>
-          String(card.title).toLowerCase().includes(searchLower) ||
-          String(card.description).toLowerCase().includes(searchLower),
-      )
-    }
+    if (error) throw error
 
     return {
-      cards: filteredSampleCards.slice(0, Number(limit)),
-      hasMore: false,
-      total: filteredSampleCards.length,
+      status: "connected",
+      cardCount: data?.[0]?.count || 0,
+    }
+  } catch (error) {
+    console.error("Database status check failed:", error)
+    return {
+      status: "error",
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }
 
-// Get categories from the categories table
+// Get categories with caching
 export async function getCategories(): Promise<Category[]> {
   const cacheKey = "categories"
-  const cached = apiCache.get(cacheKey)
+  const cached = getCachedData<Category[]>(cacheKey)
 
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return cached.data
-  }
-
-  if (!supabase) {
-    console.log("Supabase not configured, returning sample categories")
-    apiCache.set(cacheKey, { data: sampleCategories, timestamp: Date.now() })
-    return sampleCategories
+  if (cached) {
+    return cached
   }
 
   try {
-    const { data, error } = await supabase.from("categories").select("id, name, color_class").order("name")
+    const { data, error } = await supabase.from("categories").select("*").order("name")
 
-    if (error) {
-      console.error("Error fetching categories:", error)
-      // Return sample categories as fallback
-      apiCache.set(cacheKey, { data: sampleCategories, timestamp: Date.now() })
-      return sampleCategories
-    }
+    if (error) throw error
 
-    const categories = (data || sampleCategories).map((category) => ({
-      id: Number(category.id),
-      name: String(category.name),
-      color_class: String(category.color_class || "bg-gray-100 text-gray-800"),
-    }))
-
-    // Cache the result
-    apiCache.set(cacheKey, { data: categories, timestamp: Date.now() })
-
+    const categories = data || []
+    setCachedData(cacheKey, categories)
     return categories
   } catch (error) {
     console.error("Error fetching categories:", error)
-    // Return sample categories as fallback
-    apiCache.set(cacheKey, { data: sampleCategories, timestamp: Date.now() })
-    return sampleCategories
+    return []
   }
 }
 
-// Batch update view counts (for performance)
-export function incrementViewCount(cardId: number) {
-  const cardIdStr = String(cardId)
-  viewCountBatch[cardIdStr] = (viewCountBatch[cardIdStr] || 0) + 1
+// Get exposure statistics
+export async function getExposureStats() {
+  const cacheKey = "exposure_stats"
+  const cached = getCachedData<any>(cacheKey)
 
+  if (cached) {
+    return cached
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("business_cards")
+      .select("exposure_count, view_count, is_premium, is_promoted")
+
+    if (error) throw error
+
+    const stats = {
+      totalExposures: data?.reduce((sum, card) => sum + (card.exposure_count || 0), 0) || 0,
+      totalViews: data?.reduce((sum, card) => sum + (card.view_count || 0), 0) || 0,
+      premiumCards: data?.filter((card) => card.is_premium).length || 0,
+      promotedCards: data?.filter((card) => card.is_promoted).length || 0,
+      totalCards: data?.length || 0,
+    }
+
+    setCachedData(cacheKey, stats)
+    return stats
+  } catch (error) {
+    console.error("Error fetching exposure stats:", error)
+    return {
+      totalExposures: 0,
+      totalViews: 0,
+      premiumCards: 0,
+      promotedCards: 0,
+      totalCards: 0,
+    }
+  }
+}
+
+// Batch increment view count
+export function incrementViewCount(cardId: number): void {
+  const currentCount = viewCountBatch.get(cardId) || 0
+  viewCountBatch.set(cardId, currentCount + 1)
+
+  // Clear existing timeout
   if (batchTimeout) {
     clearTimeout(batchTimeout)
   }
 
+  // Set new timeout to process batch
   batchTimeout = setTimeout(async () => {
-    await flushViewCounts()
-  }, 5000) // Batch updates every 5 seconds
+    await processBatchViewCounts()
+  }, 1000) // Process batch after 1 second
 }
 
-async function flushViewCounts() {
-  if (Object.keys(viewCountBatch).length === 0) return
+async function processBatchViewCounts(): Promise<void> {
+  if (viewCountBatch.size === 0) return
 
-  if (!supabase) {
-    console.log("Supabase not configured, skipping view count update")
-    return
+  const updates = Array.from(viewCountBatch.entries())
+  viewCountBatch.clear()
+
+  try {
+    for (const [cardId, incrementBy] of updates) {
+      await supabase.rpc("increment_view_count", {
+        card_id: cardId,
+        increment_by: incrementBy,
+      })
+    }
+
+    // Clear relevant cache entries
+    cache.forEach((_, key) => {
+      if (key.includes("business_cards") || key.includes("stats")) {
+        cache.delete(key)
+      }
+    })
+  } catch (error) {
+    console.error("Error processing batch view counts:", error)
+  }
+}
+
+// Get paginated business cards with advanced filtering
+export async function getBusinessCardsPaginated(
+  page = 1,
+  limit = 20,
+  filters: {
+    category?: string
+    search?: string
+    location?: string
+    isPremium?: boolean
+    isPromoted?: boolean
+    isActive?: boolean
+  } = {},
+): Promise<PaginationResult<BusinessCard>> {
+  const cacheKey = `business_cards_paginated_${page}_${limit}_${JSON.stringify(filters)}`
+  const cached = getCachedData<PaginationResult<BusinessCard>>(cacheKey)
+
+  if (cached) {
+    return cached
   }
 
   try {
-    const updates = Object.entries(viewCountBatch).map(async ([cardId, increment]) => {
-      // Get current view count
-      const { data: currentData, error: fetchError } = await supabase
-        .from("business_cards")
-        .select("view_count")
-        .eq("id", Number(cardId))
-        .single()
+    let query = supabase
+      .from("business_cards")
+      .select(
+        `
+        *,
+        categories (
+          id,
+          name,
+          color_class
+        )
+      `,
+        { count: "exact" },
+      )
+      .eq("is_active", filters.isActive ?? true)
+      .order("exposure_weight", { ascending: false })
+      .order("created_at", { ascending: false })
 
-      if (fetchError) {
-        console.error("Error fetching current view count:", fetchError)
-        return
-      }
+    // Apply filters
+    if (filters.category && filters.category !== "all") {
+      query = query.eq("category_id", Number.parseInt(filters.category))
+    }
 
-      const currentViewCount = Number(currentData?.view_count) || 0
+    if (filters.search) {
+      query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+    }
 
-      // Update view count
-      const { error: updateError } = await supabase
-        .from("business_cards")
-        .update({
-          view_count: currentViewCount + Number(increment),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", Number(cardId))
+    if (filters.location) {
+      query = query.ilike("location", `%${filters.location}%`)
+    }
 
-      if (updateError) {
-        console.error("Error updating view count:", updateError)
-      }
-    })
+    if (filters.isPremium !== undefined) {
+      query = query.eq("is_premium", filters.isPremium)
+    }
 
-    await Promise.all(updates)
-    viewCountBatch = {}
+    if (filters.isPromoted !== undefined) {
+      query = query.eq("is_promoted", filters.isPromoted)
+    }
+
+    // Apply pagination
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+    query = query.range(from, to)
+
+    const { data, error, count } = await query
+
+    if (error) throw error
+
+    const result: PaginationResult<BusinessCard> = {
+      data: data || [],
+      total: count || 0,
+      page,
+      limit,
+      totalPages: Math.ceil((count || 0) / limit),
+    }
+
+    setCachedData(cacheKey, result)
+    return result
   } catch (error) {
-    console.error("Error updating view counts:", error)
+    console.error("Error fetching paginated business cards:", error)
+    return {
+      data: [],
+      total: 0,
+      page,
+      limit,
+      totalPages: 0,
+    }
   }
 }
 
 // Get business cards by category
-export async function getBusinessCardsByCategory(categoryName: string): Promise<BusinessCard[]> {
-  const result = await getBusinessCardsPaginated(1, 100, String(categoryName))
-  return result.cards
+export async function getBusinessCardsByCategory(categoryId: number, limit = 20): Promise<BusinessCard[]> {
+  const cacheKey = `business_cards_category_${categoryId}_${limit}`
+  const cached = getCachedData<BusinessCard[]>(cacheKey)
+
+  if (cached) {
+    return cached
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("business_cards")
+      .select(`
+        *,
+        categories (
+          id,
+          name,
+          color_class
+        )
+      `)
+      .eq("category_id", categoryId)
+      .eq("is_active", true)
+      .order("exposure_weight", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(limit)
+
+    if (error) throw error
+
+    const cards = data || []
+    setCachedData(cacheKey, cards)
+    return cards
+  } catch (error) {
+    console.error("Error fetching cards by category:", error)
+    return []
+  }
 }
 
 // Search business cards
-export async function searchBusinessCards(query: string): Promise<BusinessCard[]> {
-  const result = await getBusinessCardsPaginated(1, 100, undefined, String(query))
-  return result.cards
+export async function searchBusinessCards(query: string, limit = 20): Promise<BusinessCard[]> {
+  if (!query.trim()) return []
+
+  const cacheKey = `search_${query}_${limit}`
+  const cached = getCachedData<BusinessCard[]>(cacheKey)
+
+  if (cached) {
+    return cached
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("business_cards")
+      .select(`
+        *,
+        categories (
+          id,
+          name,
+          color_class
+        )
+      `)
+      .or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
+      .eq("is_active", true)
+      .order("exposure_weight", { ascending: false })
+      .limit(limit)
+
+    if (error) throw error
+
+    const cards = data || []
+    setCachedData(cacheKey, cards)
+    return cards
+  } catch (error) {
+    console.error("Error searching business cards:", error)
+    return []
+  }
 }
 
 // Get premium cards
-export async function getPremiumCards(): Promise<BusinessCard[]> {
-  const result = await getBusinessCardsPaginated(1, 100)
-  return result.cards.filter((card) => card.isPremium)
+export async function getPremiumCards(limit = 10): Promise<BusinessCard[]> {
+  const cacheKey = `premium_cards_${limit}`
+  const cached = getCachedData<BusinessCard[]>(cacheKey)
+
+  if (cached) {
+    return cached
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("business_cards")
+      .select(`
+        *,
+        categories (
+          id,
+          name,
+          color_class
+        )
+      `)
+      .eq("is_premium", true)
+      .eq("is_active", true)
+      .or("premium_expires_at.is.null,premium_expires_at.gt.now()")
+      .order("exposure_weight", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(limit)
+
+    if (error) throw error
+
+    const cards = data || []
+    setCachedData(cacheKey, cards)
+    return cards
+  } catch (error) {
+    console.error("Error fetching premium cards:", error)
+    return []
+  }
 }
 
 // Get promoted cards
-export async function getPromotedCards(): Promise<BusinessCard[]> {
-  const result = await getBusinessCardsPaginated(1, 100)
-  return result.cards.filter((card) => card.isPromoted)
-}
+export async function getPromotedCards(limit = 10): Promise<BusinessCard[]> {
+  const cacheKey = `promoted_cards_${limit}`
+  const cached = getCachedData<BusinessCard[]>(cacheKey)
 
-// Check database status
-export async function checkDatabaseStatus() {
-  if (!supabase) {
-    return { status: "not_configured" }
+  if (cached) {
+    return cached
   }
 
   try {
-    const tables = ["business_cards", "categories", "tags", "business_card_tags"]
-    const tableStatus: Record<string, boolean> = {}
+    const { data, error } = await supabase
+      .from("business_cards")
+      .select(`
+        *,
+        categories (
+          id,
+          name,
+          color_class
+        )
+      `)
+      .eq("is_promoted", true)
+      .eq("is_active", true)
+      .order("exposure_weight", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(limit)
 
-    for (const table of tables) {
-      try {
-        const { error } = await supabase.from(table).select("*").limit(1)
-        tableStatus[table] = !error
-      } catch {
-        tableStatus[table] = false
-      }
-    }
+    if (error) throw error
 
-    // Check social media columns
-    const hasSocialMediaColumns = await checkSocialMediaColumns()
-
-    return {
-      status: "configured",
-      tables: tableStatus,
-      allTablesExist: Object.values(tableStatus).every(Boolean),
-      hasSocialMediaColumns,
-    }
+    const cards = data || []
+    setCachedData(cacheKey, cards)
+    return cards
   } catch (error) {
-    return { status: "error", error }
+    console.error("Error fetching promoted cards:", error)
+    return []
   }
-}
-
-// Get exposure stats
-export async function getExposureStats() {
-  const cacheKey = "exposure_stats"
-  const cached = apiCache.get(cacheKey)
-
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return cached.data
-  }
-
-  if (!supabase) {
-    const stats = {
-      totalExposures: 0,
-      averageExposures: 0,
-      lastUpdated: new Date().toISOString(),
-    }
-    apiCache.set(cacheKey, { data: stats, timestamp: Date.now() })
-    return stats
-  }
-
-  try {
-    const { data, error } = await supabase.from("business_cards").select("exposure_count").eq("is_active", true)
-
-    if (error) {
-      console.error("Error fetching exposure stats:", error)
-      const stats = {
-        totalExposures: 0,
-        averageExposures: 0,
-        lastUpdated: new Date().toISOString(),
-      }
-      apiCache.set(cacheKey, { data: stats, timestamp: Date.now() })
-      return stats
-    }
-
-    const totalExposures = data.reduce((sum, card) => sum + (Number(card.exposure_count) || 0), 0)
-    const averageExposures = data.length > 0 ? totalExposures / data.length : 0
-
-    const stats = {
-      totalExposures,
-      averageExposures: Math.round(averageExposures * 100) / 100,
-      lastUpdated: new Date().toISOString(),
-    }
-
-    apiCache.set(cacheKey, { data: stats, timestamp: Date.now() })
-    return stats
-  } catch (error) {
-    console.error("Error calculating exposure stats:", error)
-    const stats = {
-      totalExposures: 0,
-      averageExposures: 0,
-      lastUpdated: new Date().toISOString(),
-    }
-    apiCache.set(cacheKey, { data: stats, timestamp: Date.now() })
-    return stats
-  }
-}
-
-// Cache functions
-export function getCachedData<T>(key: string): T | null {
-  const cached = apiCache.get(key)
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return cached.data
-  }
-  return null
-}
-
-export function setCachedData<T>(key: string, data: T): void {
-  apiCache.set(key, { data, timestamp: Date.now() })
-}
-
-// Clear cache
-export function clearApiCache(): void {
-  apiCache.clear()
-  socialMediaColumnsExist = null
-  schemaCheckTime = 0
 }
 
 // Legacy compatibility function
 export async function getBusinessCards(): Promise<BusinessCard[]> {
-  const result = await getBusinessCardsPaginated(1, 100)
-  return result.cards
+  const result = await getBusinessCardsPaginated(1, 50)
+  return result.data
 }
