@@ -6,6 +6,14 @@ import { openai } from "@ai-sdk/openai"
 import { revalidatePath } from "next/cache"
 import type { NewsFormData, NewsArticle, NewsCategory, NewsTag, NewsAnalysisResult } from "../types/news"
 
+// Check if Supabase is available
+function checkSupabase() {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다. 환경 변수를 확인해주세요.")
+  }
+  return supabase
+}
+
 // AI를 사용한 뉴스 분석
 export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResult> {
   if (!url.trim()) {
@@ -23,7 +31,7 @@ export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResul
         "title": "뉴스 제목",
         "content": "뉴스 본문 (최소 200자 이상)",
         "summary": "뉴스 요약 (100자 내외)",
-        "category": "카테고리명 (일반뉴스, 비즈니스, 기술, 건강, 여행, 음식, 교육, 스포츠 중 하나)",
+        "category": "카테고리명 (일반뉴스, 비즈니스, 기술, 건강, 여행, 음식, 교육, 스포츠, 문화, 정치 중 하나)",
         "tags": ["태그1", "태그2", "태그3"],
         "language": "언어코드 (ko, en, th 중 하나)",
         "author": "작성자명 (있는 경우)"
@@ -92,35 +100,19 @@ export async function translateNews(
 
 // 뉴스 생성
 export async function createNews(data: NewsFormData): Promise<NewsArticle> {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const client = checkSupabase()
 
   if (!data.title || !data.content) {
     throw new Error("제목과 내용은 필수 입력 항목입니다.")
   }
 
   try {
-    // 카테고리 ID 찾기
-    let categoryId = data.category_id
-    if (!categoryId && data.category_id) {
-      const { data: categories, error: categoryError } = await supabase
-        .from("news_categories")
-        .select("id")
-        .eq("name", data.category_id)
-        .single()
-
-      if (!categoryError && categories) {
-        categoryId = categories.id
-      }
-    }
-
     // 뉴스 생성
     const newsData = {
       title: data.title,
       content: data.content,
       summary: data.summary || null,
-      category_id: categoryId || null,
+      category_id: data.category_id || null,
       author: data.author || null,
       source_url: data.source_url || null,
       image_url: data.image_url || null,
@@ -131,7 +123,7 @@ export async function createNews(data: NewsFormData): Promise<NewsArticle> {
       is_translated: data.is_translated || false,
     }
 
-    const { data: newsResult, error: newsError } = await supabase
+    const { data: newsResult, error: newsError } = await client
       .from("news")
       .insert([newsData])
       .select(`
@@ -159,9 +151,7 @@ export async function createNews(data: NewsFormData): Promise<NewsArticle> {
 
 // 뉴스 업데이트
 export async function updateNews(id: number, data: Partial<NewsFormData>): Promise<NewsArticle> {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const client = checkSupabase()
 
   try {
     const updateData: any = {
@@ -181,7 +171,7 @@ export async function updateNews(id: number, data: Partial<NewsFormData>): Promi
     if (data.original_language !== undefined) updateData.original_language = data.original_language
     if (data.is_translated !== undefined) updateData.is_translated = Boolean(data.is_translated)
 
-    const { data: result, error } = await supabase
+    const { data: result, error } = await client
       .from("news")
       .update(updateData)
       .eq("id", id)
@@ -210,12 +200,10 @@ export async function updateNews(id: number, data: Partial<NewsFormData>): Promi
 
 // 뉴스 삭제
 export async function deleteNews(id: number): Promise<void> {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const client = checkSupabase()
 
   try {
-    const { error } = await supabase.from("news").delete().eq("id", id)
+    const { error } = await client.from("news").delete().eq("id", id)
 
     if (error) {
       throw new Error(`뉴스 삭제 실패: ${error.message}`)
@@ -230,12 +218,10 @@ export async function deleteNews(id: number): Promise<void> {
 
 // 뉴스 목록 조회
 export async function getNewsForAdmin(): Promise<NewsArticle[]> {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const client = checkSupabase()
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("news")
       .select(`
         *,
@@ -262,12 +248,10 @@ export async function getNewsForAdmin(): Promise<NewsArticle[]> {
 
 // 뉴스 카테고리 조회
 export async function getNewsCategories(): Promise<NewsCategory[]> {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const client = checkSupabase()
 
   try {
-    const { data, error } = await supabase.from("news_categories").select("*").order("name")
+    const { data, error } = await client.from("news_categories").select("*").order("name")
 
     if (error) {
       throw new Error(`뉴스 카테고리 조회 실패: ${error.message}`)
@@ -276,18 +260,17 @@ export async function getNewsCategories(): Promise<NewsCategory[]> {
     return data || []
   } catch (error) {
     console.error("뉴스 카테고리 조회 오류:", error)
-    throw error
+    // Return empty array instead of throwing error to prevent app crash
+    return []
   }
 }
 
 // 뉴스 태그 조회
 export async function getNewsTags(): Promise<NewsTag[]> {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const client = checkSupabase()
 
   try {
-    const { data, error } = await supabase.from("news_tags").select("*").order("name")
+    const { data, error } = await client.from("news_tags").select("*").order("name")
 
     if (error) {
       throw new Error(`뉴스 태그 조회 실패: ${error.message}`)
@@ -296,13 +279,16 @@ export async function getNewsTags(): Promise<NewsTag[]> {
     return data || []
   } catch (error) {
     console.error("뉴스 태그 조회 오류:", error)
-    throw error
+    // Return empty array instead of throwing error to prevent app crash
+    return []
   }
 }
 
 // 뉴스에 태그 추가
 async function addTagsToNews(newsId: number, tagNames: string[]): Promise<void> {
-  if (!supabase || !tagNames.length) return
+  const client = checkSupabase()
+
+  if (!tagNames.length) return
 
   try {
     // 태그 생성 또는 조회
@@ -312,7 +298,7 @@ async function addTagsToNews(newsId: number, tagNames: string[]): Promise<void> 
       if (!tagName.trim()) continue
 
       // 기존 태그 확인
-      const { data: existingTag, error: tagSelectError } = await supabase
+      const { data: existingTag, error: tagSelectError } = await client
         .from("news_tags")
         .select("id")
         .eq("name", tagName.trim())
@@ -322,7 +308,7 @@ async function addTagsToNews(newsId: number, tagNames: string[]): Promise<void> 
         tagIds.push(existingTag.id)
       } else {
         // 새 태그 생성
-        const { data: newTag, error: tagInsertError } = await supabase
+        const { data: newTag, error: tagInsertError } = await client
           .from("news_tags")
           .insert({ name: tagName.trim() })
           .select("id")
@@ -341,7 +327,7 @@ async function addTagsToNews(newsId: number, tagNames: string[]): Promise<void> 
         tag_id: tagId,
       }))
 
-      await supabase.from("news_tag_relations").insert(relations)
+      await client.from("news_tag_relations").insert(relations)
     }
   } catch (error) {
     console.error("태그 추가 오류:", error)
@@ -350,11 +336,11 @@ async function addTagsToNews(newsId: number, tagNames: string[]): Promise<void> 
 
 // 뉴스 태그 업데이트 (트랜잭션)
 async function updateNewsTagsTransaction(newsId: number, tagNames: string[]): Promise<void> {
-  if (!supabase) return
+  const client = checkSupabase()
 
   try {
     // 기존 태그 관계 삭제
-    await supabase.from("news_tag_relations").delete().eq("news_id", newsId)
+    await client.from("news_tag_relations").delete().eq("news_id", newsId)
 
     // 새 태그 추가
     if (tagNames.length > 0) {

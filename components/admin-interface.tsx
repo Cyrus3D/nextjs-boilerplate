@@ -26,9 +26,10 @@ import {
   AlertCircle,
   Globe,
   Languages,
-  Link,
   FileText,
   BarChart3,
+  Database,
+  ExternalLink,
 } from "lucide-react"
 
 // Import actions
@@ -127,6 +128,7 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
   const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([])
   const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([])
   const [newsTags, setNewsTags] = useState<NewsTag[]>([])
+  const [newsTablesExist, setNewsTablesExist] = useState(true)
 
   // Form states
   const [isEditMode, setIsEditMode] = useState(false)
@@ -241,8 +243,12 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
     try {
       const news = await getNewsForAdmin()
       setNewsArticles(news)
+      setNewsTablesExist(true)
     } catch (error) {
       console.error("뉴스 로딩 오류:", error)
+      if (error instanceof Error && error.message.includes("does not exist")) {
+        setNewsTablesExist(false)
+      }
     }
   }
 
@@ -252,6 +258,9 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
       setNewsCategories(cats)
     } catch (error) {
       console.error("뉴스 카테고리 로딩 오류:", error)
+      if (error instanceof Error && error.message.includes("does not exist")) {
+        setNewsTablesExist(false)
+      }
     }
   }
 
@@ -261,6 +270,9 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
       setNewsTags(tagsData)
     } catch (error) {
       console.error("뉴스 태그 로딩 오류:", error)
+      if (error instanceof Error && error.message.includes("does not exist")) {
+        setNewsTablesExist(false)
+      }
     }
   }
 
@@ -742,11 +754,27 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
         </Alert>
       )}
 
+      {/* News Tables Missing Alert */}
+      {!newsTablesExist && (
+        <Alert>
+          <Database className="h-4 w-4" />
+          <AlertDescription>
+            뉴스 테이블이 존재하지 않습니다. 데이터베이스에서 뉴스 테이블 생성 스크립트를 실행해주세요.
+            <br />
+            <code className="text-sm bg-muted px-2 py-1 rounded mt-2 inline-block">
+              scripts/11-create-news-tables.sql
+            </code>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="cards">비즈니스 카드 관리</TabsTrigger>
-          <TabsTrigger value="news">뉴스 관리</TabsTrigger>
+          <TabsTrigger value="news" disabled={!newsTablesExist}>
+            뉴스 관리 {!newsTablesExist && "(테이블 없음)"}
+          </TabsTrigger>
         </TabsList>
 
         {/* Business Cards Tab */}
@@ -1194,301 +1222,319 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
 
         {/* News Tab */}
         <TabsContent value="news" className="space-y-6">
-          {/* News Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                {isEditNewsMode ? "뉴스 수정" : "새 뉴스 생성"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {/* AI News Analysis Section */}
-              {aiStatus?.isActive && (
-                <div className="mb-6 p-4 border rounded-lg">
-                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                    <Globe className="h-5 w-5" />
-                    AI 뉴스 분석
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="뉴스 URL을 입력하세요"
-                        value={newsUrl}
-                        onChange={(e) => setNewsUrl(e.target.value)}
-                      />
-                      <Button onClick={handleNewsAnalysis} disabled={isAnalyzing || !newsUrl.trim()}>
-                        {isAnalyzing ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            분석 중...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            URL 분석
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    {newsFormData.content && (
-                      <Button variant="outline" onClick={handleNewsTranslation} disabled={isTranslating}>
-                        {isTranslating ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            번역 중...
-                          </>
-                        ) : (
-                          <>
-                            <Languages className="h-4 w-4 mr-2" />
-                            한국어로 번역
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <form onSubmit={handleNewsSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="news_title">제목 *</Label>
-                    <Input
-                      id="news_title"
-                      value={newsFormData.title}
-                      onChange={(e) => handleNewsInputChange("title", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="news_category">카테고리</Label>
-                    <Select
-                      value={newsFormData.category_id?.toString() || ""}
-                      onValueChange={(value) => handleNewsInputChange("category_id", Number.parseInt(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="카테고리 선택" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {newsCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id.toString()}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="news_content">내용 *</Label>
-                  <Textarea
-                    id="news_content"
-                    value={newsFormData.content}
-                    onChange={(e) => handleNewsInputChange("content", e.target.value)}
-                    rows={6}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="news_summary">요약</Label>
-                  <Textarea
-                    id="news_summary"
-                    value={newsFormData.summary || ""}
-                    onChange={(e) => handleNewsInputChange("summary", e.target.value)}
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="news_author">작성자</Label>
-                    <Input
-                      id="news_author"
-                      value={newsFormData.author || ""}
-                      onChange={(e) => handleNewsInputChange("author", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="news_source_url">소스 URL</Label>
-                    <Input
-                      id="news_source_url"
-                      value={newsFormData.source_url || ""}
-                      onChange={(e) => handleNewsInputChange("source_url", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="news_image_url">이미지 URL</Label>
-                    <Input
-                      id="news_image_url"
-                      value={newsFormData.image_url || ""}
-                      onChange={(e) => handleNewsInputChange("image_url", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="original_language">원본 언어</Label>
-                    <Select
-                      value={newsFormData.original_language || "ko"}
-                      onValueChange={(value) => handleNewsInputChange("original_language", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ko">한국어</SelectItem>
-                        <SelectItem value="en">영어</SelectItem>
-                        <SelectItem value="th">태국어</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="news_tags">태그 (쉼표로 구분)</Label>
-                  <Input
-                    id="news_tags"
-                    value={newsFormData.tag_names?.join(", ") || ""}
-                    onChange={(e) =>
-                      handleNewsInputChange(
-                        "tag_names",
-                        e.target.value
-                          .split(",")
-                          .map((tag) => tag.trim())
-                          .filter(Boolean),
-                      )
-                    }
-                    placeholder="예: 비즈니스, 기술, 뉴스"
-                  />
-                </div>
-
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="news_is_active"
-                      checked={newsFormData.is_active}
-                      onCheckedChange={(checked) => handleNewsInputChange("is_active", checked)}
-                    />
-                    <Label htmlFor="news_is_active">활성화</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="news_is_featured"
-                      checked={newsFormData.is_featured}
-                      onCheckedChange={(checked) => handleNewsInputChange("is_featured", checked)}
-                    />
-                    <Label htmlFor="news_is_featured">추천 뉴스</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="news_is_translated"
-                      checked={newsFormData.is_translated}
-                      onCheckedChange={(checked) => handleNewsInputChange("is_translated", checked)}
-                    />
-                    <Label htmlFor="news_is_translated">번역된 뉴스</Label>
-                  </div>
-                </div>
-
-                <div className="flex space-x-2">
-                  <Button type="submit">{isEditNewsMode ? "업데이트" : "생성"}</Button>
-                  {isEditNewsMode && (
-                    <Button type="button" variant="outline" onClick={resetNewsForm}>
-                      취소
-                    </Button>
-                  )}
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* News Search */}
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="뉴스 검색..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* News List */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">뉴스 목록 ({filteredNews.length}개)</h2>
-
-            {filteredNews.map((news) => (
-              <Card key={news.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-semibold">{news.title}</h3>
-                        {news.category && (
-                          <Badge variant="secondary" className={news.category.color_class}>
-                            {news.category.name}
-                          </Badge>
-                        )}
-                        {news.is_featured && <Badge variant="default">추천</Badge>}
-                        {news.is_translated && <Badge variant="outline">번역됨</Badge>}
-                        {!news.is_active && <Badge variant="destructive">비활성</Badge>}
-                        <Badge variant="outline" className="text-xs">
-                          {news.original_language.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {news.summary || news.content.substring(0, 100) + "..."}
-                      </p>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>조회: {news.view_count}</span>
-                        {news.author && <span>작성자: {news.author}</span>}
-                        <span>{new Date(news.published_at).toLocaleDateString()}</span>
-                        {news.source_url && (
-                          <a
-                            href={news.source_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 hover:text-primary"
-                          >
-                            <Link className="h-3 w-3" />
-                            소스
-                          </a>
-                        )}
-                      </div>
-                      {news.tags && news.tags.length > 0 && (
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {news.tags.map((tag) => (
-                            <Badge key={tag.id} variant="outline" className="text-xs">
-                              #{tag.name}
-                            </Badge>
-                          ))}
+          {newsTablesExist ? (
+            <>
+              {/* News Form */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    {isEditNewsMode ? "뉴스 수정" : "새 뉴스 생성"}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {/* AI News Analysis Section */}
+                  {aiStatus?.isActive && (
+                    <div className="mb-6 p-4 border rounded-lg">
+                      <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <Globe className="h-5 w-5" />
+                        AI 뉴스 분석
+                      </h3>
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="뉴스 URL을 입력하세요"
+                            value={newsUrl}
+                            onChange={(e) => setNewsUrl(e.target.value)}
+                          />
+                          <Button onClick={handleNewsAnalysis} disabled={isAnalyzing || !newsUrl.trim()}>
+                            {isAnalyzing ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                분석 중...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                URL 분석
+                              </>
+                            )}
+                          </Button>
                         </div>
+                        {newsFormData.content && (
+                          <Button variant="outline" onClick={handleNewsTranslation} disabled={isTranslating}>
+                            {isTranslating ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                번역 중...
+                              </>
+                            ) : (
+                              <>
+                                <Languages className="h-4 w-4 mr-2" />
+                                한국어로 번역
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleNewsSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="news_title">제목 *</Label>
+                        <Input
+                          id="news_title"
+                          value={newsFormData.title}
+                          onChange={(e) => handleNewsInputChange("title", e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="news_category">카테고리</Label>
+                        <Select
+                          value={newsFormData.category_id?.toString() || ""}
+                          onValueChange={(value) => handleNewsInputChange("category_id", Number.parseInt(value))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="카테고리 선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {newsCategories.map((category) => (
+                              <SelectItem key={category.id} value={category.id.toString()}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="news_content">내용 *</Label>
+                      <Textarea
+                        id="news_content"
+                        value={newsFormData.content}
+                        onChange={(e) => handleNewsInputChange("content", e.target.value)}
+                        rows={6}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="news_summary">요약</Label>
+                      <Textarea
+                        id="news_summary"
+                        value={newsFormData.summary || ""}
+                        onChange={(e) => handleNewsInputChange("summary", e.target.value)}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="news_author">작성자</Label>
+                        <Input
+                          id="news_author"
+                          value={newsFormData.author || ""}
+                          onChange={(e) => handleNewsInputChange("author", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="news_source_url">소스 URL</Label>
+                        <Input
+                          id="news_source_url"
+                          value={newsFormData.source_url || ""}
+                          onChange={(e) => handleNewsInputChange("source_url", e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="news_image_url">이미지 URL</Label>
+                        <Input
+                          id="news_image_url"
+                          value={newsFormData.image_url || ""}
+                          onChange={(e) => handleNewsInputChange("image_url", e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="original_language">원본 언어</Label>
+                        <Select
+                          value={newsFormData.original_language || "ko"}
+                          onValueChange={(value) => handleNewsInputChange("original_language", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ko">한국어</SelectItem>
+                            <SelectItem value="en">영어</SelectItem>
+                            <SelectItem value="th">태국어</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="news_tags">태그 (쉼표로 구분)</Label>
+                      <Input
+                        id="news_tags"
+                        value={newsFormData.tag_names?.join(", ") || ""}
+                        onChange={(e) =>
+                          handleNewsInputChange(
+                            "tag_names",
+                            e.target.value
+                              .split(",")
+                              .map((tag) => tag.trim())
+                              .filter(Boolean),
+                          )
+                        }
+                        placeholder="예: 비즈니스, 기술, 뉴스"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="news_is_active"
+                          checked={newsFormData.is_active}
+                          onCheckedChange={(checked) => handleNewsInputChange("is_active", checked)}
+                        />
+                        <Label htmlFor="news_is_active">활성화</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="news_is_featured"
+                          checked={newsFormData.is_featured}
+                          onCheckedChange={(checked) => handleNewsInputChange("is_featured", checked)}
+                        />
+                        <Label htmlFor="news_is_featured">추천 뉴스</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="news_is_translated"
+                          checked={newsFormData.is_translated}
+                          onCheckedChange={(checked) => handleNewsInputChange("is_translated", checked)}
+                        />
+                        <Label htmlFor="news_is_translated">번역된 뉴스</Label>
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <Button type="submit">{isEditNewsMode ? "업데이트" : "생성"}</Button>
+                      {isEditNewsMode && (
+                        <Button type="button" variant="outline" onClick={resetNewsForm}>
+                          취소
+                        </Button>
                       )}
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleNewsEdit(news)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleNewsDelete(news.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                  </form>
                 </CardContent>
               </Card>
-            ))}
 
-            {filteredNews.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">검색 조건에 맞는 뉴스가 없습니다.</div>
-            )}
-          </div>
+              {/* News Search */}
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="뉴스 검색..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* News List */}
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold">뉴스 목록 ({filteredNews.length}개)</h2>
+
+                {filteredNews.map((news) => (
+                  <Card key={news.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold">{news.title}</h3>
+                            {news.category && (
+                              <Badge variant="secondary" className={news.category.color_class}>
+                                {news.category.name}
+                              </Badge>
+                            )}
+                            {news.is_featured && <Badge variant="default">추천</Badge>}
+                            {news.is_translated && <Badge variant="outline">번역됨</Badge>}
+                            {!news.is_active && <Badge variant="destructive">비활성</Badge>}
+                            <Badge variant="outline" className="text-xs">
+                              {news.original_language.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {news.summary || news.content.substring(0, 100) + "..."}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>조회: {news.view_count}</span>
+                            {news.author && <span>작성자: {news.author}</span>}
+                            <span>{new Date(news.published_at).toLocaleDateString()}</span>
+                            {news.source_url && (
+                              <a
+                                href={news.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 hover:text-primary"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                소스
+                              </a>
+                            )}
+                          </div>
+                          {news.tags && news.tags.length > 0 && (
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {news.tags.map((tag) => (
+                                <Badge key={tag.id} variant="outline" className="text-xs">
+                                  #{tag.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleNewsEdit(news)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleNewsDelete(news.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {filteredNews.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">검색 조건에 맞는 뉴스가 없습니다.</div>
+                )}
+              </div>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Database className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">뉴스 테이블이 없습니다</h3>
+                <p className="text-muted-foreground mb-4">
+                  뉴스 기능을 사용하려면 먼저 데이터베이스에 뉴스 테이블을 생성해야 합니다.
+                </p>
+                <div className="bg-muted p-4 rounded-lg text-left">
+                  <p className="text-sm font-medium mb-2">실행할 스크립트:</p>
+                  <code className="text-sm">scripts/11-create-news-tables.sql</code>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
