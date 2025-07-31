@@ -1,16 +1,69 @@
-import { supabase, isSupabaseConfigured } from "./supabase"
-import { sampleBusinessCards, sampleCategories } from "../data/sample-cards"
-import { updateExposureStats } from "./card-rotation"
-import type { BusinessCard, Category } from "../types/business-card"
+import { supabase } from "./supabase"
 
-export async function getBusinessCards(): Promise<BusinessCard[]> {
-  if (!isSupabaseConfigured() || !supabase) {
-    console.log("Supabase not configured, returning sample data")
-    return sampleBusinessCards
+export interface BusinessCard {
+  id: number
+  title: string
+  description: string
+  category_id: number
+  categories?: {
+    id: number
+    name: string
+    color_class: string
   }
+  location?: string | null
+  phone?: string | null
+  kakao_id?: string | null
+  line_id?: string | null
+  website?: string | null
+  hours?: string | null
+  price?: string | null
+  promotion?: string | null
+  image_url?: string | null
+  facebook_url?: string | null
+  instagram_url?: string | null
+  tiktok_url?: string | null
+  threads_url?: string | null
+  youtube_url?: string | null
+  is_promoted: boolean
+  is_active: boolean
+  is_premium: boolean
+  premium_expires_at?: string | null
+  exposure_count: number
+  last_exposed_at?: string | null
+  exposure_weight: number
+  view_count: number
+  created_at: string
+  updated_at: string
+}
 
+export interface Category {
+  id: number
+  name: string
+  color_class: string
+  created_at: string
+}
+
+export interface Tag {
+  id: number
+  name: string
+  created_at: string
+}
+
+// 비즈니스 카드 목록 가져오기
+export async function getBusinessCards(
+  options: {
+    limit?: number
+    offset?: number
+    category?: string
+    search?: string
+    sortBy?: "created_at" | "updated_at" | "title" | "exposure_count"
+    sortOrder?: "asc" | "desc"
+  } = {},
+) {
   try {
-    const { data, error } = await supabase
+    const { limit = 20, offset = 0, category, search, sortBy = "created_at", sortOrder = "desc" } = options
+
+    let query = supabase
       .from("business_cards")
       .select(`
         *,
@@ -21,201 +74,224 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
         )
       `)
       .eq("is_active", true)
-      .order("created_at", { ascending: false })
 
-    if (error) {
-      console.error("Supabase error:", error)
-      return sampleBusinessCards
+    // 카테고리 필터
+    if (category && category !== "all") {
+      query = query.eq("category_id", Number(category))
     }
 
-    const cards = (data || []).map((card) => ({
-      id: card.id,
-      title: card.title,
-      description: card.description,
-      category: card.categories?.name || "Unknown",
-      location: card.location,
-      phone: card.phone,
-      kakaoId: card.kakao_id,
-      lineId: card.line_id,
-      website: card.website,
-      hours: card.hours,
-      price: card.price,
-      promotion: card.promotion,
-      tags: [], // Tags would need separate query
-      image: card.image_url,
-      isPromoted: card.is_promoted || false,
-      isPremium: card.is_premium || false,
-      premiumExpiresAt: card.premium_expires_at,
-      exposureCount: card.exposure_count || 0,
-      lastExposedAt: card.last_exposed_at,
-      exposureWeight: card.exposure_weight || 1.0,
-      // 소셜 미디어 필드 매핑
-      facebookUrl: card.facebook_url,
-      instagramUrl: card.instagram_url,
-      tiktokUrl: card.tiktok_url,
-      threadsUrl: card.threads_url,
-      youtubeUrl: card.youtube_url,
+    // 검색 필터
+    if (search && search.trim()) {
+      const searchTerm = String(search).trim()
+      query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+    }
+
+    // 정렬
+    query = query.order(sortBy, { ascending: sortOrder === "asc" })
+
+    // 페이지네이션
+    if (limit > 0) {
+      query = query.range(offset, offset + limit - 1)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error("Error fetching business cards:", error)
+      return { data: [], error: error.message }
+    }
+
+    // 안전한 데이터 변환
+    const safeData = (data || []).map((card) => ({
+      id: Number(card.id),
+      title: String(card.title || ""),
+      description: String(card.description || ""),
+      category_id: Number(card.category_id),
+      categories: card.categories || null,
+      location: card.location ? String(card.location) : null,
+      phone: card.phone ? String(card.phone) : null,
+      kakao_id: card.kakao_id ? String(card.kakao_id) : null,
+      line_id: card.line_id ? String(card.line_id) : null,
+      website: card.website ? String(card.website) : null,
+      hours: card.hours ? String(card.hours) : null,
+      price: card.price ? String(card.price) : null,
+      promotion: card.promotion ? String(card.promotion) : null,
+      image_url: card.image_url ? String(card.image_url) : null,
+      facebook_url: card.facebook_url ? String(card.facebook_url) : null,
+      instagram_url: card.instagram_url ? String(card.instagram_url) : null,
+      tiktok_url: card.tiktok_url ? String(card.tiktok_url) : null,
+      threads_url: card.threads_url ? String(card.threads_url) : null,
+      youtube_url: card.youtube_url ? String(card.youtube_url) : null,
+      is_promoted: Boolean(card.is_promoted),
+      is_active: Boolean(card.is_active),
+      is_premium: Boolean(card.is_premium),
+      premium_expires_at: card.premium_expires_at ? String(card.premium_expires_at) : null,
+      exposure_count: Number(card.exposure_count) || 0,
+      last_exposed_at: card.last_exposed_at ? String(card.last_exposed_at) : null,
+      exposure_weight: Number(card.exposure_weight) || 1.0,
+      view_count: Number(card.view_count) || 0,
+      created_at: String(card.created_at),
+      updated_at: String(card.updated_at),
     }))
 
-    // Update exposure stats for displayed cards
-    const cardIds = cards.slice(0, 12).map((card) => card.id)
-    await updateExposureStats(cardIds)
-
-    return cards
+    return { data: safeData, error: null }
   } catch (error) {
-    console.error("Error fetching business cards:", error)
-    return sampleBusinessCards
+    console.error("Error in getBusinessCards:", error)
+    return {
+      data: [],
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
   }
 }
 
-export async function getCategories(): Promise<Category[]> {
-  if (!isSupabaseConfigured() || !supabase) {
-    return sampleCategories
-  }
-
+// 카테고리 목록 가져오기
+export async function getCategories() {
   try {
     const { data, error } = await supabase.from("categories").select("*").order("name")
 
     if (error) {
       console.error("Error fetching categories:", error)
-      return sampleCategories
+      return { data: [], error: error.message }
     }
 
-    return data || sampleCategories
+    const safeData = (data || []).map((category) => ({
+      id: Number(category.id),
+      name: String(category.name),
+      color_class: String(category.color_class || "bg-gray-100 text-gray-800"),
+      created_at: String(category.created_at),
+    }))
+
+    return { data: safeData, error: null }
   } catch (error) {
-    console.error("Error fetching categories:", error)
-    return sampleCategories
+    console.error("Error in getCategories:", error)
+    return {
+      data: [],
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
   }
 }
 
-export async function getBusinessCardsByCategory(categoryName: string): Promise<BusinessCard[]> {
-  const allCards = await getBusinessCards()
-  return allCards.filter((card) => card.category === categoryName)
-}
-
-export async function searchBusinessCards(query: string): Promise<BusinessCard[]> {
-  const allCards = await getBusinessCards()
-  const lowercaseQuery = query.toLowerCase()
-
-  return allCards.filter(
-    (card) =>
-      card.title.toLowerCase().includes(lowercaseQuery) ||
-      card.description.toLowerCase().includes(lowercaseQuery) ||
-      card.category.toLowerCase().includes(lowercaseQuery) ||
-      card.tags.some((tag) => tag.toLowerCase().includes(lowercaseQuery)),
-  )
-}
-
-export async function getPremiumCards(): Promise<BusinessCard[]> {
-  const allCards = await getBusinessCards()
-  return allCards.filter((card) => card.isPremium)
-}
-
-export async function getPromotedCards(): Promise<BusinessCard[]> {
-  const allCards = await getBusinessCards()
-  return allCards.filter((card) => card.isPromoted)
-}
-
-export async function incrementViewCount(cardId: number): Promise<void> {
-  if (!isSupabaseConfigured() || !supabase) {
-    return
-  }
-
+// 태그 목록 가져오기
+export async function getTags() {
   try {
-    // First get the current view count
-    const { data: currentData, error: fetchError } = await supabase
-      .from("business_cards")
-      .select("view_count")
-      .eq("id", cardId)
-      .single()
+    const { data, error } = await supabase.from("tags").select("*").order("name")
 
-    if (fetchError) {
-      console.error("Error fetching current view count:", fetchError)
-      return
+    if (error) {
+      console.error("Error fetching tags:", error)
+      return { data: [], error: error.message }
     }
 
-    const currentViewCount = currentData?.view_count || 0
+    const safeData = (data || []).map((tag) => ({
+      id: Number(tag.id),
+      name: String(tag.name),
+      created_at: String(tag.created_at),
+    }))
 
-    // Then update with incremented value
+    return { data: safeData, error: null }
+  } catch (error) {
+    console.error("Error in getTags:", error)
+    return {
+      data: [],
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+// 비즈니스 카드 조회수 증가
+export async function incrementViewCount(cardId: number) {
+  try {
+    const id = Number(cardId)
+
     const { error } = await supabase
       .from("business_cards")
       .update({
-        view_count: currentViewCount + 1,
+        view_count: supabase.raw("view_count + 1"),
         updated_at: new Date().toISOString(),
       })
-      .eq("id", cardId)
+      .eq("id", id)
 
     if (error) {
       console.error("Error incrementing view count:", error)
+      return { error: error.message }
     }
+
+    return { error: null }
   } catch (error) {
-    console.error("Error incrementing view count:", error)
-  }
-}
-
-export async function checkDatabaseStatus() {
-  if (!isSupabaseConfigured() || !supabase) {
-    return { status: "not_configured" }
-  }
-
-  try {
-    const tables = ["business_cards", "categories", "tags", "business_card_tags"]
-    const tableStatus: Record<string, boolean> = {}
-
-    for (const table of tables) {
-      try {
-        const { error } = await supabase.from(table).select("*").limit(1)
-        tableStatus[table] = !error
-      } catch {
-        tableStatus[table] = false
-      }
-    }
-
+    console.error("Error in incrementViewCount:", error)
     return {
-      status: "configured",
-      tables: tableStatus,
-      allTablesExist: Object.values(tableStatus).every(Boolean),
+      error: error instanceof Error ? error.message : "Unknown error",
     }
-  } catch (error) {
-    return { status: "error", error }
   }
 }
 
+// 노출 통계 가져오기
 export async function getExposureStats() {
-  if (!isSupabaseConfigured() || !supabase) {
-    return {
-      totalExposures: 0,
-      averageExposures: 0,
-      lastUpdated: new Date().toISOString(),
-    }
-  }
-
   try {
-    const { data, error } = await supabase.from("business_cards").select("exposure_count").eq("is_active", true)
+    const { data, error } = await supabase.from("business_cards").select("exposure_count, exposure_weight, is_premium")
 
     if (error) {
       console.error("Error fetching exposure stats:", error)
       return {
         totalExposures: 0,
         averageExposures: 0,
-        lastUpdated: new Date().toISOString(),
+        migrationNeeded: true,
+        error: error.message,
       }
     }
 
-    const totalExposures = data.reduce((sum, card) => sum + (card.exposure_count || 0), 0)
-    const averageExposures = data.length > 0 ? totalExposures / data.length : 0
+    const cards = data || []
+    const totalExposures = cards.reduce((sum, card) => sum + (Number(card.exposure_count) || 0), 0)
+    const averageExposures = cards.length > 0 ? Math.round(totalExposures / cards.length) : 0
 
     return {
       totalExposures,
-      averageExposures: Math.round(averageExposures * 100) / 100,
-      lastUpdated: new Date().toISOString(),
+      averageExposures,
+      migrationNeeded: false,
+      error: null,
     }
   } catch (error) {
-    console.error("Error calculating exposure stats:", error)
+    console.error("Error in getExposureStats:", error)
     return {
       totalExposures: 0,
       averageExposures: 0,
-      lastUpdated: new Date().toISOString(),
+      migrationNeeded: true,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+// 프리미엄 카드 만료 확인
+export async function checkExpiredPremiumCards() {
+  try {
+    const now = new Date().toISOString()
+
+    const { data, error } = await supabase
+      .from("business_cards")
+      .update({
+        is_premium: false,
+        premium_expires_at: null,
+        updated_at: now,
+      })
+      .lt("premium_expires_at", now)
+      .eq("is_premium", true)
+      .select("id, title")
+
+    if (error) {
+      console.error("Error checking expired premium cards:", error)
+      return { expiredCount: 0, error: error.message }
+    }
+
+    return {
+      expiredCount: (data || []).length,
+      expiredCards: data || [],
+      error: null,
+    }
+  } catch (error) {
+    console.error("Error in checkExpiredPremiumCards:", error)
+    return {
+      expiredCount: 0,
+      expiredCards: [],
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }

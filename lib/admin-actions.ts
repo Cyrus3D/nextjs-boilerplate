@@ -1,11 +1,11 @@
 "use server"
 
-import { supabase } from "./supabase"
+import { createServerClient } from "./supabase"
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { revalidatePath } from "next/cache"
 
-// 실제 데이터베이스 스키마에 맞게 수정된 인터페이스 (소셜 미디어 필드 추가)
+// 실제 데이터베이스 스키마에 맞게 수정된 인터페이스
 export interface BusinessCardData {
   title: string
   description: string
@@ -27,7 +27,7 @@ export interface BusinessCardData {
   last_exposed_at?: string | null
   exposure_weight?: number
   view_count?: number
-  // 소셜 미디어 필드 추가
+  // 소셜 미디어 필드
   facebook_url?: string | null
   instagram_url?: string | null
   tiktok_url?: string | null
@@ -68,7 +68,7 @@ export async function checkAIStatus(): Promise<AIStatusResult> {
       temperature: 0,
     })
 
-    const canGenerateText = text.toLowerCase().includes("working")
+    const canGenerateText = String(text).toLowerCase().includes("working")
 
     return {
       isActive: canGenerateText,
@@ -88,9 +88,9 @@ export async function checkAIStatus(): Promise<AIStatusResult> {
   }
 }
 
-// AI를 사용한 비즈니스 카드 데이터 파싱 (소셜 미디어 필드 추가)
+// AI를 사용한 비즈니스 카드 데이터 파싱
 export async function parseBusinessCardData(text: string): Promise<Partial<BusinessCardData>> {
-  if (!text.trim()) {
+  if (!String(text).trim()) {
     throw new Error("분석할 텍스트가 없습니다.")
   }
 
@@ -100,7 +100,7 @@ export async function parseBusinessCardData(text: string): Promise<Partial<Busin
       prompt: `다음 텍스트에서 비즈니스 정보를 추출하여 JSON 형태로 반환해주세요. 
       정보가 없는 필드는 null로 설정하세요.
 
-      텍스트: "${text}"
+      텍스트: "${String(text)}"
 
       다음 형식으로 반환해주세요:
       {
@@ -126,26 +126,28 @@ export async function parseBusinessCardData(text: string): Promise<Partial<Busin
     })
 
     // JSON 파싱 시도
-    const cleanedResult = result.replace(/```json\n?|\n?```/g, "").trim()
+    const cleanedResult = String(result)
+      .replace(/```json\n?|\n?```/g, "")
+      .trim()
     const parsedData = JSON.parse(cleanedResult)
 
-    // 기본값 설정 (소셜 미디어 필드 포함)
+    // 기본값 설정 및 안전한 타입 변환
     const businessData: Partial<BusinessCardData> = {
-      title: parsedData.title || "제목 없음",
-      description: parsedData.description || "설명 없음",
-      location: parsedData.location || null,
-      phone: parsedData.phone || null,
-      kakao_id: parsedData.kakao_id || null,
-      line_id: parsedData.line_id || null,
-      website: parsedData.website || null,
-      hours: parsedData.hours || null,
-      price: parsedData.price || null,
-      promotion: parsedData.promotion || null,
-      facebook_url: parsedData.facebook_url || null,
-      instagram_url: parsedData.instagram_url || null,
-      tiktok_url: parsedData.tiktok_url || null,
-      threads_url: parsedData.threads_url || null,
-      youtube_url: parsedData.youtube_url || null,
+      title: String(parsedData.title || "제목 없음"),
+      description: String(parsedData.description || "설명 없음"),
+      location: parsedData.location ? String(parsedData.location) : null,
+      phone: parsedData.phone ? String(parsedData.phone) : null,
+      kakao_id: parsedData.kakao_id ? String(parsedData.kakao_id) : null,
+      line_id: parsedData.line_id ? String(parsedData.line_id) : null,
+      website: parsedData.website ? String(parsedData.website) : null,
+      hours: parsedData.hours ? String(parsedData.hours) : null,
+      price: parsedData.price ? String(parsedData.price) : null,
+      promotion: parsedData.promotion ? String(parsedData.promotion) : null,
+      facebook_url: parsedData.facebook_url ? String(parsedData.facebook_url) : null,
+      instagram_url: parsedData.instagram_url ? String(parsedData.instagram_url) : null,
+      tiktok_url: parsedData.tiktok_url ? String(parsedData.tiktok_url) : null,
+      threads_url: parsedData.threads_url ? String(parsedData.threads_url) : null,
+      youtube_url: parsedData.youtube_url ? String(parsedData.youtube_url) : null,
       is_active: true,
       is_promoted: false,
       is_premium: false,
@@ -160,47 +162,44 @@ export async function parseBusinessCardData(text: string): Promise<Partial<Busin
   }
 }
 
-// 비즈니스 카드 생성 (소셜 미디어 필드 포함)
+// 비즈니스 카드 생성
 export async function createBusinessCard(data: BusinessCardData) {
   console.log("createBusinessCard 호출됨:", data)
 
-  if (!supabase) {
-    console.error("Supabase 클라이언트가 없습니다")
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const supabase = createServerClient()
 
   // 필수 필드 검증
-  if (!data.title || !data.description || !data.category_id) {
+  if (!String(data.title).trim() || !String(data.description).trim() || !Number(data.category_id)) {
     throw new Error("제목, 설명, 카테고리는 필수 입력 항목입니다.")
   }
 
   try {
-    // 데이터베이스에 삽입할 데이터 준비 (소셜 미디어 필드 포함)
+    // 데이터베이스에 삽입할 데이터 준비
     const insertData = {
-      title: data.title,
-      description: data.description,
-      category_id: data.category_id,
-      location: data.location || null,
-      phone: data.phone || null,
-      kakao_id: data.kakao_id || null,
-      line_id: data.line_id || null,
-      website: data.website || null,
-      hours: data.hours || null,
-      price: data.price || null,
-      promotion: data.promotion || null,
-      image_url: data.image_url || null,
-      facebook_url: data.facebook_url || null,
-      instagram_url: data.instagram_url || null,
-      tiktok_url: data.tiktok_url || null,
-      threads_url: data.threads_url || null,
-      youtube_url: data.youtube_url || null,
-      is_promoted: data.is_promoted || false,
+      title: String(data.title).trim(),
+      description: String(data.description).trim(),
+      category_id: Number(data.category_id),
+      location: data.location ? String(data.location).trim() || null : null,
+      phone: data.phone ? String(data.phone).trim() || null : null,
+      kakao_id: data.kakao_id ? String(data.kakao_id).trim() || null : null,
+      line_id: data.line_id ? String(data.line_id).trim() || null : null,
+      website: data.website ? String(data.website).trim() || null : null,
+      hours: data.hours ? String(data.hours).trim() || null : null,
+      price: data.price ? String(data.price).trim() || null : null,
+      promotion: data.promotion ? String(data.promotion).trim() || null : null,
+      image_url: data.image_url ? String(data.image_url).trim() || null : null,
+      facebook_url: data.facebook_url ? String(data.facebook_url).trim() || null : null,
+      instagram_url: data.instagram_url ? String(data.instagram_url).trim() || null : null,
+      tiktok_url: data.tiktok_url ? String(data.tiktok_url).trim() || null : null,
+      threads_url: data.threads_url ? String(data.threads_url).trim() || null : null,
+      youtube_url: data.youtube_url ? String(data.youtube_url).trim() || null : null,
+      is_promoted: Boolean(data.is_promoted),
       is_active: data.is_active !== false,
-      is_premium: data.is_premium || false,
-      premium_expires_at: data.premium_expires_at || null,
-      exposure_count: data.exposure_count || 0,
-      last_exposed_at: data.last_exposed_at || null,
-      exposure_weight: data.exposure_weight || 1.0,
+      is_premium: Boolean(data.is_premium),
+      premium_expires_at: data.premium_expires_at ? String(data.premium_expires_at) : null,
+      exposure_count: Number(data.exposure_count) || 0,
+      last_exposed_at: data.last_exposed_at ? String(data.last_exposed_at) : null,
+      exposure_weight: Number(data.exposure_weight) || 1.0,
       view_count: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -228,49 +227,56 @@ export async function createBusinessCard(data: BusinessCardData) {
   }
 }
 
-// 비즈니스 카드 업데이트 - 소셜 미디어 필드 포함
+// 비즈니스 카드 업데이트
 export async function updateBusinessCard(id: number, data: Partial<BusinessCardData>) {
   console.log("updateBusinessCard 호출됨:", { id, data })
 
-  if (!supabase) {
-    console.error("Supabase 클라이언트가 없습니다")
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const supabase = createServerClient()
+  const cardId = Number(id)
 
-  if (!id || id <= 0) {
+  if (!cardId || cardId <= 0) {
     throw new Error("유효하지 않은 카드 ID입니다.")
   }
 
   try {
-    // 업데이트할 데이터 준비 - 빈 문자열을 null로 변환
+    // 업데이트할 데이터 준비
     const updateData: any = {
       updated_at: new Date().toISOString(),
     }
 
-    // 각 필드를 안전하게 처리 (소셜 미디어 필드 포함)
-    if (data.title !== undefined) updateData.title = data.title || null
-    if (data.description !== undefined) updateData.description = data.description || null
-    if (data.category_id !== undefined) updateData.category_id = data.category_id
-    if (data.location !== undefined) updateData.location = data.location || null
-    if (data.phone !== undefined) updateData.phone = data.phone || null
-    if (data.kakao_id !== undefined) updateData.kakao_id = data.kakao_id || null
-    if (data.line_id !== undefined) updateData.line_id = data.line_id || null
-    if (data.website !== undefined) updateData.website = data.website || null
-    if (data.hours !== undefined) updateData.hours = data.hours || null
-    if (data.price !== undefined) updateData.price = data.price || null
-    if (data.promotion !== undefined) updateData.promotion = data.promotion || null
-    if (data.image_url !== undefined) updateData.image_url = data.image_url || null
-    if (data.facebook_url !== undefined) updateData.facebook_url = data.facebook_url || null
-    if (data.instagram_url !== undefined) updateData.instagram_url = data.instagram_url || null
-    if (data.tiktok_url !== undefined) updateData.tiktok_url = data.tiktok_url || null
-    if (data.threads_url !== undefined) updateData.threads_url = data.threads_url || null
-    if (data.youtube_url !== undefined) updateData.youtube_url = data.youtube_url || null
+    // 각 필드를 안전하게 처리
+    if (data.title !== undefined) updateData.title = String(data.title).trim() || null
+    if (data.description !== undefined) updateData.description = String(data.description).trim() || null
+    if (data.category_id !== undefined) updateData.category_id = Number(data.category_id)
+    if (data.location !== undefined) updateData.location = data.location ? String(data.location).trim() || null : null
+    if (data.phone !== undefined) updateData.phone = data.phone ? String(data.phone).trim() || null : null
+    if (data.kakao_id !== undefined) updateData.kakao_id = data.kakao_id ? String(data.kakao_id).trim() || null : null
+    if (data.line_id !== undefined) updateData.line_id = data.line_id ? String(data.line_id).trim() || null : null
+    if (data.website !== undefined) updateData.website = data.website ? String(data.website).trim() || null : null
+    if (data.hours !== undefined) updateData.hours = data.hours ? String(data.hours).trim() || null : null
+    if (data.price !== undefined) updateData.price = data.price ? String(data.price).trim() || null : null
+    if (data.promotion !== undefined)
+      updateData.promotion = data.promotion ? String(data.promotion).trim() || null : null
+    if (data.image_url !== undefined)
+      updateData.image_url = data.image_url ? String(data.image_url).trim() || null : null
+    if (data.facebook_url !== undefined)
+      updateData.facebook_url = data.facebook_url ? String(data.facebook_url).trim() || null : null
+    if (data.instagram_url !== undefined)
+      updateData.instagram_url = data.instagram_url ? String(data.instagram_url).trim() || null : null
+    if (data.tiktok_url !== undefined)
+      updateData.tiktok_url = data.tiktok_url ? String(data.tiktok_url).trim() || null : null
+    if (data.threads_url !== undefined)
+      updateData.threads_url = data.threads_url ? String(data.threads_url).trim() || null : null
+    if (data.youtube_url !== undefined)
+      updateData.youtube_url = data.youtube_url ? String(data.youtube_url).trim() || null : null
     if (data.is_promoted !== undefined) updateData.is_promoted = Boolean(data.is_promoted)
     if (data.is_active !== undefined) updateData.is_active = Boolean(data.is_active)
     if (data.is_premium !== undefined) updateData.is_premium = Boolean(data.is_premium)
-    if (data.premium_expires_at !== undefined) updateData.premium_expires_at = data.premium_expires_at
+    if (data.premium_expires_at !== undefined)
+      updateData.premium_expires_at = data.premium_expires_at ? String(data.premium_expires_at) : null
     if (data.exposure_count !== undefined) updateData.exposure_count = Number(data.exposure_count) || 0
-    if (data.last_exposed_at !== undefined) updateData.last_exposed_at = data.last_exposed_at
+    if (data.last_exposed_at !== undefined)
+      updateData.last_exposed_at = data.last_exposed_at ? String(data.last_exposed_at) : null
     if (data.exposure_weight !== undefined) updateData.exposure_weight = Number(data.exposure_weight) || 1.0
     if (data.view_count !== undefined) updateData.view_count = Number(data.view_count) || 0
 
@@ -279,7 +285,7 @@ export async function updateBusinessCard(id: number, data: Partial<BusinessCardD
     const { data: result, error } = await supabase
       .from("business_cards")
       .update(updateData)
-      .eq("id", id)
+      .eq("id", cardId)
       .select(`
         *,
         categories (
@@ -314,12 +320,11 @@ export async function updateBusinessCard(id: number, data: Partial<BusinessCardD
 
 // 비즈니스 카드 삭제
 export async function deleteBusinessCard(id: number) {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const supabase = createServerClient()
+  const cardId = Number(id)
 
   try {
-    const { error } = await supabase.from("business_cards").delete().eq("id", id)
+    const { error } = await supabase.from("business_cards").delete().eq("id", cardId)
 
     if (error) {
       throw new Error(`카드 삭제 실패: ${error.message}`)
@@ -337,16 +342,15 @@ export async function deleteBusinessCard(id: number) {
 
 // 다중 비즈니스 카드 삭제
 export async function deleteMultipleBusinessCards(ids: number[]) {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const supabase = createServerClient()
+  const cardIds = ids.map((id) => Number(id)).filter((id) => id > 0)
 
-  if (!ids.length) {
+  if (!cardIds.length) {
     throw new Error("삭제할 카드가 선택되지 않았습니다.")
   }
 
   try {
-    const { error } = await supabase.from("business_cards").delete().in("id", ids)
+    const { error } = await supabase.from("business_cards").delete().in("id", cardIds)
 
     if (error) {
       throw new Error(`카드 삭제 실패: ${error.message}`)
@@ -355,7 +359,7 @@ export async function deleteMultipleBusinessCards(ids: number[]) {
     revalidatePath("/dashboard-mgmt-2024")
     revalidatePath("/")
 
-    return { success: true, deletedCount: ids.length }
+    return { success: true, deletedCount: cardIds.length }
   } catch (error) {
     console.error("다중 카드 삭제 오류:", error)
     throw error
@@ -364,9 +368,7 @@ export async function deleteMultipleBusinessCards(ids: number[]) {
 
 // 카테고리 목록 가져오기
 export async function getCategories() {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const supabase = createServerClient()
 
   try {
     const { data, error } = await supabase.from("categories").select("*").order("name")
@@ -375,7 +377,12 @@ export async function getCategories() {
       throw new Error(`카테고리 조회 실패: ${error.message}`)
     }
 
-    return data || []
+    return (data || []).map((category) => ({
+      id: Number(category.id),
+      name: String(category.name),
+      color_class: String(category.color_class || "bg-gray-100 text-gray-800"),
+      created_at: String(category.created_at),
+    }))
   } catch (error) {
     console.error("카테고리 조회 오류:", error)
     throw error
@@ -384,9 +391,7 @@ export async function getCategories() {
 
 // 태그 목록 가져오기
 export async function getTags() {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const supabase = createServerClient()
 
   try {
     const { data, error } = await supabase.from("tags").select("*").order("name")
@@ -395,7 +400,11 @@ export async function getTags() {
       throw new Error(`태그 조회 실패: ${error.message}`)
     }
 
-    return data || []
+    return (data || []).map((tag) => ({
+      id: Number(tag.id),
+      name: String(tag.name),
+      created_at: String(tag.created_at),
+    }))
   } catch (error) {
     console.error("태그 조회 오류:", error)
     throw error
@@ -404,9 +413,7 @@ export async function getTags() {
 
 // 비즈니스 카드 목록 가져오기 (관리자용)
 export async function getBusinessCardsForAdmin() {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const supabase = createServerClient()
 
   try {
     const { data, error } = await supabase
@@ -425,7 +432,37 @@ export async function getBusinessCardsForAdmin() {
       throw new Error(`카드 목록 조회 실패: ${error.message}`)
     }
 
-    return data || []
+    return (data || []).map((card) => ({
+      id: Number(card.id),
+      title: String(card.title || ""),
+      description: String(card.description || ""),
+      category_id: Number(card.category_id),
+      categories: card.categories || null,
+      location: card.location ? String(card.location) : null,
+      phone: card.phone ? String(card.phone) : null,
+      kakao_id: card.kakao_id ? String(card.kakao_id) : null,
+      line_id: card.line_id ? String(card.line_id) : null,
+      website: card.website ? String(card.website) : null,
+      hours: card.hours ? String(card.hours) : null,
+      price: card.price ? String(card.price) : null,
+      promotion: card.promotion ? String(card.promotion) : null,
+      image_url: card.image_url ? String(card.image_url) : null,
+      facebook_url: card.facebook_url ? String(card.facebook_url) : null,
+      instagram_url: card.instagram_url ? String(card.instagram_url) : null,
+      tiktok_url: card.tiktok_url ? String(card.tiktok_url) : null,
+      threads_url: card.threads_url ? String(card.threads_url) : null,
+      youtube_url: card.youtube_url ? String(card.youtube_url) : null,
+      is_promoted: Boolean(card.is_promoted),
+      is_active: Boolean(card.is_active),
+      is_premium: Boolean(card.is_premium),
+      premium_expires_at: card.premium_expires_at ? String(card.premium_expires_at) : null,
+      exposure_count: Number(card.exposure_count) || 0,
+      last_exposed_at: card.last_exposed_at ? String(card.last_exposed_at) : null,
+      exposure_weight: Number(card.exposure_weight) || 1.0,
+      view_count: Number(card.view_count) || 0,
+      created_at: String(card.created_at),
+      updated_at: String(card.updated_at),
+    }))
   } catch (error) {
     console.error("카드 목록 조회 오류:", error)
     throw error
@@ -434,18 +471,17 @@ export async function getBusinessCardsForAdmin() {
 
 // 프리미엄 설정 업데이트
 export async function updatePremiumStatus(id: number, isPremium: boolean, expiresAt?: string) {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const supabase = createServerClient()
+  const cardId = Number(id)
 
   try {
     const updateData: any = {
-      is_premium: isPremium,
+      is_premium: Boolean(isPremium),
       updated_at: new Date().toISOString(),
     }
 
     if (isPremium && expiresAt) {
-      updateData.premium_expires_at = expiresAt
+      updateData.premium_expires_at = String(expiresAt)
     } else if (!isPremium) {
       updateData.premium_expires_at = null
     }
@@ -453,7 +489,7 @@ export async function updatePremiumStatus(id: number, isPremium: boolean, expire
     const { data: result, error } = await supabase
       .from("business_cards")
       .update(updateData)
-      .eq("id", id)
+      .eq("id", cardId)
       .select()
       .single()
 
@@ -473,21 +509,21 @@ export async function updatePremiumStatus(id: number, isPremium: boolean, expire
 
 // 노출 카운트 업데이트
 export async function updateExposureCount(id: number, count: number) {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const supabase = createServerClient()
+  const cardId = Number(id)
+  const exposureCount = Number(count) || 0
 
   try {
     const updateData: any = {
-      exposure_count: count,
-      last_exposed_at: count > 0 ? new Date().toISOString() : null,
+      exposure_count: exposureCount,
+      last_exposed_at: exposureCount > 0 ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
     }
 
     const { data: result, error } = await supabase
       .from("business_cards")
       .update(updateData)
-      .eq("id", id)
+      .eq("id", cardId)
       .select()
       .single()
 
@@ -507,20 +543,20 @@ export async function updateExposureCount(id: number, count: number) {
 
 // 노출 가중치 업데이트
 export async function updateExposureWeight(id: number, weight: number) {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const supabase = createServerClient()
+  const cardId = Number(id)
+  const exposureWeight = Number(weight) || 1.0
 
   try {
     const updateData: any = {
-      exposure_weight: weight,
+      exposure_weight: exposureWeight,
       updated_at: new Date().toISOString(),
     }
 
     const { data: result, error } = await supabase
       .from("business_cards")
       .update(updateData)
-      .eq("id", id)
+      .eq("id", cardId)
       .select()
       .single()
 
@@ -540,9 +576,7 @@ export async function updateExposureWeight(id: number, weight: number) {
 
 // 데이터베이스 연결 테스트 함수
 export async function testDatabaseConnection() {
-  if (!supabase) {
-    throw new Error("Supabase가 설정되지 않았습니다.")
-  }
+  const supabase = createServerClient()
 
   try {
     const { data, error } = await supabase.from("categories").select("count").limit(1)

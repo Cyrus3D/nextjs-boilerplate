@@ -1,120 +1,90 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import AdminInterface from "./admin-interface"
 import AdminLogin from "./admin-login"
+import AdminInterface from "./admin-interface"
+import { verifyAdminPassword, validateAdminSession } from "@/lib/admin-auth"
+import { toast } from "@/hooks/use-toast"
 
-export default function SecureAdminInterface() {
+export default function AdminInterfaceSecure() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [loginError, setLoginError] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string>("")
 
   useEffect(() => {
-    // 세션 스토리지에서 인증 상태 확인
-    const authStatus = sessionStorage.getItem("admin-auth")
-    const authTime = sessionStorage.getItem("admin-auth-time")
-
-    if (authStatus === "true" && authTime) {
-      const loginTime = Number.parseInt(authTime)
-      const currentTime = Date.now()
-      const sessionDuration = 2 * 60 * 60 * 1000 // 2시간
-
-      if (currentTime - loginTime < sessionDuration) {
-        setIsAuthenticated(true)
-      } else {
-        // 세션 만료
-        sessionStorage.removeItem("admin-auth")
-        sessionStorage.removeItem("admin-auth-time")
-      }
-    }
-
+    // 세션 검증
+    const isValid = validateAdminSession()
+    setIsAuthenticated(isValid)
     setIsLoading(false)
   }, [])
 
   const handleLogin = async (password: string) => {
-    setLoginError("")
-
     try {
-      const response = await fetch("/api/admin/auth", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ password }),
-      })
-
-      const result = await response.json()
+      setError("")
+      const result = await verifyAdminPassword(password)
 
       if (result.success) {
         setIsAuthenticated(true)
-        sessionStorage.setItem("admin-auth", "true")
-        sessionStorage.setItem("admin-auth-time", Date.now().toString())
 
-        // 로그인 시도 횟수 초기화
-        localStorage.removeItem("login-attempts")
-      } else {
-        setLoginError(result.error || "로그인에 실패했습니다.")
-
-        // 잘못된 시도 기록
-        const attempts = Number.parseInt(localStorage.getItem("login-attempts") || "0")
-        const newAttempts = attempts + 1
-        localStorage.setItem("login-attempts", newAttempts.toString())
-
-        if (newAttempts >= 5) {
-          setLoginError("너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.")
-
-          // 5분 후 시도 횟수 초기화
-          setTimeout(
-            () => {
-              localStorage.removeItem("login-attempts")
-            },
-            5 * 60 * 1000,
-          )
+        // 세션 저장
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("admin-auth", "true")
+          sessionStorage.setItem("admin-auth-time", String(Date.now()))
         }
+
+        toast({
+          title: "로그인 성공",
+          description: "관리자 인터페이스에 접근할 수 있습니다.",
+        })
+      } else {
+        setError(result.error || "로그인에 실패했습니다.")
+        toast({
+          title: "로그인 실패",
+          description: result.error || "비밀번호를 확인해주세요.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
-      console.error("Login error:", error)
-      setLoginError("서버 오류가 발생했습니다. 다시 시도해주세요.")
+      const errorMessage = error instanceof Error ? error.message : "로그인 중 오류가 발생했습니다."
+      setError(errorMessage)
+      toast({
+        title: "오류",
+        description: errorMessage,
+        variant: "destructive",
+      })
     }
   }
 
   const handleLogout = () => {
     setIsAuthenticated(false)
-    sessionStorage.removeItem("admin-auth")
-    sessionStorage.removeItem("admin-auth-time")
+    setError("")
 
-    // 쿠키도 제거
-    document.cookie = "admin-auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;"
+    // 세션 정리
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("admin-auth")
+      sessionStorage.removeItem("admin-auth-time")
+    }
+
+    toast({
+      title: "로그아웃",
+      description: "관리자 세션이 종료되었습니다.",
+    })
   }
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-gray-600">로딩 중...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">인증 상태를 확인하는 중...</p>
         </div>
       </div>
     )
   }
 
   if (!isAuthenticated) {
-    return <AdminLogin onLogin={handleLogin} error={loginError} />
+    return <AdminLogin onLogin={handleLogin} error={error} />
   }
 
-  return (
-    <div>
-      {/* 로그아웃 버튼 */}
-      <div className="fixed top-4 right-4 z-50">
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-        >
-          로그아웃
-        </button>
-      </div>
-
-      <AdminInterface />
-    </div>
-  )
+  return <AdminInterface onLogout={handleLogout} />
 }
