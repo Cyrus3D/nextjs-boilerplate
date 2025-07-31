@@ -110,6 +110,42 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                 </div>
               )}
 
+              {/* Images */}
+              {news.image_url && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-gray-900">이미지</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Array.isArray(news.image_url) ? (
+                      news.image_url.map((url, index) => (
+                        <div key={index} className="relative overflow-hidden rounded-lg border border-gray-200">
+                          <img
+                            src={String(url) || "/placeholder.svg"}
+                            alt={`뉴스 이미지 ${index + 1}`}
+                            className="w-full h-auto max-h-64 object-cover hover:scale-105 transition-transform duration-200"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = "none"
+                            }}
+                          />
+                        </div>
+                      ))
+                    ) : (
+                      <div className="relative overflow-hidden rounded-lg border border-gray-200">
+                        <img
+                          src={String(news.image_url) || "/placeholder.svg"}
+                          alt="뉴스 이미지"
+                          className="w-full h-auto max-h-64 object-cover hover:scale-105 transition-transform duration-200"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.display = "none"
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Content */}
               {news.content && (
                 <div className="prose max-w-none">
