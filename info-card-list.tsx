@@ -107,7 +107,7 @@ const InfoCardList = () => {
   const newsTablesExist = true
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
           <TabsTrigger value="news" className="flex items-center gap-2">
@@ -166,7 +166,7 @@ const InfoCardList = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 {filteredNews.map((news) => (
                   <NewsCard key={news.id} news={news} onDetailClick={setSelectedNews} />
                 ))}
@@ -199,9 +199,12 @@ const InfoCardList = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* 개선된 그리드 레이아웃 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 auto-rows-fr">
                 {businessCards.map((card) => (
-                  <BusinessCard key={card.id} card={card} onDetailClick={setSelectedBusiness} />
+                  <div key={card.id} className="flex">
+                    <BusinessCard card={card} onDetailClick={setSelectedBusiness} />
+                  </div>
                 ))}
               </div>
 
@@ -214,12 +217,12 @@ const InfoCardList = () => {
               )}
 
               {hasMore && businessCards.length > 0 && (
-                <div className="text-center">
+                <div className="text-center pt-8">
                   <Button
                     onClick={loadMoreBusinessCards}
                     disabled={loading}
                     variant="outline"
-                    className="px-8 bg-transparent"
+                    className="px-8 bg-transparent hover:bg-blue-50 border-blue-200 text-blue-600"
                   >
                     {loading ? (
                       <>
