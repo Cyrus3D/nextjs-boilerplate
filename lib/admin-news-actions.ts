@@ -623,7 +623,22 @@ ${scrapedData.content}
     console.log("AI analysis response:", text.substring(0, 200) + "...")
 
     try {
-      const result = JSON.parse(text)
+      // Clean up the AI response - remove markdown code blocks if present
+      let cleanedText = text.trim()
+
+      // Remove markdown code block markers
+      if (cleanedText.startsWith("```json")) {
+        cleanedText = cleanedText.replace(/^```json\s*/, "").replace(/\s*```$/, "")
+      } else if (cleanedText.startsWith("```")) {
+        cleanedText = cleanedText.replace(/^```\s*/, "").replace(/\s*```$/, "")
+      }
+
+      // Remove any leading/trailing whitespace
+      cleanedText = cleanedText.trim()
+
+      console.log("Cleaned AI response for parsing:", cleanedText.substring(0, 200) + "...")
+
+      const result = JSON.parse(cleanedText)
 
       // Validate and clean the result
       let cleanResult = {
