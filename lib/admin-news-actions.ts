@@ -474,3 +474,37 @@ ${String(content).substring(0, 200)}
     throw new Error(`번역 중 오류가 발생했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`)
   }
 }
+
+// 뉴스 조회수 증가
+export async function incrementNewsViewCount(id: number) {
+  try {
+    const tablesExist = await checkNewsTablesExist()
+    if (!tablesExist) {
+      throw new Error("News tables do not exist.")
+    }
+
+    const supabase = createServerClient()
+    const newsId = Number(id)
+
+    // 현재 조회수 가져오기
+    const { data: currentNews } = await supabase.from("news_articles").select("view_count").eq("id", newsId).single()
+
+    if (currentNews) {
+      const newViewCount = Number(currentNews.view_count || 0) + 1
+
+      const { error } = await supabase.from("news_articles").update({ view_count: newViewCount }).eq("id", newsId)
+
+      if (error) {
+        console.error("Error incrementing view count:", error)
+        throw new Error(`조회수 증가 실패: ${error.message}`)
+      }
+
+      return { success: true, newViewCount }
+    }
+
+    throw new Error("뉴스를 찾을 수 없습니다.")
+  } catch (error) {
+    console.error("Error in incrementNewsViewCount:", error)
+    throw error
+  }
+}
