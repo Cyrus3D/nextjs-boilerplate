@@ -1,62 +1,46 @@
-export interface NewsArticle {
+export interface NewsItem {
   id: number
   title: string
-  content: string
   summary?: string
-  category_id?: number
-  category?: NewsCategory
-  tags?: NewsTag[]
+  content: string
+  category?: {
+    id: number
+    name: string
+    color_class?: string
+  }
+  tags?: Array<{
+    id: number
+    name: string
+  }>
   author?: string
   source_url?: string
   image_url?: string
-  is_featured: boolean
-  is_active: boolean
   published_at: string
   view_count: number
-  original_language: string
-  is_translated: boolean
-  created_at: string
-  updated_at: string
+  is_featured?: boolean
+  is_active?: boolean
+  original_language?: string
+  is_translated?: boolean
 }
 
 export interface NewsCategory {
   id: number
   name: string
-  description?: string
   color_class?: string
-  created_at: string
-  updated_at: string
+  is_active: boolean
 }
 
 export interface NewsTag {
   id: number
   name: string
-  created_at: string
-  updated_at: string
-}
-
-export interface NewsFormData {
-  title: string
-  content: string
-  summary?: string
-  category_id?: number
-  author?: string
-  source_url?: string
-  image_url?: string
-  is_featured?: boolean
-  is_active?: boolean
-  published_at?: string
-  original_language?: string
-  is_translated?: boolean
-  tag_names?: string[]
 }
 
 export interface NewsAnalysisResult {
   title: string
-  content: string
   summary: string
+  content: string
   category: string
   tags: string[]
+  author?: string
   language: string
-  author?: string | null
 }

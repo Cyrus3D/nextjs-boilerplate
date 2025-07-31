@@ -34,7 +34,7 @@ interface NewsCardProps {
   }
 }
 
-export function NewsCard({ news }: NewsCardProps) {
+export default function NewsCard({ news }: NewsCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [imageError, setImageError] = useState(false)
 
