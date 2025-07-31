@@ -37,6 +37,7 @@ function extractTextContent(html: string): { title: string; content: string } {
   let title = ""
   const titleSelectors = [
     /<title[^>]*>([\s\S]*?)<\/title>/i,
+    /<h1[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/h1>/i,
     /<h1[^>]*>([\s\S]*?)<\/h1>/i,
     /<meta[^>]*property="og:title"[^>]*content="([^"]*)"[^>]*>/i,
     /<meta[^>]*name="title"[^>]*content="([^"]*)"[^>]*>/i,
@@ -63,6 +64,9 @@ function extractTextContent(html: string): { title: string; content: string } {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&#8217;/g, "'")
+    .replace(/&#8220;/g, '"')
+    .replace(/&#8221;/g, '"')
     .trim()
 
   // Remove common navigation and footer text patterns
@@ -86,6 +90,9 @@ function extractTextContent(html: string): { title: string; content: string } {
     /published.*$/gi,
     /updated.*$/gi,
     /source:.*$/gi,
+    /redirecting.*$/gi,
+    /loading.*$/gi,
+    /please wait.*$/gi,
   ]
 
   unwantedPatterns.forEach((pattern) => {
@@ -96,7 +103,11 @@ function extractTextContent(html: string): { title: string; content: string } {
   const lines = textContent.split("\n")
   const meaningfulLines = lines.filter((line) => {
     const trimmed = line.trim()
-    return trimmed.length > 20 && !trimmed.match(/^(home|news|sports|business|contact|about)$/i)
+    return (
+      trimmed.length > 30 &&
+      !trimmed.match(/^(home|news|sports|business|contact|about|menu|search|login|register)$/i) &&
+      !trimmed.match(/^(click|tap|swipe|scroll|loading|redirecting)/i)
+    )
   })
 
   textContent = meaningfulLines.join("\n").trim()
@@ -139,13 +150,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log(`Starting to fetch URL: ${url}`)
+
     // Fetch the webpage with better headers and error handling
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 20000) // 20 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 25000) // 25 second timeout
 
     try {
-      console.log(`Fetching URL: ${url}`)
-
       const response = await fetch(url, {
         signal: controller.signal,
         headers: {
@@ -170,9 +181,10 @@ export async function POST(request: NextRequest) {
 
       clearTimeout(timeoutId)
 
-      console.log(`Response status: ${response.status}, URL: ${response.url}`)
+      console.log(`Response received - Status: ${response.status}, Final URL: ${response.url}`)
 
       if (!response.ok) {
+        console.error(`HTTP Error: ${response.status} ${response.statusText}`)
         return NextResponse.json(
           {
             error: `웹페이지를 가져올 수 없습니다. HTTP ${response.status}: ${response.statusText}`,
@@ -184,6 +196,8 @@ export async function POST(request: NextRequest) {
       }
 
       const contentType = response.headers.get("content-type") || ""
+      console.log(`Content-Type: ${contentType}`)
+
       if (!contentType.includes("text/html")) {
         return NextResponse.json(
           {
@@ -195,8 +209,9 @@ export async function POST(request: NextRequest) {
       }
 
       const html = await response.text()
+      console.log(`HTML content length: ${html.length}`)
 
-      if (!html || html.length < 200) {
+      if (!html || html.length < 500) {
         return NextResponse.json(
           {
             error: "웹페이지 내용이 너무 짧거나 비어있습니다.",
@@ -206,41 +221,68 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Check if we got a redirect page or error page
+      // Check if we got a redirect page, error page, or insufficient content
       const lowerHtml = html.toLowerCase()
-      if (
-        lowerHtml.includes("redirecting") ||
-        lowerHtml.includes("redirect") ||
-        lowerHtml.includes("moved permanently") ||
-        lowerHtml.includes("404 not found") ||
-        lowerHtml.includes("access denied") ||
-        lowerHtml.includes("forbidden")
-      ) {
+      const redirectIndicators = [
+        "redirecting",
+        "redirect",
+        "moved permanently",
+        "404 not found",
+        "access denied",
+        "forbidden",
+        "please wait",
+        "loading",
+        "javascript is required",
+        "enable javascript",
+      ]
+
+      const hasRedirectIndicator = redirectIndicators.some((indicator) => lowerHtml.includes(indicator))
+
+      if (hasRedirectIndicator) {
+        console.error("Detected redirect or error page")
         return NextResponse.json(
           {
-            error: "웹페이지가 리다이렉트되었거나 접근할 수 없습니다. 다른 URL을 시도해보세요.",
+            error:
+              "웹페이지가 리다이렉트되었거나 접근할 수 없습니다. JavaScript가 필요한 페이지이거나 차단된 페이지일 수 있습니다.",
             finalUrl: response.url,
+            indicators: redirectIndicators.filter((indicator) => lowerHtml.includes(indicator)),
           },
           { status: 400 },
         )
       }
 
       const { title, content } = extractTextContent(html)
+      console.log(`Extracted - Title: "${title.substring(0, 100)}...", Content length: ${content.length}`)
 
-      if (!content || content.length < 200) {
+      if (!content || content.length < 300) {
+        console.error("Insufficient content extracted")
         return NextResponse.json(
           {
             error: "추출된 텍스트 내용이 충분하지 않습니다. 뉴스 내용을 찾을 수 없습니다.",
             extractedLength: content?.length || 0,
             title: title || "제목 없음",
+            contentPreview: content?.substring(0, 200) || "",
           },
           { status: 400 },
         )
       }
 
-      console.log(
-        `Successfully extracted content. Title: ${title.substring(0, 50)}..., Content length: ${content.length}`,
-      )
+      // Additional validation - check if content looks like actual news
+      const newsIndicators = ["뉴스", "기사", "보도", "발표", "사건", "사고", "정치", "경제", "사회", "문화", "스포츠"]
+      const hasNewsContent = newsIndicators.some((indicator) => content.includes(indicator))
+
+      if (!hasNewsContent && content.length < 1000) {
+        console.error("Content doesn't appear to be news")
+        return NextResponse.json(
+          {
+            error: "뉴스 내용으로 보이지 않습니다. 다른 URL을 시도해보세요.",
+            contentPreview: content.substring(0, 200),
+          },
+          { status: 400 },
+        )
+      }
+
+      console.log("Successfully extracted content")
 
       return NextResponse.json({
         title: title || "제목 없음",
@@ -249,6 +291,7 @@ export async function POST(request: NextRequest) {
         originalUrl: url,
         extractedAt: new Date().toISOString(),
         contentLength: content.length,
+        success: true,
       })
     } catch (fetchError) {
       clearTimeout(timeoutId)

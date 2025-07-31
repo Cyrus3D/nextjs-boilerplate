@@ -22,17 +22,31 @@ function extractJsonFromResponse(text: string): any {
 
   // Clean the text first
   const cleanText = text.trim()
+  console.log("Attempting to parse AI response:", cleanText.substring(0, 200) + "...")
+
+  // Check if the response contains obvious non-JSON content
+  if (cleanText.toLowerCase().includes("redirecting") || cleanText.toLowerCase().includes("loading")) {
+    throw new Error("AI가 리다이렉트 페이지나 로딩 페이지를 분석했습니다. 다른 URL을 시도해주세요.")
+  }
 
   try {
     // First try to parse as is
-    return JSON.parse(cleanText)
-  } catch {
+    const parsed = JSON.parse(cleanText)
+    console.log("Successfully parsed JSON directly")
+    return parsed
+  } catch (firstError) {
+    console.log("Direct JSON parse failed, trying to extract JSON...")
+
     // Try to find JSON within the text
     const jsonMatch = cleanText.match(/\{[\s\S]*\}/)
     if (jsonMatch) {
       try {
-        return JSON.parse(jsonMatch[0])
-      } catch {
+        const parsed = JSON.parse(jsonMatch[0])
+        console.log("Successfully parsed extracted JSON")
+        return parsed
+      } catch (secondError) {
+        console.log("Extracted JSON parse failed, trying cleanup...")
+
         // If still fails, try to clean up common issues
         let cleanedText = jsonMatch[0]
           .replace(/```json\n?/g, "")
@@ -49,17 +63,26 @@ function extractJsonFromResponse(text: string): any {
           .replace(/\n/g, "\\n") // Escape newlines in strings
           .replace(/\t/g, "\\t") // Escape tabs in strings
 
-        return JSON.parse(cleanedText)
+        try {
+          const parsed = JSON.parse(cleanedText)
+          console.log("Successfully parsed cleaned JSON")
+          return parsed
+        } catch (thirdError) {
+          console.log("All JSON parsing attempts failed")
+        }
       }
     }
 
-    // If no JSON found, try to extract key information manually
+    // If no JSON found, try to extract key information manually from the text
+    console.log("Attempting manual extraction from text...")
+
     const titleMatch = cleanText.match(/title["\s]*:?["\s]*([^"\n,}]+)/i)
     const contentMatch = cleanText.match(/content["\s]*:?["\s]*([^"]+?)(?=\n|$|,|})/i)
     const summaryMatch = cleanText.match(/summary["\s]*:?["\s]*([^"\n,}]+)/i)
     const categoryMatch = cleanText.match(/category["\s]*:?["\s]*([^"\n,}]+)/i)
 
     if (titleMatch && contentMatch) {
+      console.log("Successfully extracted data manually")
       return {
         title: titleMatch[1].trim(),
         content: contentMatch[1].trim(),
@@ -71,7 +94,21 @@ function extractJsonFromResponse(text: string): any {
       }
     }
 
-    throw new Error("JSON 형식을 찾을 수 없습니다")
+    // If all else fails, create a basic structure from the available text
+    if (cleanText.length > 100) {
+      console.log("Creating fallback structure from available text")
+      return {
+        title: "분석된 뉴스",
+        content: cleanText.substring(0, 1000),
+        summary: cleanText.substring(0, 150) + "...",
+        category: "일반뉴스",
+        tags: [],
+        language: "ko",
+        author: null,
+      }
+    }
+
+    throw new Error("AI 응답에서 유효한 데이터를 추출할 수 없습니다.")
   }
 }
 
@@ -96,110 +133,134 @@ export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResul
       },
     )
 
+    const scrapeData = await scrapeResponse.json()
+
     if (!scrapeResponse.ok) {
-      const errorData = await scrapeResponse.json()
-      console.error("Scraping failed:", errorData)
-      throw new Error(errorData.error || "웹페이지를 가져올 수 없습니다.")
+      console.error("Scraping failed:", scrapeData)
+      throw new Error(scrapeData.error || "웹페이지를 가져올 수 없습니다.")
     }
 
-    const scrapedData = await scrapeResponse.json()
-    const { content, title: pageTitle, contentLength } = scrapedData
+    const { content, title: pageTitle, contentLength } = scrapeData
 
     console.log(`Scraped content length: ${contentLength}, Title: ${pageTitle?.substring(0, 50)}...`)
 
-    if (!content || content.length < 100) {
+    if (!content || content.length < 200) {
       throw new Error("웹페이지에서 충분한 내용을 추출할 수 없습니다. 다른 URL을 시도해보세요.")
     }
 
+    // Check if content looks like redirect or error content
+    const lowerContent = content.toLowerCase()
+    if (
+      lowerContent.includes("redirecting") ||
+      lowerContent.includes("loading") ||
+      lowerContent.includes("please wait") ||
+      lowerContent.includes("javascript required")
+    ) {
+      throw new Error(
+        "웹페이지가 제대로 로드되지 않았습니다. JavaScript가 필요한 페이지이거나 접근이 제한된 페이지입니다.",
+      )
+    }
+
     // Truncate content if too long to avoid token limits
-    const maxContentLength = 8000
+    const maxContentLength = 6000
     const truncatedContent =
       content.length > maxContentLength ? content.substring(0, maxContentLength) + "..." : content
 
     console.log("Sending to AI for analysis...")
 
-    // AI로 뉴스 분석
+    // AI로 뉴스 분석 - 더 구체적인 프롬프트 사용
     const { text: analysisResult } = await generateText({
       model: openai("gpt-4o"),
-      prompt: `다음은 뉴스 웹페이지에서 추출한 내용입니다. 이를 분석하여 구조화된 뉴스 정보를 만들어 주세요.
+      prompt: `다음은 뉴스 웹페이지에서 추출한 내용입니다. 이를 분석하여 구조화된 뉴스 정보를 JSON 형식으로 만들어 주세요.
 
 웹페이지 제목: ${pageTitle || ""}
 웹페이지 내용: ${truncatedContent}
 
-다음 형식의 JSON으로만 응답해주세요. 다른 텍스트나 설명은 포함하지 마세요:
+반드시 다음 JSON 형식으로만 응답해주세요. 다른 설명이나 텍스트는 절대 포함하지 마세요:
 
 {
-  "title": "적절한 뉴스 제목 (한국어)",
-  "content": "뉴스 전체 내용 (한국어, 최소 200자)",
+  "title": "뉴스 제목 (한국어로 번역)",
+  "content": "뉴스 전체 내용 (한국어로 번역, 최소 200자)",
   "summary": "뉴스 요약 (한국어, 80-120자)",
-  "category": "카테고리 (다음 중 선택: 일반뉴스, 비즈니스, 기술, 건강, 여행, 음식, 교육, 스포츠, 문화, 정치)",
-  "tags": ["관련", "태그", "목록"],
-  "language": "원본 언어 코드 (ko, en, th 중 하나)",
-  "author": "작성자명 (없으면 null)"
+  "category": "일반뉴스",
+  "tags": ["태그1", "태그2", "태그3"],
+  "language": "ko",
+  "author": null
 }
 
-주의사항:
-- 제목과 내용은 한국어로 번역하여 제공
-- 내용은 충분히 상세하게 작성 (최소 200자)
-- 태그는 3-5개 정도로 제한
-- 카테고리는 제공된 목록에서만 선택
-- JSON 형식을 정확히 지켜주세요`,
+중요한 규칙:
+1. 반드시 유효한 JSON 형식으로만 응답
+2. 제목과 내용은 한국어로 번역
+3. 내용은 최소 200자 이상
+4. 카테고리는 "일반뉴스", "비즈니스", "기술", "건강", "여행", "음식", "교육", "스포츠", "문화", "정치" 중 선택
+5. 태그는 3-5개 정도
+6. JSON 외의 다른 텍스트는 절대 포함하지 마세요`,
       temperature: 0.1,
-      maxTokens: 2000,
+      maxTokens: 1500,
     })
 
     console.log("AI Response received, length:", analysisResult.length)
-    console.log("AI Response preview:", analysisResult.substring(0, 200) + "...")
+    console.log("AI Response preview:", analysisResult.substring(0, 300) + "...")
 
     if (!analysisResult || analysisResult.length < 50) {
       throw new Error("AI 응답이 너무 짧습니다. 다시 시도해주세요.")
     }
 
     // Check if response contains error indicators
+    const lowerResponse = analysisResult.toLowerCase()
     if (
-      analysisResult.toLowerCase().includes("error") ||
-      analysisResult.toLowerCase().includes("sorry") ||
-      analysisResult.toLowerCase().includes("cannot")
+      lowerResponse.includes("error") ||
+      lowerResponse.includes("sorry") ||
+      lowerResponse.includes("cannot") ||
+      lowerResponse.includes("redirecting") ||
+      lowerResponse.includes("unable")
     ) {
       throw new Error("AI가 내용을 분석할 수 없습니다. URL의 내용을 확인해주세요.")
     }
 
     const parsedData = extractJsonFromResponse(analysisResult)
 
-    // 필수 필드 검증
-    if (!parsedData.title || !parsedData.content) {
-      throw new Error("AI 응답에서 필수 필드(제목, 내용)를 찾을 수 없습니다.")
-    }
-
-    // 내용 길이 검증
-    if (parsedData.content.length < 50) {
-      throw new Error("분석된 내용이 너무 짧습니다. 더 상세한 뉴스 내용이 필요합니다.")
-    }
-
-    console.log("Analysis completed successfully")
-
-    return {
-      title: parsedData.title || "제목 없음",
-      content: parsedData.content || "내용 없음",
-      summary: parsedData.summary || parsedData.content.substring(0, 100) + "...",
+    // 필수 필드 검증 및 기본값 설정
+    const result = {
+      title: parsedData.title || pageTitle || "제목 없음",
+      content: parsedData.content || content.substring(0, 1000),
+      summary: parsedData.summary || (parsedData.content || content).substring(0, 100) + "...",
       category: parsedData.category || "일반뉴스",
       tags: Array.isArray(parsedData.tags) ? parsedData.tags.slice(0, 5) : [],
       language: parsedData.language || "ko",
       author: parsedData.author || null,
     }
+
+    // 내용 길이 검증
+    if (result.content.length < 50) {
+      result.content = content.substring(0, 1000) // Use original content if AI content is too short
+    }
+
+    console.log("Analysis completed successfully")
+    console.log("Result preview:", {
+      title: result.title.substring(0, 50) + "...",
+      contentLength: result.content.length,
+      category: result.category,
+      tagsCount: result.tags.length,
+    })
+
+    return result
   } catch (error) {
     console.error("뉴스 분석 오류:", error)
 
     // 구체적인 오류 메시지 제공
     if (error instanceof Error) {
-      if (error.message.includes("fetch")) {
+      if (error.message.includes("fetch") || error.message.includes("network")) {
         throw new Error("웹페이지에 접근할 수 없습니다. URL을 확인해주세요.")
       }
       if (error.message.includes("JSON") || error.message.includes("parse")) {
-        throw new Error("AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.")
+        throw new Error("AI 응답을 처리할 수 없습니다. 다시 시도해주세요.")
       }
-      if (error.message.includes("token")) {
+      if (error.message.includes("token") || error.message.includes("length")) {
         throw new Error("내용이 너무 길어서 분석할 수 없습니다. 더 짧은 기사를 시도해보세요.")
+      }
+      if (error.message.includes("redirect") || error.message.includes("loading")) {
+        throw new Error("웹페이지가 제대로 로드되지 않았습니다. 다른 URL을 시도해보세요.")
       }
       throw error
     }

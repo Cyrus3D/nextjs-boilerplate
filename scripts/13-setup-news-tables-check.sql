@@ -1,146 +1,140 @@
--- News Tables Setup Script
--- This script safely creates all news-related tables and can be run multiple times
+-- Create news tables if they don't exist
+-- This script can be run multiple times safely
 
 -- Create news_categories table
-CREATE TABLE IF NOT EXISTS public.news_categories (
+CREATE TABLE IF NOT EXISTS news_categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
-    color_class VARCHAR(50) DEFAULT 'bg-gray-100 text-gray-800',
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create news_tags table
-CREATE TABLE IF NOT EXISTS public.news_tags (
+CREATE TABLE IF NOT EXISTS news_tags (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
-    description TEXT,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create news table
-CREATE TABLE IF NOT EXISTS public.news (
+CREATE TABLE IF NOT EXISTS news (
     id SERIAL PRIMARY KEY,
     title VARCHAR(500) NOT NULL,
     content TEXT NOT NULL,
     summary TEXT,
-    category_id INTEGER REFERENCES public.news_categories(id) ON DELETE SET NULL,
+    category_id INTEGER REFERENCES news_categories(id) ON DELETE SET NULL,
     author VARCHAR(200),
     source_url TEXT,
     image_url TEXT,
-    is_featured BOOLEAN DEFAULT false,
-    is_active BOOLEAN DEFAULT true,
-    view_count INTEGER DEFAULT 0,
-    published_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_featured BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    published_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     original_language VARCHAR(10) DEFAULT 'ko',
-    is_translated BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    is_translated BOOLEAN DEFAULT FALSE,
+    view_count INTEGER DEFAULT 0
 );
 
 -- Create news_tag_relations table
-CREATE TABLE IF NOT EXISTS public.news_tag_relations (
+CREATE TABLE IF NOT EXISTS news_tag_relations (
     id SERIAL PRIMARY KEY,
-    news_id INTEGER NOT NULL REFERENCES public.news(id) ON DELETE CASCADE,
-    tag_id INTEGER NOT NULL REFERENCES public.news_tags(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    news_id INTEGER NOT NULL REFERENCES news(id) ON DELETE CASCADE,
+    tag_id INTEGER NOT NULL REFERENCES news_tags(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(news_id, tag_id)
 );
 
--- Insert default news categories if they don't exist
-INSERT INTO public.news_categories (name, description, color_class) VALUES
-    ('일반뉴스', '일반적인 뉴스', 'bg-blue-100 text-blue-800'),
-    ('비즈니스', '비즈니스 관련 뉴스', 'bg-green-100 text-green-800'),
-    ('기술', '기술 관련 뉴스', 'bg-purple-100 text-purple-800'),
-    ('건강', '건강 관련 뉴스', 'bg-red-100 text-red-800'),
-    ('여행', '여행 관련 뉴스', 'bg-yellow-100 text-yellow-800'),
-    ('음식', '음식 관련 뉴스', 'bg-orange-100 text-orange-800'),
-    ('교육', '교육 관련 뉴스', 'bg-indigo-100 text-indigo-800'),
-    ('스포츠', '스포츠 관련 뉴스', 'bg-teal-100 text-teal-800'),
-    ('문화', '문화 관련 뉴스', 'bg-pink-100 text-pink-800'),
-    ('정치', '정치 관련 뉴스', 'bg-gray-100 text-gray-800')
+-- Insert default categories if they don't exist
+INSERT INTO news_categories (name, description) VALUES
+    ('일반뉴스', '일반적인 뉴스 및 사회 이슈'),
+    ('비즈니스', '경제, 금융, 기업 관련 뉴스'),
+    ('기술', 'IT, 과학기술, 혁신 관련 뉴스'),
+    ('건강', '의료, 건강, 웰빙 관련 뉴스'),
+    ('여행', '여행, 관광, 문화체험 관련 뉴스'),
+    ('음식', '요리, 맛집, 식문화 관련 뉴스'),
+    ('교육', '교육, 학습, 연구 관련 뉴스'),
+    ('스포츠', '스포츠, 운동, 경기 관련 뉴스'),
+    ('문화', '예술, 문화, 엔터테인먼트 관련 뉴스'),
+    ('정치', '정치, 정책, 정부 관련 뉴스')
 ON CONFLICT (name) DO NOTHING;
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_news_category_id ON public.news(category_id);
-CREATE INDEX IF NOT EXISTS idx_news_published_at ON public.news(published_at DESC);
-CREATE INDEX IF NOT EXISTS idx_news_is_active ON public.news(is_active);
-CREATE INDEX IF NOT EXISTS idx_news_is_featured ON public.news(is_featured);
-CREATE INDEX IF NOT EXISTS idx_news_tag_relations_news_id ON public.news_tag_relations(news_id);
-CREATE INDEX IF NOT EXISTS idx_news_tag_relations_tag_id ON public.news_tag_relations(tag_id);
+CREATE INDEX IF NOT EXISTS idx_news_category_id ON news(category_id);
+CREATE INDEX IF NOT EXISTS idx_news_published_at ON news(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_news_is_active ON news(is_active);
+CREATE INDEX IF NOT EXISTS idx_news_is_featured ON news(is_featured);
+CREATE INDEX IF NOT EXISTS idx_news_created_at ON news(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_news_tag_relations_news_id ON news_tag_relations(news_id);
+CREATE INDEX IF NOT EXISTS idx_news_tag_relations_tag_id ON news_tag_relations(tag_id);
 
--- Enable RLS (Row Level Security) if needed
-ALTER TABLE public.news_categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.news_tags ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.news ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.news_tag_relations ENABLE ROW LEVEL SECURITY;
+-- Enable Row Level Security (RLS)
+ALTER TABLE news ENABLE ROW LEVEL SECURITY;
+ALTER TABLE news_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE news_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE news_tag_relations ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for public read access
-DROP POLICY IF EXISTS "Enable read access for all users" ON public.news_categories;
-CREATE POLICY "Enable read access for all users" ON public.news_categories FOR SELECT USING (true);
+CREATE POLICY IF NOT EXISTS "Public can read active news" ON news
+    FOR SELECT USING (is_active = true);
 
-DROP POLICY IF EXISTS "Enable read access for all users" ON public.news_tags;
-CREATE POLICY "Enable read access for all users" ON public.news_tags FOR SELECT USING (true);
+CREATE POLICY IF NOT EXISTS "Public can read news categories" ON news_categories
+    FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Enable read access for active news" ON public.news;
-CREATE POLICY "Enable read access for active news" ON public.news FOR SELECT USING (is_active = true);
+CREATE POLICY IF NOT EXISTS "Public can read news tags" ON news_tags
+    FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Enable read access for all users" ON public.news_tag_relations;
-CREATE POLICY "Enable read access for all users" ON public.news_tag_relations FOR SELECT USING (true);
+CREATE POLICY IF NOT EXISTS "Public can read news tag relations" ON news_tag_relations
+    FOR SELECT USING (true);
 
--- Grant necessary permissions
-GRANT SELECT ON public.news_categories TO anon, authenticated;
-GRANT SELECT ON public.news_tags TO anon, authenticated;
-GRANT SELECT ON public.news TO anon, authenticated;
-GRANT SELECT ON public.news_tag_relations TO anon, authenticated;
+-- Create policies for authenticated users (admin)
+CREATE POLICY IF NOT EXISTS "Authenticated users can manage news" ON news
+    FOR ALL USING (auth.role() = 'authenticated');
 
--- Grant full access to authenticated users (for admin functions)
-GRANT ALL ON public.news_categories TO authenticated;
-GRANT ALL ON public.news_tags TO authenticated;
-GRANT ALL ON public.news TO authenticated;
-GRANT ALL ON public.news_tag_relations TO authenticated;
+CREATE POLICY IF NOT EXISTS "Authenticated users can manage categories" ON news_categories
+    FOR ALL USING (auth.role() = 'authenticated');
 
--- Grant sequence usage
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+CREATE POLICY IF NOT EXISTS "Authenticated users can manage tags" ON news_tags
+    FOR ALL USING (auth.role() = 'authenticated');
+
+CREATE POLICY IF NOT EXISTS "Authenticated users can manage tag relations" ON news_tag_relations
+    FOR ALL USING (auth.role() = 'authenticated');
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
+    NEW.updated_at = NOW();
     RETURN NEW;
 END;
 $$ language 'plpgsql';
 
 -- Create triggers for updated_at
-DROP TRIGGER IF EXISTS update_news_categories_updated_at ON public.news_categories;
-CREATE TRIGGER update_news_categories_updated_at
-    BEFORE UPDATE ON public.news_categories
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_news_tags_updated_at ON public.news_tags;
-CREATE TRIGGER update_news_tags_updated_at
-    BEFORE UPDATE ON public.news_tags
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_news_updated_at ON public.news;
+DROP TRIGGER IF EXISTS update_news_updated_at ON news;
 CREATE TRIGGER update_news_updated_at
-    BEFORE UPDATE ON public.news
+    BEFORE UPDATE ON news
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Verify tables were created successfully
+DROP TRIGGER IF EXISTS update_news_categories_updated_at ON news_categories;
+CREATE TRIGGER update_news_categories_updated_at
+    BEFORE UPDATE ON news_categories
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Grant necessary permissions
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT ON news, news_categories, news_tags, news_tag_relations TO anon;
+GRANT ALL ON news, news_categories, news_tags, news_tag_relations TO authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- Verify tables were created
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'news') THEN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'news') THEN
         RAISE NOTICE 'News tables created successfully!';
     ELSE
-        RAISE EXCEPTION 'Failed to create news tables';
+        RAISE EXCEPTION 'Failed to create news tables!';
     END IF;
 END $$;
