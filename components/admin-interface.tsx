@@ -31,7 +31,6 @@ import {
   Database,
   ExternalLink,
   Info,
-  Link,
 } from "lucide-react"
 
 // Import actions
@@ -112,28 +111,6 @@ interface BusinessCardTag {
   id: number
   name: string
 }
-
-const SUPPORTED_NEWS_SOURCES = [
-  { name: "Bangkok Post", url: "bangkokpost.com", language: "English", description: "태국 영자 신문" },
-  { name: "The Nation Thailand", url: "nationthailand.com", language: "English", description: "태국 영자 신문" },
-  {
-    name: "주태국 대한민국 대사관",
-    url: "overseas.mofa.go.kr/th-ko",
-    language: "Korean",
-    description: "한국 대사관 공지사항",
-  },
-  { name: "ไทยรัฐ (Thairath)", url: "thairath.co.th", language: "Thai", description: "태국 주요 일간지" },
-  { name: "มติชน (Matichon)", url: "matichon.co.th", language: "Thai", description: "태국 일간지" },
-  { name: "ข่าวสด (Khaosod)", url: "khaosod.co.th", language: "Thai", description: "태국 뉴스 사이트" },
-  { name: "เดลินิวส์ (Daily News)", url: "dailynews.co.th", language: "Thai", description: "태국 일간지" },
-  { name: "ผู้จัดการออนไลน์ (Manager Online)", url: "mgronline.com", language: "Thai", description: "태국 경제 뉴스" },
-  { name: "Thai PBS World", url: "world.thaipbs.or.th", language: "Thai", description: "태국 공영방송" },
-  { name: "คมชัดลึก (Komchadluek)", url: "komchadluek.net", language: "Thai", description: "태국 뉴스 사이트" },
-  { name: "แนวหน้า (Naew Na)", url: "naewna.com", language: "Thai", description: "태국 일간지" },
-  { name: "ประชาไท (Prachatai)", url: "prachatai.com", language: "Thai", description: "태국 독립 언론" },
-  { name: "สนุก (Sanook)", url: "sanook.com", language: "Thai", description: "태국 포털 뉴스" },
-  { name: "INN News", url: "innnews.co.th", language: "Thai", description: "태국 뉴스 사이트" },
-]
 
 export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
   // State management
@@ -1279,44 +1256,17 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
                       <Alert className="mb-4">
                         <Info className="h-4 w-4" />
                         <AlertDescription>
-                          지원되는 태국 뉴스 소스의 URL을 입력하면 AI가 자동으로 제목, 내용, 요약, 카테고리, 태그를
-                          분석합니다. 태국어, 영어 뉴스는 한국어로 번역됩니다.
+                          유효한 뉴스 URL을 입력하면 AI가 해당 웹페이지의 내용을 분석하여 자동으로 제목, 내용, 요약,
+                          카테고리, 태그를 추출합니다.
+                          <br />
+                          <strong>지원 사이트:</strong> sanook.com, bangkokpost.com, thairath.co.th, matichon.co.th,
+                          한국 외교부 등
                         </AlertDescription>
                       </Alert>
-
-                      {/* Supported Sources */}
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="mb-3 bg-transparent">
-                            <Link className="h-4 w-4 mr-2" />
-                            지원되는 뉴스 소스 보기
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>지원되는 뉴스 소스</DialogTitle>
-                          </DialogHeader>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {SUPPORTED_NEWS_SOURCES.map((source, index) => (
-                              <div key={index} className="p-3 border rounded-lg">
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="font-semibold">{source.name}</h4>
-                                  <Badge variant="outline" className="text-xs">
-                                    {source.language}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-2">{source.description}</p>
-                                <code className="text-xs bg-muted px-2 py-1 rounded">{source.url}</code>
-                              </div>
-                            ))}
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-
                       <div className="space-y-3">
                         <div className="flex gap-2">
                           <Input
-                            placeholder="뉴스 URL을 입력하세요 (예: https://bangkokpost.com/thailand/general/...)"
+                            placeholder="뉴스 URL을 입력하세요 (예: https://example.com/news/article)"
                             value={newsUrl}
                             onChange={(e) => setNewsUrl(e.target.value)}
                           />
