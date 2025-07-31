@@ -256,7 +256,7 @@ export async function getBusinessCardsPaginated(
 }
 
 // Get categories from the categories table
-export async function getCategoriesOptimized(): Promise<Category[]> {
+export async function getCategories(): Promise<Category[]> {
   const cacheKey = "categories"
   const cached = apiCache.get(cacheKey)
 
@@ -299,7 +299,7 @@ export async function getCategoriesOptimized(): Promise<Category[]> {
 }
 
 // Batch update view counts (for performance)
-export function incrementViewCountBatched(cardId: number) {
+export function incrementViewCount(cardId: number) {
   const cardIdStr = String(cardId)
   viewCountBatch[cardIdStr] = (viewCountBatch[cardIdStr] || 0) + 1
 
@@ -357,30 +357,130 @@ async function flushViewCounts() {
   }
 }
 
-// Legacy compatibility functions
-export async function getBusinessCards(): Promise<BusinessCard[]> {
-  const result = await getBusinessCardsPaginated(1, 100)
-  return result.cards
-}
-
+// Get business cards by category
 export async function getBusinessCardsByCategory(categoryName: string): Promise<BusinessCard[]> {
   const result = await getBusinessCardsPaginated(1, 100, String(categoryName))
   return result.cards
 }
 
+// Search business cards
 export async function searchBusinessCards(query: string): Promise<BusinessCard[]> {
   const result = await getBusinessCardsPaginated(1, 100, undefined, String(query))
   return result.cards
 }
 
+// Get premium cards
 export async function getPremiumCards(): Promise<BusinessCard[]> {
   const result = await getBusinessCardsPaginated(1, 100)
   return result.cards.filter((card) => card.isPremium)
 }
 
+// Get promoted cards
 export async function getPromotedCards(): Promise<BusinessCard[]> {
   const result = await getBusinessCardsPaginated(1, 100)
   return result.cards.filter((card) => card.isPromoted)
+}
+
+// Check database status
+export async function checkDatabaseStatus() {
+  if (!supabase) {
+    return { status: "not_configured" }
+  }
+
+  try {
+    const tables = ["business_cards", "categories", "tags", "business_card_tags"]
+    const tableStatus: Record<string, boolean> = {}
+
+    for (const table of tables) {
+      try {
+        const { error } = await supabase.from(table).select("*").limit(1)
+        tableStatus[table] = !error
+      } catch {
+        tableStatus[table] = false
+      }
+    }
+
+    // Check social media columns
+    const hasSocialMediaColumns = await checkSocialMediaColumns()
+
+    return {
+      status: "configured",
+      tables: tableStatus,
+      allTablesExist: Object.values(tableStatus).every(Boolean),
+      hasSocialMediaColumns,
+    }
+  } catch (error) {
+    return { status: "error", error }
+  }
+}
+
+// Get exposure stats
+export async function getExposureStats() {
+  const cacheKey = "exposure_stats"
+  const cached = apiCache.get(cacheKey)
+
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data
+  }
+
+  if (!supabase) {
+    const stats = {
+      totalExposures: 0,
+      averageExposures: 0,
+      lastUpdated: new Date().toISOString(),
+    }
+    apiCache.set(cacheKey, { data: stats, timestamp: Date.now() })
+    return stats
+  }
+
+  try {
+    const { data, error } = await supabase.from("business_cards").select("exposure_count").eq("is_active", true)
+
+    if (error) {
+      console.error("Error fetching exposure stats:", error)
+      const stats = {
+        totalExposures: 0,
+        averageExposures: 0,
+        lastUpdated: new Date().toISOString(),
+      }
+      apiCache.set(cacheKey, { data: stats, timestamp: Date.now() })
+      return stats
+    }
+
+    const totalExposures = data.reduce((sum, card) => sum + (Number(card.exposure_count) || 0), 0)
+    const averageExposures = data.length > 0 ? totalExposures / data.length : 0
+
+    const stats = {
+      totalExposures,
+      averageExposures: Math.round(averageExposures * 100) / 100,
+      lastUpdated: new Date().toISOString(),
+    }
+
+    apiCache.set(cacheKey, { data: stats, timestamp: Date.now() })
+    return stats
+  } catch (error) {
+    console.error("Error calculating exposure stats:", error)
+    const stats = {
+      totalExposures: 0,
+      averageExposures: 0,
+      lastUpdated: new Date().toISOString(),
+    }
+    apiCache.set(cacheKey, { data: stats, timestamp: Date.now() })
+    return stats
+  }
+}
+
+// Cache functions
+export function getCachedData<T>(key: string): T | null {
+  const cached = apiCache.get(key)
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data
+  }
+  return null
+}
+
+export function setCachedData<T>(key: string, data: T): void {
+  apiCache.set(key, { data, timestamp: Date.now() })
 }
 
 // Clear cache
@@ -388,4 +488,10 @@ export function clearApiCache(): void {
   apiCache.clear()
   socialMediaColumnsExist = null
   schemaCheckTime = 0
+}
+
+// Legacy compatibility function
+export async function getBusinessCards(): Promise<BusinessCard[]> {
+  const result = await getBusinessCardsPaginated(1, 100)
+  return result.cards
 }
