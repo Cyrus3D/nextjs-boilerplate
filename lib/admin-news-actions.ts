@@ -253,8 +253,8 @@ export async function getNewsPaginated(
   }
 }
 
-// Soft delete news
-export async function deactivateNews(id: number): Promise<boolean> {
+// Delete news (soft delete)
+export async function deleteNews(id: number): Promise<boolean> {
   if (!supabase) {
     return false
   }
@@ -269,7 +269,7 @@ export async function deactivateNews(id: number): Promise<boolean> {
 
     return true
   } catch (error) {
-    console.error("Error deactivating news:", error)
+    console.error("Error deleting news:", error)
     return false
   }
 }
