@@ -49,13 +49,16 @@ export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResul
 
   try {
     // 웹페이지 내용 가져오기
-    const scrapeResponse = await fetch("/api/scrape-news", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const scrapeResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/scrape-news`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url }),
       },
-      body: JSON.stringify({ url }),
-    })
+    )
 
     if (!scrapeResponse.ok) {
       const errorData = await scrapeResponse.json()
@@ -198,17 +201,22 @@ export async function createNews(data: NewsFormData): Promise<NewsArticle> {
       is_translated: data.is_translated || false,
     }
 
-    const { data: newsResult, error: newsError } = await client
-      .from("news")
-      .insert([newsData])
-      .select(`
-        *,
-        category:news_categories(*)
-      `)
-      .single()
+    const { data: newsResult, error: newsError } = await client.from("news").insert([newsData]).select("*").single()
 
     if (newsError) {
       throw new Error(`뉴스 생성 실패: ${newsError.message}`)
+    }
+
+    // 카테고리 정보 별도 조회
+    let categoryInfo = null
+    if (newsResult.category_id) {
+      const { data: categoryData } = await client
+        .from("news_categories")
+        .select("*")
+        .eq("id", newsResult.category_id)
+        .single()
+
+      categoryInfo = categoryData
     }
 
     // 태그 처리
@@ -216,8 +224,23 @@ export async function createNews(data: NewsFormData): Promise<NewsArticle> {
       await addTagsToNews(newsResult.id, data.tag_names)
     }
 
+    // 태그 정보 조회
+    const { data: tagData } = await client
+      .from("news_tag_relations")
+      .select(`
+        tag:news_tags(*)
+      `)
+      .eq("news_id", newsResult.id)
+
+    const tags = tagData?.map((t: any) => t.tag) || []
+
     revalidatePath("/dashboard-mgmt-2024")
-    return newsResult
+
+    return {
+      ...newsResult,
+      category: categoryInfo,
+      tags: tags,
+    }
   } catch (error) {
     console.error("뉴스 생성 오류:", error)
     throw error
@@ -246,18 +269,22 @@ export async function updateNews(id: number, data: Partial<NewsFormData>): Promi
     if (data.original_language !== undefined) updateData.original_language = data.original_language
     if (data.is_translated !== undefined) updateData.is_translated = Boolean(data.is_translated)
 
-    const { data: result, error } = await client
-      .from("news")
-      .update(updateData)
-      .eq("id", id)
-      .select(`
-        *,
-        category:news_categories(*)
-      `)
-      .single()
+    const { data: result, error } = await client.from("news").update(updateData).eq("id", id).select("*").single()
 
     if (error) {
       throw new Error(`뉴스 업데이트 실패: ${error.message}`)
+    }
+
+    // 카테고리 정보 별도 조회
+    let categoryInfo = null
+    if (result.category_id) {
+      const { data: categoryData } = await client
+        .from("news_categories")
+        .select("*")
+        .eq("id", result.category_id)
+        .single()
+
+      categoryInfo = categoryData
     }
 
     // 태그 업데이트
@@ -265,8 +292,23 @@ export async function updateNews(id: number, data: Partial<NewsFormData>): Promi
       await updateNewsTagsTransaction(id, data.tag_names)
     }
 
+    // 태그 정보 조회
+    const { data: tagData } = await client
+      .from("news_tag_relations")
+      .select(`
+        tag:news_tags(*)
+      `)
+      .eq("news_id", id)
+
+    const tags = tagData?.map((t: any) => t.tag) || []
+
     revalidatePath("/dashboard-mgmt-2024")
-    return result
+
+    return {
+      ...result,
+      category: categoryInfo,
+      tags: tags,
+    }
   } catch (error) {
     console.error("뉴스 업데이트 오류:", error)
     throw error
@@ -296,25 +338,59 @@ export async function getNewsForAdmin(): Promise<NewsArticle[]> {
   const client = checkSupabase()
 
   try {
-    const { data, error } = await client
+    // 뉴스 기본 정보 조회
+    const { data: newsData, error: newsError } = await client
       .from("news")
-      .select(`
-        *,
-        category:news_categories(*),
-        tags:news_tag_relations(tag:news_tags(*))
-      `)
+      .select("*")
       .order("created_at", { ascending: false })
 
-    if (error) {
-      throw new Error(`뉴스 목록 조회 실패: ${error.message}`)
+    if (newsError) {
+      throw new Error(`뉴스 목록 조회 실패: ${newsError.message}`)
     }
 
-    return (
-      data?.map((news) => ({
-        ...news,
-        tags: news.tags?.map((t: any) => t.tag) || [],
-      })) || []
-    )
+    if (!newsData || newsData.length === 0) {
+      return []
+    }
+
+    // 카테고리 정보 조회
+    const categoryIds = [...new Set(newsData.map((news) => news.category_id).filter(Boolean))]
+    const categoriesMap = new Map()
+
+    if (categoryIds.length > 0) {
+      const { data: categoriesData } = await client.from("news_categories").select("*").in("id", categoryIds)
+
+      if (categoriesData) {
+        categoriesData.forEach((cat) => categoriesMap.set(cat.id, cat))
+      }
+    }
+
+    // 태그 정보 조회
+    const newsIds = newsData.map((news) => news.id)
+    const { data: tagRelationsData } = await client
+      .from("news_tag_relations")
+      .select(`
+        news_id,
+        tag:news_tags(*)
+      `)
+      .in("news_id", newsIds)
+
+    // 뉴스별 태그 그룹화
+    const tagsMap = new Map()
+    if (tagRelationsData) {
+      tagRelationsData.forEach((relation) => {
+        if (!tagsMap.has(relation.news_id)) {
+          tagsMap.set(relation.news_id, [])
+        }
+        tagsMap.get(relation.news_id).push(relation.tag)
+      })
+    }
+
+    // 결과 조합
+    return newsData.map((news) => ({
+      ...news,
+      category: categoriesMap.get(news.category_id) || null,
+      tags: tagsMap.get(news.id) || [],
+    }))
   } catch (error) {
     console.error("뉴스 목록 조회 오류:", error)
     throw error
