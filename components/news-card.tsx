@@ -43,70 +43,70 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
     }
   }
 
-  const getSourceBadgeFromUrl = (sourceUrl: string, source: string) => {
-    if (!sourceUrl && !source) return "기타"
+  const getSourceBadgeInfo = (sourceUrl: string, source: string) => {
+    if (!sourceUrl && !source) return { name: "기타", color: "bg-gray-200 text-gray-800" }
 
-    // URL to Korean pronunciation mapping
-    const urlToBadgeMap: { [key: string]: string } = {
-      // Thai news sources
-      "thaipbs.or.th": "타이피비에스",
-      "bangkokpost.com": "방콕포스트",
-      "nationthailand.com": "네이션",
-      "thairath.co.th": "타이랏",
-      "khaosod.co.th": "카오솟",
-      "matichon.co.th": "마티촌",
-      "dailynews.co.th": "데일리뉴스",
-      "posttoday.com": "포스트투데이",
-      "manager.co.th": "매니저",
-      "sanook.com": "사누크",
-      "kapook.com": "카푸크",
-      "mthai.com": "엠타이",
-      "thansettakij.com": "탄셋타킷",
-      "prachachat.net": "프라차챗",
-      "workpointnews.com": "워크포인트",
-      "ch3plus.com": "채널3",
-      "tnn.co.th": "티엔엔",
-      "springnews.co.th": "스프링뉴스",
-      "amarintv.com": "아마린",
-      "newsk.net": "뉴스케이",
+    // URL to Korean pronunciation and color mapping
+    const urlToBadgeMap: { [key: string]: { name: string; color: string } } = {
+      // Thai news sources - Blue tones
+      "thaipbs.or.th": { name: "타이피비에스", color: "bg-blue-500 text-white" },
+      "bangkokpost.com": { name: "방콕포스트", color: "bg-blue-600 text-white" },
+      "nationthailand.com": { name: "네이션", color: "bg-blue-400 text-white" },
+      "thairath.co.th": { name: "타이랏", color: "bg-red-500 text-white" },
+      "khaosod.co.th": { name: "카오솟", color: "bg-orange-500 text-white" },
+      "matichon.co.th": { name: "마티촌", color: "bg-green-600 text-white" },
+      "dailynews.co.th": { name: "데일리뉴스", color: "bg-purple-500 text-white" },
+      "posttoday.com": { name: "포스트투데이", color: "bg-indigo-500 text-white" },
+      "manager.co.th": { name: "매니저", color: "bg-teal-500 text-white" },
+      "sanook.com": { name: "사누크", color: "bg-pink-500 text-white" },
+      "kapook.com": { name: "카푸크", color: "bg-cyan-500 text-white" },
+      "mthai.com": { name: "엠타이", color: "bg-lime-500 text-white" },
+      "thansettakij.com": { name: "탄셋타킷", color: "bg-emerald-500 text-white" },
+      "prachachat.net": { name: "프라차챗", color: "bg-violet-500 text-white" },
+      "workpointnews.com": { name: "워크포인트", color: "bg-rose-500 text-white" },
+      "ch3plus.com": { name: "채널3", color: "bg-amber-500 text-white" },
+      "tnn.co.th": { name: "티엔엔", color: "bg-sky-500 text-white" },
+      "springnews.co.th": { name: "스프링뉴스", color: "bg-green-500 text-white" },
+      "amarintv.com": { name: "아마린", color: "bg-red-600 text-white" },
+      "newsk.net": { name: "뉴스케이", color: "bg-slate-600 text-white" },
 
-      // Korean news sources
-      "chosun.com": "조선일보",
-      "joongang.co.kr": "중앙일보",
-      "donga.com": "동아일보",
-      "hani.co.kr": "한겨레",
-      "khan.co.kr": "경향신문",
-      "mk.co.kr": "매일경제",
-      "hankyung.com": "한국경제",
-      "ytn.co.kr": "와이티엔",
-      "sbs.co.kr": "에스비에스",
-      "kbs.co.kr": "케이비에스",
-      "mbc.co.kr": "엠비씨",
-      "jtbc.co.kr": "제이티비씨",
-      "news1.kr": "뉴스원",
-      "newsis.com": "뉴시스",
-      "yonhapnews.co.kr": "연합뉴스",
+      // Korean news sources - Red/Orange tones
+      "chosun.com": { name: "조선일보", color: "bg-red-700 text-white" },
+      "joongang.co.kr": { name: "중앙일보", color: "bg-blue-700 text-white" },
+      "donga.com": { name: "동아일보", color: "bg-green-700 text-white" },
+      "hani.co.kr": { name: "한겨레", color: "bg-green-800 text-white" },
+      "khan.co.kr": { name: "경향신문", color: "bg-purple-700 text-white" },
+      "mk.co.kr": { name: "매일경제", color: "bg-orange-600 text-white" },
+      "hankyung.com": { name: "한국경제", color: "bg-blue-800 text-white" },
+      "ytn.co.kr": { name: "와이티엔", color: "bg-red-600 text-white" },
+      "sbs.co.kr": { name: "에스비에스", color: "bg-blue-500 text-white" },
+      "kbs.co.kr": { name: "케이비에스", color: "bg-blue-600 text-white" },
+      "mbc.co.kr": { name: "엠비씨", color: "bg-red-500 text-white" },
+      "jtbc.co.kr": { name: "제이티비씨", color: "bg-orange-500 text-white" },
+      "news1.kr": { name: "뉴스원", color: "bg-indigo-600 text-white" },
+      "newsis.com": { name: "뉴시스", color: "bg-teal-600 text-white" },
+      "yonhapnews.co.kr": { name: "연합뉴스", color: "bg-slate-700 text-white" },
 
-      // International sources
-      "cnn.com": "씨엔엔",
-      "bbc.com": "비비씨",
-      "reuters.com": "로이터",
-      "ap.org": "에이피",
-      "bloomberg.com": "블룸버그",
-      "wsj.com": "월스트리트",
-      "nytimes.com": "뉴욕타임스",
-      "washingtonpost.com": "워싱턴포스트",
-      "theguardian.com": "가디언",
-      "ft.com": "파이낸셜",
-      "economist.com": "이코노미스트",
-      "time.com": "타임",
-      "newsweek.com": "뉴스위크",
-      "forbes.com": "포브스",
-      "techcrunch.com": "테크크런치",
-      "wired.com": "와이어드",
-      "engadget.com": "엔가젯",
-      "theverge.com": "더버지",
-      "arstechnica.com": "아르스테크니카",
+      // International sources - Dark tones
+      "cnn.com": { name: "씨엔엔", color: "bg-red-800 text-white" },
+      "bbc.com": { name: "비비씨", color: "bg-red-900 text-white" },
+      "reuters.com": { name: "로이터", color: "bg-orange-700 text-white" },
+      "ap.org": { name: "에이피", color: "bg-blue-900 text-white" },
+      "bloomberg.com": { name: "블룸버그", color: "bg-black text-white" },
+      "wsj.com": { name: "월스트리트", color: "bg-gray-800 text-white" },
+      "nytimes.com": { name: "뉴욕타임스", color: "bg-gray-900 text-white" },
+      "washingtonpost.com": { name: "워싱턴포스트", color: "bg-slate-800 text-white" },
+      "theguardian.com": { name: "가디언", color: "bg-blue-800 text-white" },
+      "ft.com": { name: "파이낸셜", color: "bg-pink-800 text-white" },
+      "economist.com": { name: "이코노미스트", color: "bg-red-800 text-white" },
+      "time.com": { name: "타임", color: "bg-red-700 text-white" },
+      "newsweek.com": { name: "뉴스위크", color: "bg-blue-700 text-white" },
+      "forbes.com": { name: "포브스", color: "bg-green-800 text-white" },
+      "techcrunch.com": { name: "테크크런치", color: "bg-green-600 text-white" },
+      "wired.com": { name: "와이어드", color: "bg-black text-white" },
+      "engadget.com": { name: "엔가젯", color: "bg-blue-600 text-white" },
+      "theverge.com": { name: "더버지", color: "bg-purple-600 text-white" },
+      "arstechnica.com": { name: "아르스테크니카", color: "bg-orange-600 text-white" },
     }
 
     // Extract domain from URL
@@ -127,32 +127,38 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
       return urlToBadgeMap[domain]
     }
 
-    // Fallback: use source name and truncate to 4 characters
+    // Fallback: use source name and truncate to 4 characters with default color
     if (source) {
       const koreanChars = source.match(/[가-힣]/g)
       if (koreanChars && koreanChars.length > 0) {
-        return koreanChars.slice(0, 4).join("")
+        return {
+          name: koreanChars.slice(0, 4).join(""),
+          color: "bg-gray-500 text-white",
+        }
       }
 
       const words = source.split(/\s+/)
-      return words
-        .map((word) => word.charAt(0).toUpperCase())
-        .join("")
-        .slice(0, 4)
+      return {
+        name: words
+          .map((word) => word.charAt(0).toUpperCase())
+          .join("")
+          .slice(0, 4),
+        color: "bg-gray-500 text-white",
+      }
     }
 
-    return "기타"
+    return { name: "기타", color: "bg-gray-400 text-white" }
   }
+
+  const sourceBadgeInfo = getSourceBadgeInfo(String(news.source_url || ""), String(news.source || ""))
 
   return (
     <Card className="h-full hover:shadow-lg transition-shadow duration-200 cursor-pointer group">
       <CardHeader className="pb-3" onClick={() => onDetailClick(news)}>
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2">
-            {/* Source Badge - First */}
-            <Badge className="bg-gray-200 text-gray-800 text-xs">
-              {getSourceBadgeFromUrl(String(news.source_url || ""), String(news.source || ""))}
-            </Badge>
+            {/* Source Badge - First with unique color */}
+            <Badge className={`${sourceBadgeInfo.color} text-xs font-medium`}>{sourceBadgeInfo.name}</Badge>
 
             {/* Category Badge - Second */}
             <Badge className={`${getCategoryColor(String(news.category))} text-xs`}>{String(news.category)}</Badge>
