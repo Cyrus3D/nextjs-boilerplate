@@ -1,231 +1,145 @@
 "use client"
 
-import { useState } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Eye, ExternalLink, Calendar, User, Star } from "lucide-react"
-import { incrementNewsViewCount } from "@/lib/admin-news-actions"
-import NewsDetailModal from "./news-detail-modal"
+import { Calendar, Clock, Eye, Globe, Star } from "lucide-react"
+import type { NewsItem } from "@/types/news"
 
 interface NewsCardProps {
-  id: number
-  title: string
-  summary: string
-  content: string
-  author?: string | null
-  source_url?: string | null
-  image_url?: string | null
-  published_at: string
-  view_count: number
-  is_featured: boolean
-  is_active: boolean
-  original_language: string
-  is_translated: boolean
-  category?: {
-    id: number
-    name: string
-    color_class: string
-  } | null
-  tags?: Array<{
-    id: number
-    name: string
-  }>
-  onViewCountUpdate?: (id: number, newCount: number) => void
+  news: NewsItem
+  onDetailClick: (news: NewsItem) => void
 }
 
-export default function NewsCard({
-  id,
-  title,
-  summary,
-  content,
-  author,
-  source_url,
-  image_url,
-  published_at,
-  view_count,
-  is_featured,
-  is_active,
-  original_language,
-  is_translated,
-  category,
-  tags = [],
-  onViewCountUpdate,
-}: NewsCardProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [currentViewCount, setCurrentViewCount] = useState(Number(view_count) || 0)
-
-  const handleCardClick = async () => {
-    try {
-      // 조회수 증가
-      await incrementNewsViewCount(Number(id))
-      const newViewCount = currentViewCount + 1
-      setCurrentViewCount(newViewCount)
-
-      // 부모 컴포넌트에 알림
-      if (onViewCountUpdate) {
-        onViewCountUpdate(Number(id), newViewCount)
-      }
-
-      // 모달 열기
-      setIsModalOpen(true)
-    } catch (error) {
-      console.error("Error incrementing view count:", error)
-      // 조회수 증가 실패해도 모달은 열기
-      setIsModalOpen(true)
+export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
+  const getCategoryColor = (category: string) => {
+    const colors = {
+      정책: "bg-blue-100 text-blue-800",
+      경제: "bg-green-100 text-green-800",
+      사회: "bg-purple-100 text-purple-800",
+      문화: "bg-pink-100 text-pink-800",
+      교통: "bg-indigo-100 text-indigo-800",
+      의료: "bg-red-100 text-red-800",
+      생활: "bg-orange-100 text-orange-800",
+      일반: "bg-gray-100 text-gray-800",
     }
+    return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
   }
 
   const formatDate = (dateString: string) => {
     try {
-      const date = new Date(String(dateString))
-      return date.toLocaleDateString("ko-KR", {
-        year: "numeric",
-        month: "long",
+      return new Date(dateString).toLocaleDateString("ko-KR", {
+        month: "short",
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit",
       })
     } catch {
-      return String(dateString)
+      return "날짜 정보 없음"
     }
   }
 
-  const truncateText = (text: string, maxLength = 150) => {
-    const safeText = String(text || "")
-    return safeText.length > maxLength ? safeText.substring(0, maxLength) + "..." : safeText
-  }
-
-  if (!is_active) {
-    return null
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + "..."
   }
 
   return (
-    <>
-      <Card
-        className="cursor-pointer hover:shadow-lg transition-shadow duration-200 h-full flex flex-col"
-        onClick={handleCardClick}
-      >
-        {image_url && (
-          <div className="relative w-full h-48 overflow-hidden rounded-t-lg">
-            <img
-              src={String(image_url) || "/placeholder.svg"}
-              alt={String(title)}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                target.style.display = "none"
-              }}
-            />
-          </div>
-        )}
-
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <h3 className="font-semibold text-lg line-clamp-2 flex-1">{String(title)}</h3>
-            {is_featured && <Star className="h-5 w-5 text-yellow-500 flex-shrink-0" />}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            {category && (
-              <Badge variant="secondary" className={String(category.color_class)}>
-                {String(category.name)}
+    <Card className="h-full hover:shadow-lg transition-shadow duration-200 cursor-pointer group">
+      <CardHeader className="pb-3" onClick={() => onDetailClick(news)}>
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center gap-2">
+            <Badge className={`${getCategoryColor(String(news.category))} text-xs`}>{String(news.category)}</Badge>
+            {news.is_featured && (
+              <Badge className="bg-yellow-500 text-white text-xs">
+                <Star className="w-3 h-3 mr-1" />
+                추천
               </Badge>
             )}
-
-            {is_translated && (
-              <Badge variant="outline" className="text-xs">
-                번역됨
-              </Badge>
-            )}
-
-            <Badge variant="outline" className="text-xs">
-              {String(original_language).toUpperCase()}
-            </Badge>
           </div>
-        </CardHeader>
+          <div className="flex items-center gap-1 text-xs text-gray-500">
+            <Globe className="w-3 h-3" />
+            <span>{String(news.language).toUpperCase()}</span>
+          </div>
+        </div>
 
-        <CardContent className="flex-1 flex flex-col">
-          <p className="text-muted-foreground text-sm mb-4 flex-1">{truncateText(String(summary))}</p>
+        <h3 className="font-semibold text-lg leading-tight group-hover:text-blue-600 transition-colors mb-2">
+          {truncateText(String(news.title || ""), 80)}
+        </h3>
 
-          {tags && tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-4">
-              {tags.slice(0, 3).map((tag) => (
-                <Badge key={Number(tag.id)} variant="outline" className="text-xs">
-                  #{String(tag.name)}
-                </Badge>
-              ))}
-              {tags.length > 3 && (
-                <Badge variant="outline" className="text-xs">
-                  +{tags.length - 3}
-                </Badge>
-              )}
+        <p className="text-gray-600 text-sm leading-relaxed">{truncateText(String(news.summary || ""), 150)}</p>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        {/* Meta Information */}
+        <div className="space-y-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            <span>{formatDate(String(news.published_at || news.created_at))}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Globe className="w-4 h-4" />
+            <span className="truncate">{String(news.source || "알 수 없음")}</span>
+          </div>
+
+          {news.reading_time && (
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              <span>{Number(news.reading_time)} 분 읽기</span>
             </div>
           )}
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                <span>{formatDate(String(published_at))}</span>
-              </div>
-
-              {author && (
-                <div className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  <span>{String(author)}</span>
-                </div>
-              )}
-            </div>
-
+          {news.location && (
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <Eye className="h-3 w-3" />
-                <span>{currentViewCount.toLocaleString()}</span>
-              </div>
-
-              {source_url && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    window.open(String(source_url), "_blank", "noopener,noreferrer")
-                  }}
-                  title="원문 보기"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                </Button>
-              )}
+              <span className="text-xs bg-gray-100 px-2 py-1 rounded">📍 {String(news.location)}</span>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
 
-      <NewsDetailModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        news={{
-          id: Number(id),
-          title: String(title),
-          summary: String(summary),
-          content: String(content),
-          author: author ? String(author) : null,
-          source_url: source_url ? String(source_url) : null,
-          image_url: image_url ? String(image_url) : null,
-          published_at: String(published_at),
-          view_count: currentViewCount,
-          is_featured: Boolean(is_featured),
-          is_active: Boolean(is_active),
-          original_language: String(original_language),
-          is_translated: Boolean(is_translated),
-          created_at: String(published_at),
-          updated_at: String(published_at),
-          category,
-          tags,
-        }}
-      />
-    </>
+        {/* Tags */}
+        {Array.isArray(news.tags) && news.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {news.tags.slice(0, 3).map((tag, index) => (
+              <Badge key={index} variant="outline" className="text-xs">
+                #{String(tag)}
+              </Badge>
+            ))}
+            {news.tags.length > 3 && (
+              <Badge variant="outline" className="text-xs">
+                +{news.tags.length - 3}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* AI Analysis Preview */}
+        {news.ai_analysis && (
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
+            <p className="text-purple-800 text-xs font-medium">
+              🤖 AI 분석: {truncateText(String(news.ai_analysis), 100)}
+            </p>
+          </div>
+        )}
+
+        {/* Stats */}
+        <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
+          <div className="flex items-center gap-1">
+            <Eye className="w-3 h-3" />
+            <span>{Number(news.view_count || 0).toLocaleString()} 조회</span>
+          </div>
+          <span>{formatDate(String(news.created_at))}</span>
+        </div>
+
+        {/* Action Button */}
+        <Button
+          onClick={() => onDetailClick(news)}
+          className="w-full bg-transparent hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300"
+          variant="outline"
+        >
+          기사 읽기
+        </Button>
+      </CardContent>
+    </Card>
   )
 }

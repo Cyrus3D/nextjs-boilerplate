@@ -1,146 +1,158 @@
-import type { NewsArticle, NewsCategory } from "../types/news"
+export interface NewsItem {
+  id: number
+  title: string
+  summary: string
+  content: string
+  content_ko?: string
+  source: string
+  source_url?: string
+  author?: string
+  published_at: string
+  created_at: string
+  updated_at: string
+  category: string
+  tags: string[]
+  language: string
+  location?: string
+  ai_analysis?: string
+  reading_time?: number
+  view_count: number
+  is_featured: boolean
+  is_active: boolean
+}
 
-export const sampleNewsCategories: NewsCategory[] = [
+export const sampleNews: NewsItem[] = [
   {
     id: 1,
-    name: "일반뉴스",
-    description: "일반적인 뉴스",
-    color_class: "bg-blue-100 text-blue-800",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
+    title: "태국 정부, 외국인 관광객 대상 새로운 비자 정책 발표",
+    summary:
+      "태국 정부가 외국인 관광객 유치를 위해 새로운 장기 체류 비자 정책을 발표했습니다. 이번 정책으로 한국인들의 태국 장기 체류가 더욱 용이해질 전망입니다.",
+    content:
+      '태국 정부는 오늘 외국인 관광객을 대상으로 한 새로운 장기 체류 비자 정책을 공식 발표했습니다.\n\n이번 정책의 주요 내용은 다음과 같습니다:\n\n1. 관광 목적 장기 체류 비자 신설\n- 최대 180일까지 체류 가능\n- 1회 연장으로 총 360일 체류 허용\n- 신청 수수료 10,000바트\n\n2. 디지털 노마드 비자 확대\n- 원격 근무자를 위한 특별 비자\n- 최대 5년간 체류 가능\n- 연간 소득 80,000달러 이상 증명 필요\n\n3. 은퇴자 비자 조건 완화\n- 기존 50세에서 45세로 연령 하향\n- 은행 예금 조건 완화\n\n태국 관광청 관계자는 "이번 정책으로 더 많은 외국인들이 태국에서 장기간 체류하며 현지 경제 활성화에 기여할 것으로 기대한다"고 밝혔습니다.\n\n특히 한국인들에게는 기존보다 훨씬 유연한 체류 조건이 제공되어, 태국에서의 장기 거주나 사업 활동이 더욱 활발해질 것으로 예상됩니다.',
+    source: "태국 관광청",
+    source_url: "https://www.tat.or.th/news/visa-policy-2024",
+    author: "김태국 기자",
+    published_at: "2024-01-22T10:30:00Z",
+    created_at: "2024-01-22T10:35:00Z",
+    updated_at: "2024-01-22T10:35:00Z",
+    category: "정책",
+    tags: ["비자", "관광", "장기체류", "정책변경", "한국인"],
+    language: "ko",
+    location: "방콕",
+    ai_analysis:
+      "이번 비자 정책 변경은 태국 거주 한국인들에게 매우 긍정적인 영향을 미칠 것으로 분석됩니다. 특히 디지털 노마드나 은퇴 후 태국 거주를 계획하는 분들에게 큰 도움이 될 것입니다.",
+    reading_time: 3,
+    view_count: 1250,
+    is_featured: true,
+    is_active: true,
   },
   {
     id: 2,
-    name: "비즈니스",
-    description: "비즈니스 관련 뉴스",
-    color_class: "bg-green-100 text-green-800",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
+    title: "방콕 지하철 새 노선 개통, 한인 거주 지역 접근성 크게 향상",
+    summary:
+      "방콕 대중교통공사가 새로운 지하철 노선을 개통하여 한인들이 많이 거주하는 지역의 교통 접근성이 크게 개선되었습니다.",
+    content:
+      '방콕 대중교통공사(BMCL)는 어제 새로운 지하철 노선인 \'골드 라인\'을 공식 개통했다고 발표했습니다.\n\n골드 라인의 주요 특징:\n\n1. 노선 정보\n- 총 길이: 15.2km\n- 역 수: 12개 역\n- 운행 시간: 오전 6시 ~ 자정\n- 배차 간격: 평일 3-5분, 주말 5-7분\n\n2. 주요 경유지\n- 수쿰빗 지역 (아속, 프롬퐁, 통로)\n- 시암 상업지구\n- 차이나타운\n- 왕궁 인근 관광지\n\n3. 요금 체계\n- 기본 요금: 15바트\n- 최대 요금: 45바트\n- 기존 노선과 환승 할인 적용\n\n특히 한인들이 많이 거주하는 수쿰빗 지역과 시내 중심가를 직접 연결하여, 출퇴근 시간이 기존 대비 30% 단축될 것으로 예상됩니다.\n\n방콕 거주 한국인 이모씨(45)는 "그동안 시내 나가려면 택시나 버스를 이용해야 했는데, 이제 지하철로 편리하게 이동할 수 있어서 정말 좋다"고 소감을 밝혔습니다.\n\n교통공사 측은 "향후 2년 내에 추가로 3개 노선을 더 개통할 예정"이라고 발표했습니다.',
+    source: "방콕 포스트",
+    source_url: "https://www.bangkokpost.com/thailand/transport/gold-line-opening",
+    published_at: "2024-01-21T14:20:00Z",
+    created_at: "2024-01-21T14:25:00Z",
+    updated_at: "2024-01-21T14:25:00Z",
+    category: "교통",
+    tags: ["지하철", "교통", "방콕", "골드라인", "수쿰빗"],
+    language: "ko",
+    location: "방콕",
+    reading_time: 2,
+    view_count: 890,
+    is_featured: false,
+    is_active: true,
   },
   {
     id: 3,
-    name: "기술",
-    description: "기술 관련 뉴스",
-    color_class: "bg-purple-100 text-purple-800",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
+    title: "태국 경제, 2024년 3.2% 성장 전망... 관광업 회복이 주요 동력",
+    summary:
+      "태국 중앙은행이 2024년 경제성장률을 3.2%로 전망한다고 발표했습니다. 관광업 회복과 수출 증가가 주요 성장 동력으로 작용할 것으로 예상됩니다.",
+    content:
+      '태국 중앙은행(BOT)은 오늘 2024년 태국 경제성장률을 3.2%로 전망한다고 공식 발표했습니다.\n\n주요 성장 동력:\n\n1. 관광업 회복\n- 2024년 외국인 관광객 3,500만 명 목표\n- 관광 수입 2조 8,000억 바트 예상\n- 코로나19 이전 수준의 95% 회복 전망\n\n2. 수출 증가\n- 전년 대비 4.1% 증가 예상\n- 주요 수출품: 전자제품, 자동차, 농산물\n- 중국, 미국, 일본으로의 수출 확대\n\n3. 내수 소비 개선\n- 가계 소득 증가로 소비 심리 회복\n- 정부 경기 부양책 효과\n- 최저임금 인상 영향\n\n우려 요인:\n\n1. 글로벌 경제 불확실성\n- 미중 무역 갈등 지속\n- 유럽 경제 둔화\n- 원자재 가격 변동성\n\n2. 국내 정치 상황\n- 정치적 불안정성\n- 정책 일관성 우려\n\n태국 중앙은행 총재는 "관광업 회복세가 예상보다 빠르게 진행되고 있어 경제 전반에 긍정적 영향을 미치고 있다"며 "다만 대외 불확실성에 대한 지속적인 모니터링이 필요하다"고 강조했습니다.\n\n한편, 태국 거주 한국 기업들도 이러한 경제 회복세에 힘입어 사업 확장을 검토하고 있는 것으로 알려졌습니다.',
+    source: "태국 중앙은행",
+    source_url: "https://www.bot.or.th/economic-outlook-2024",
+    author: "박경제 기자",
+    published_at: "2024-01-20T09:15:00Z",
+    created_at: "2024-01-20T09:20:00Z",
+    updated_at: "2024-01-20T09:20:00Z",
+    category: "경제",
+    tags: ["경제성장", "관광업", "수출", "중앙은행", "전망"],
+    language: "ko",
+    location: "방콕",
+    ai_analysis:
+      "태국 경제의 회복세는 현지 한국 기업들과 거주민들에게 긍정적인 영향을 미칠 것으로 예상됩니다. 특히 관광업 회복은 서비스업에 종사하는 한국인들에게 새로운 기회를 제공할 것입니다.",
+    reading_time: 4,
+    view_count: 650,
+    is_featured: true,
+    is_active: true,
   },
   {
     id: 4,
-    name: "건강",
-    description: "건강 관련 뉴스",
-    color_class: "bg-red-100 text-red-800",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
+    title: "방콕 한인타운에 새로운 복합쇼핑몰 오픈 예정",
+    summary:
+      "수쿰빗 지역 한인타운에 한국 브랜드와 음식점들이 입점하는 대형 복합쇼핑몰이 올해 하반기 오픈할 예정입니다.",
+    content:
+      '수쿰빗 소이 39에 위치할 예정인 \'코리아 플라자(Korea Plaza)\'가 올해 9월 정식 오픈한다고 개발사가 발표했습니다.\n\n코리아 플라자 주요 정보:\n\n1. 규모 및 시설\n- 총 면적: 15,000㎡ (지상 8층)\n- 매장 수: 120개\n- 주차 공간: 300대\n- 푸드코트, 영화관, 키즈존 포함\n\n2. 입점 브랜드\n- 한국 화장품: 올리브영, 이니스프리, 더페이스샵\n- 패션: 유니클로, 자라, H&M\n- 음식점: 본죽, 김밥천국, 투썸플레이스\n- 마트: 롯데마트 익스프레스\n\n3. 특별 서비스\n- 한국어 안내 서비스\n- 한국 결제 시스템 (카카오페이, 네이버페이)\n- 한국 배송 서비스\n- 통역 서비스\n\n개발사 관계자는 "태국 거주 한국인들이 고향의 맛과 제품을 쉽게 접할 수 있는 공간을 만들고자 했다"며 "동시에 한국 문화에 관심 있는 태국인들에게도 새로운 경험을 제공할 것"이라고 설명했습니다.\n\n인근 거주 한국인 김모씨(38)는 "한국 제품을 사려면 시내까지 나가야 했는데, 가까운 곳에 이런 쇼핑몰이 생긴다니 정말 기대된다"고 말했습니다.\n\n쇼핑몰 측은 오픈 기념으로 다양한 할인 이벤트와 문화 행사를 준비 중이라고 밝혔습니다.',
+    source: "태국 한인신문",
+    published_at: "2024-01-19T16:45:00Z",
+    created_at: "2024-01-19T16:50:00Z",
+    updated_at: "2024-01-19T16:50:00Z",
+    category: "생활",
+    tags: ["쇼핑몰", "한인타운", "수쿰빗", "한국브랜드", "오픈"],
+    language: "ko",
+    location: "방콕",
+    reading_time: 3,
+    view_count: 1100,
+    is_featured: false,
+    is_active: true,
   },
   {
     id: 5,
-    name: "여행",
-    description: "여행 관련 뉴스",
-    color_class: "bg-yellow-100 text-yellow-800",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
+    title: "태국 보건부, 새로운 의료보험 제도 도입... 외국인도 혜택 확대",
+    summary:
+      "태국 보건부가 외국인 거주자를 포함한 새로운 의료보험 제도를 도입한다고 발표했습니다. 한국인들도 더 저렴한 비용으로 의료 서비스를 받을 수 있게 됩니다.",
+    content:
+      '태국 보건부는 어제 외국인 장기 거주자를 대상으로 한 새로운 의료보험 제도 \'헬스케어 플러스(Healthcare Plus)\'를 도입한다고 발표했습니다.\n\n새 의료보험 제도 주요 내용:\n\n1. 가입 자격\n- 태국 거주 6개월 이상 외국인\n- 워크퍼밋 또는 장기 비자 소지자\n- 연령 제한 없음\n\n2. 보험료 및 혜택\n- 월 보험료: 2,500바트 (기본형)\n- 월 보험료: 4,500바트 (프리미엄형)\n- 연간 보장 한도: 기본형 100만바트, 프리미엄형 300만바트\n- 응급실, 입원, 수술, 약값 80% 보장\n\n3. 이용 가능 병원\n- 정부 지정 사립병원 50곳\n- 방콕병원, 범룽랏병원, 삼티베병원 포함\n- 한국어 통역 서비스 제공 병원 우선 선정\n\n4. 특별 혜택\n- 건강검진 연 1회 무료\n- 예방접종 50% 할인\n- 치과 치료 30% 할인\n- 한방 치료 포함\n\n보건부 장관은 "외국인 거주자들의 의료비 부담을 줄이고, 양질의 의료 서비스를 제공하기 위해 이 제도를 도입했다"고 설명했습니다.\n\n태국 거주 한국인 의사회 관계자는 "그동안 의료비 부담 때문에 치료를 미루는 한국인들이 많았는데, 이번 제도로 많은 도움이 될 것"이라고 환영했습니다.\n\n새 의료보험은 3월부터 가입 신청을 받아 5월부터 본격 시행될 예정입니다.',
+    source: "태국 보건부",
+    source_url: "https://www.moph.go.th/healthcare-plus-2024",
+    author: "이의료 기자",
+    published_at: "2024-01-18T11:30:00Z",
+    created_at: "2024-01-18T11:35:00Z",
+    updated_at: "2024-01-18T11:35:00Z",
+    category: "의료",
+    tags: ["의료보험", "외국인", "보건부", "의료비", "혜택확대"],
+    language: "ko",
+    location: "방콕",
+    ai_analysis:
+      "새로운 의료보험 제도는 태국 거주 한국인들에게 매우 실질적인 도움이 될 것으로 보입니다. 특히 기존에 비해 저렴한 보험료로 포괄적인 의료 서비스를 받을 수 있어 생활 안정성이 크게 향상될 것입니다.",
+    reading_time: 4,
+    view_count: 780,
+    is_featured: true,
+    is_active: true,
   },
   {
     id: 6,
-    name: "음식",
-    description: "음식 관련 뉴스",
-    color_class: "bg-orange-100 text-orange-800",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: 7,
-    name: "교육",
-    description: "교육 관련 뉴스",
-    color_class: "bg-indigo-100 text-indigo-800",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: 8,
-    name: "스포츠",
-    description: "스포츠 관련 뉴스",
-    color_class: "bg-pink-100 text-pink-800",
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
-  },
-]
-
-export const sampleNews: NewsArticle[] = [
-  {
-    id: 1,
-    title: "태국 방콕 새로운 한국 레스토랑 오픈",
+    title: "파타야 한인 축제 성황리 개최... 3만 명 참가",
+    summary:
+      "파타야에서 열린 제5회 한인 축제가 성황리에 마무리되었습니다. 한국 전통 문화 체험과 K-pop 공연 등 다양한 프로그램이 진행되었습니다.",
     content:
-      "방콕 시내 중심가에 새로운 한국 레스토랑이 오픈했습니다. 이 레스토랑은 정통 한국 요리를 제공하며, 현지 한국인들과 태국인들에게 큰 인기를 끌고 있습니다. 특히 김치찌개와 불고기가 시그니처 메뉴로 자리잡고 있습니다.",
-    summary: "방콕에 새로운 한국 레스토랑이 오픈하여 인기를 끌고 있습니다.",
-    category_id: 6,
-    category: sampleNewsCategories[5],
-    author: "뉴스팀",
-    source_url: "https://example.com/news/1",
-    image_url: "/placeholder.jpg?height=200&width=400&text=Korean+Restaurant",
-    is_featured: true,
-    is_active: true,
-    published_at: "2024-01-15T10:00:00Z",
-    created_at: "2024-01-15T09:00:00Z",
-    updated_at: "2024-01-15T09:00:00Z",
-    view_count: 125,
-    original_language: "ko",
-    is_translated: false,
-    tags: [
-      { id: 1, name: "레스토랑", created_at: "2024-01-01T00:00:00Z" },
-      { id: 2, name: "한국음식", created_at: "2024-01-01T00:00:00Z" },
-      { id: 3, name: "방콕", created_at: "2024-01-01T00:00:00Z" },
-    ],
-  },
-  {
-    id: 2,
-    title: "태국 코로나19 방역 지침 완화 발표",
-    content:
-      "태국 정부가 코로나19 방역 지침을 완화한다고 발표했습니다. 이번 조치로 마스크 착용 의무가 실내에서만 유지되며, 실외에서는 자율적으로 착용할 수 있게 됩니다. 또한 각종 행사와 모임에 대한 제한도 대폭 완화될 예정입니다.",
-    summary: "태국 정부가 코로나19 방역 지침을 완화한다고 발표했습니다.",
-    category_id: 1,
-    category: sampleNewsCategories[0],
-    author: "보건부",
-    source_url: "https://example.com/news/2",
-    image_url: "/placeholder.jpg?height=200&width=400&text=COVID+Guidelines",
+      '파타야 비치에서 지난 주말 열린 \'제5회 파타야 한인 축제\'가 3만여 명이 참가한 가운데 성황리에 마무리되었습니다.\n\n축제 주요 프로그램:\n\n1. 문화 체험 부스\n- 한복 체험 및 사진 촬영\n- 전통 놀이 (윷놀이, 제기차기, 팽이치기)\n- 서예 체험\n- 한국 전통 차 시음\n\n2. 음식 부스\n- 한국 전통 음식 30여 종\n- 떡볶이, 김밥, 불고기, 비빔밥\n- 한국 전통주 시음\n- 디저트: 붕어빵, 호떡, 계란빵\n\n3. 공연 프로그램\n- K-pop 댄스 경연대회\n- 한국 전통 무용 공연\n- 태권도 시연\n- 한국 가요 노래자랑\n\n4. 체험 활동\n- 한국어 교실\n- 태권도 체험\n- 한국 전통 게임\n- 페이스 페인팅\n\n축제 조직위원장 박모씨는 "올해는 특히 태국인들의 참여가 많아서 한국 문화를 알리는 좋은 기회가 되었다"며 "내년에는 더 큰 규모로 준비하겠다"고 말했습니다.\n\n참가한 태국인 솜차이씨(25)는 "한국 드라마를 좋아해서 왔는데, 직접 한국 음식을 먹고 문화를 체험할 수 있어서 정말 좋았다"고 소감을 밝혔습니다.\n\n한국 관광공사 태국 지사는 "이런 문화 교류 행사가 양국 관계 발전에 큰 도움이 된다"며 지속적인 지원을 약속했습니다.\n\n내년 축제는 더 많은 한국 기업들의 후원을 받아 규모를 확대할 예정입니다.',
+    source: "파타야 한인회",
+    published_at: "2024-01-17T13:20:00Z",
+    created_at: "2024-01-17T13:25:00Z",
+    updated_at: "2024-01-17T13:25:00Z",
+    category: "문화",
+    tags: ["한인축제", "파타야", "문화교류", "K-pop", "전통문화"],
+    language: "ko",
+    location: "파타야",
+    reading_time: 3,
+    view_count: 920,
     is_featured: false,
     is_active: true,
-    published_at: "2024-01-14T14:30:00Z",
-    created_at: "2024-01-14T13:30:00Z",
-    updated_at: "2024-01-14T13:30:00Z",
-    view_count: 89,
-    original_language: "ko",
-    is_translated: false,
-    tags: [
-      { id: 4, name: "코로나19", created_at: "2024-01-01T00:00:00Z" },
-      { id: 5, name: "방역", created_at: "2024-01-01T00:00:00Z" },
-      { id: 6, name: "정책", created_at: "2024-01-01T00:00:00Z" },
-    ],
-  },
-  {
-    id: 3,
-    title: "New Korean Cultural Center Opens in Bangkok",
-    content:
-      "A new Korean Cultural Center has officially opened in Bangkok, Thailand. The center aims to promote Korean culture, language, and arts among Thai people and the Korean community living in Thailand. The facility includes language classrooms, exhibition spaces, and a performance hall.",
-    summary: "A new Korean Cultural Center opens in Bangkok to promote Korean culture.",
-    category_id: 7,
-    category: sampleNewsCategories[6],
-    author: "Cultural Team",
-    source_url: "https://example.com/news/3",
-    image_url: "/placeholder.jpg?height=200&width=400&text=Cultural+Center",
-    is_featured: false,
-    is_active: true,
-    published_at: "2024-01-13T16:00:00Z",
-    created_at: "2024-01-13T15:00:00Z",
-    updated_at: "2024-01-13T15:00:00Z",
-    view_count: 67,
-    original_language: "en",
-    is_translated: true,
-    tags: [
-      { id: 7, name: "문화센터", created_at: "2024-01-01T00:00:00Z" },
-      { id: 8, name: "한국문화", created_at: "2024-01-01T00:00:00Z" },
-      { id: 9, name: "교육", created_at: "2024-01-01T00:00:00Z" },
-    ],
   },
 ]

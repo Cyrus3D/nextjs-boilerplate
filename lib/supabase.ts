@@ -1,13 +1,9 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase environment variables")
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
 
 // 서버 사이드용 클라이언트 (서비스 롤 키 사용)
 export function createServerClient() {
@@ -17,7 +13,7 @@ export function createServerClient() {
     throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY environment variable")
   }
 
-  return createClient(supabaseUrl, supabaseServiceKey, {
+  return createClient(supabaseUrl!, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -28,7 +24,7 @@ export function createServerClient() {
 // 데이터베이스 연결 테스트
 export async function testConnection() {
   try {
-    const { data, error } = await supabase.from("categories").select("count").limit(1)
+    const { data, error } = await supabase!.from("categories").select("count").limit(1)
 
     if (error) {
       console.error("Database connection test failed:", error)
@@ -44,3 +40,5 @@ export async function testConnection() {
     }
   }
 }
+
+export default supabase

@@ -1,3 +1,26 @@
+export interface NewsItem {
+  id: number
+  title: string
+  summary: string
+  content: string
+  content_ko?: string
+  source: string
+  source_url?: string
+  author?: string
+  published_at: string
+  created_at: string
+  updated_at: string
+  category: string
+  tags: string[]
+  language: string
+  location?: string
+  ai_analysis?: string
+  reading_time?: number
+  view_count: number
+  is_featured: boolean
+  is_active: boolean
+}
+
 export interface NewsCategory {
   id: number
   name: string
@@ -14,43 +37,29 @@ export interface NewsTag {
 export interface NewsArticle {
   id: number
   title: string
-  summary: string
   content: string
-  author?: string | null
-  source_url?: string | null
-  image_url?: string | null
-  category_id?: number | null
-  published_at: string
-  created_at: string
-  updated_at: string
-  view_count: number
+  summary?: string
+  category_id?: number
+  author?: string
+  source_url?: string
+  image_url?: string
   is_featured: boolean
   is_active: boolean
+  published_at: string
   original_language: string
   is_translated: boolean
-  category?: NewsCategory | null
-  tags?: NewsTag[]
-}
-
-export interface NewsArticleTag {
-  id: number
-  article_id: number
-  tag_id: number
+  view_count: number
   created_at: string
-}
-
-export interface NewsAnalysisResult {
-  success: boolean
-  message: string
-  data: NewsArticle | null
-}
-
-export interface ScrapedContent {
-  title: string
-  content: string
-  description: string
-  image: string
-  url: string
+  updated_at: string
+  category?: {
+    id: number
+    name: string
+    color_class: string
+  }
+  tags?: {
+    id: number
+    name: string
+  }[]
 }
 
 export interface AIAnalysisResult {
@@ -59,6 +68,6 @@ export interface AIAnalysisResult {
   content: string
   category: string
   tags: string[]
-  author?: string | null
+  author: string | null
   language: string
 }

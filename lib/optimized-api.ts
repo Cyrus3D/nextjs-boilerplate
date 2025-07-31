@@ -562,4 +562,3 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
   const result = await getBusinessCardsPaginated(1, 100)
   return Array.isArray(result.cards) ? result.cards : []
 }
-</merged_code>

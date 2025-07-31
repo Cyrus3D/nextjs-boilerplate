@@ -19,7 +19,8 @@ export interface BusinessCard {
   exposureCount: number
   lastExposedAt?: string | null
   exposureWeight: number
-  // 소셜 미디어 필드 추가
+  created_at: string
+  updated_at: string
   facebookUrl?: string | null
   instagramUrl?: string | null
   tiktokUrl?: string | null
@@ -31,14 +32,18 @@ export interface Category {
   id: number
   name: string
   color_class: string
+  created_at?: string
 }
 
 export interface Tag {
   id: number
   name: string
+  created_at?: string
 }
 
 export interface BusinessCardTag {
+  id: number
   business_card_id: number
   tag_id: number
+  created_at?: string
 }
