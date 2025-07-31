@@ -345,6 +345,11 @@ export async function getNewsForAdmin(): Promise<NewsArticle[]> {
       .order("created_at", { ascending: false })
 
     if (newsError) {
+      // Check if table doesn't exist
+      if (newsError.message.includes("does not exist") || newsError.code === "42P01") {
+        console.log("News table does not exist")
+        return []
+      }
       throw new Error(`뉴스 목록 조회 실패: ${newsError.message}`)
     }
 
@@ -393,7 +398,8 @@ export async function getNewsForAdmin(): Promise<NewsArticle[]> {
     }))
   } catch (error) {
     console.error("뉴스 목록 조회 오류:", error)
-    throw error
+    // Return empty array instead of throwing error to prevent app crash
+    return []
   }
 }
 
@@ -405,6 +411,11 @@ export async function getNewsCategories(): Promise<NewsCategory[]> {
     const { data, error } = await client.from("news_categories").select("*").order("name")
 
     if (error) {
+      // Check if table doesn't exist
+      if (error.message.includes("does not exist") || error.code === "42P01") {
+        console.log("News categories table does not exist")
+        return []
+      }
       throw new Error(`뉴스 카테고리 조회 실패: ${error.message}`)
     }
 
@@ -424,6 +435,11 @@ export async function getNewsTags(): Promise<NewsTag[]> {
     const { data, error } = await client.from("news_tags").select("*").order("name")
 
     if (error) {
+      // Check if table doesn't exist
+      if (error.message.includes("does not exist") || error.code === "42P01") {
+        console.log("News tags table does not exist")
+        return []
+      }
       throw new Error(`뉴스 태그 조회 실패: ${error.message}`)
     }
 
@@ -499,5 +515,26 @@ async function updateNewsTagsTransaction(newsId: number, tagNames: string[]): Pr
     }
   } catch (error) {
     console.error("태그 업데이트 오류:", error)
+  }
+}
+
+// Add a function to check if news tables exist
+export async function checkNewsTablesExist(): Promise<boolean> {
+  const client = checkSupabase()
+
+  try {
+    // Try to query the news table with a limit to check if it exists
+    const { error } = await client.from("news").select("id").limit(1)
+
+    if (error) {
+      if (error.message.includes("does not exist") || error.code === "42P01") {
+        return false
+      }
+    }
+
+    return true
+  } catch (error) {
+    console.error("뉴스 테이블 존재 확인 오류:", error)
+    return false
   }
 }

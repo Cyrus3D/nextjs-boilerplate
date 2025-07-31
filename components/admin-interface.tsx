@@ -60,6 +60,7 @@ import {
   getNewsTags,
   analyzeNewsFromUrl,
   translateNews,
+  checkNewsTablesExist,
   type NewsFormData,
 } from "@/lib/admin-news-actions"
 
@@ -192,15 +193,17 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
   const loadAllData = async () => {
     setLoading(true)
     try {
-      await Promise.all([
-        loadBusinessCards(),
-        loadCategories(),
-        loadTags(),
-        loadNews(),
-        loadNewsCategories(),
-        loadNewsTags(),
-        checkAI(),
-      ])
+      // First check if news tables exist
+      const tablesExist = await checkNewsTablesExist()
+      setNewsTablesExist(tablesExist)
+
+      // Load business card data (always available)
+      await Promise.all([loadBusinessCards(), loadCategories(), loadTags(), checkAI()])
+
+      // Only load news data if tables exist
+      if (tablesExist) {
+        await Promise.all([loadNews(), loadNewsCategories(), loadNewsTags()])
+      }
     } catch (error) {
       console.error("데이터 로딩 오류:", error)
       toast({
@@ -247,9 +250,7 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
       setNewsTablesExist(true)
     } catch (error) {
       console.error("뉴스 로딩 오류:", error)
-      if (error instanceof Error && error.message.includes("does not exist")) {
-        setNewsTablesExist(false)
-      }
+      setNewsTablesExist(false)
     }
   }
 
@@ -259,9 +260,7 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
       setNewsCategories(cats)
     } catch (error) {
       console.error("뉴스 카테고리 로딩 오류:", error)
-      if (error instanceof Error && error.message.includes("does not exist")) {
-        setNewsTablesExist(false)
-      }
+      setNewsTablesExist(false)
     }
   }
 
@@ -271,9 +270,7 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
       setNewsTags(tagsData)
     } catch (error) {
       console.error("뉴스 태그 로딩 오류:", error)
-      if (error instanceof Error && error.message.includes("does not exist")) {
-        setNewsTablesExist(false)
-      }
+      setNewsTablesExist(false)
     }
   }
 
