@@ -464,7 +464,7 @@ export async function getBusinessCardsForAdmin() {
       updated_at: String(card.updated_at),
     }))
   } catch (error) {
-    console.error("카드 목록 조회 오류:", error)
+    console.error("카드 목록 조회 ���류:", error)
     throw error
   }
 }
