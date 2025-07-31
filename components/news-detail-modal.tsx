@@ -115,47 +115,65 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                 <div className="space-y-3">
                   <h3 className="font-semibold text-gray-900">이미지</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {Array.isArray(news.image_url) ? (
-                      news.image_url.map((url, index) => (
-                        <div key={index} className="relative overflow-hidden rounded-lg border border-gray-200">
-                          <img
-                            src={String(url) || "/placeholder.svg"}
-                            alt={`뉴스 이미지 ${index + 1}`}
-                            className="w-full h-auto max-h-64 object-cover hover:scale-105 transition-transform duration-200"
-                            loading="lazy"
-                            decoding="async"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.style.display = "none"
-                            }}
-                            onLoad={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.style.opacity = "1"
-                            }}
-                            style={{ opacity: 0, transition: "opacity 0.3s ease-in-out" }}
-                          />
-                        </div>
-                      ))
-                    ) : (
-                      <div className="relative overflow-hidden rounded-lg border border-gray-200">
-                        <img
-                          src={String(news.image_url) || "/placeholder.svg"}
-                          alt="뉴스 이미지"
-                          className="w-full h-auto max-h-64 object-cover hover:scale-105 transition-transform duration-200"
-                          loading="lazy"
-                          decoding="async"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.display = "none"
-                          }}
-                          onLoad={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.style.opacity = "1"
-                          }}
-                          style={{ opacity: 0, transition: "opacity 0.3s ease-in-out" }}
-                        />
-                      </div>
-                    )}
+                    {Array.isArray(news.image_url)
+                      ? news.image_url.map((url, index) => {
+                          const imageUrl = String(url).trim()
+                          if (!imageUrl || imageUrl === "/placeholder.svg") return null
+
+                          return (
+                            <div
+                              key={index}
+                              className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100"
+                            >
+                              <img
+                                src={imageUrl || "/placeholder.svg"}
+                                alt={`뉴스 이미지 ${index + 1}`}
+                                className="w-full h-auto max-h-64 object-cover hover:scale-105 transition-transform duration-200"
+                                loading="lazy"
+                                crossOrigin="anonymous"
+                                onError={(e) => {
+                                  console.log(`이미지 로드 실패: ${imageUrl}`)
+                                  const target = e.target as HTMLImageElement
+                                  target.src = "/placeholder.svg?height=200&width=300&text=이미지 로드 실패"
+                                }}
+                                onLoad={(e) => {
+                                  console.log(`이미지 로드 성공: ${imageUrl}`)
+                                }}
+                              />
+                            </div>
+                          )
+                        })
+                      : (() => {
+                          const imageUrl = String(news.image_url).trim()
+                          if (!imageUrl || imageUrl === "/placeholder.svg") return null
+
+                          return (
+                            <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+                              <img
+                                src={imageUrl || "/placeholder.svg"}
+                                alt="뉴스 이미지"
+                                className="w-full h-auto max-h-64 object-cover hover:scale-105 transition-transform duration-200"
+                                loading="lazy"
+                                crossOrigin="anonymous"
+                                onError={(e) => {
+                                  console.log(`이미지 로드 실패: ${imageUrl}`)
+                                  const target = e.target as HTMLImageElement
+                                  target.src = "/placeholder.svg?height=200&width=300&text=이미지 로드 실패"
+                                }}
+                                onLoad={(e) => {
+                                  console.log(`이미지 로드 성공: ${imageUrl}`)
+                                }}
+                              />
+                            </div>
+                          )
+                        })()}
+                  </div>
+                  {/* Debug info */}
+                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    <strong>디버그:</strong>{" "}
+                    {Array.isArray(news.image_url)
+                      ? `배열 ${news.image_url.length}개: ${JSON.stringify(news.image_url)}`
+                      : `단일: ${String(news.image_url)}`}
                   </div>
                 </div>
               )}
