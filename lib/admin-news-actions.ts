@@ -1,19 +1,12 @@
 "use server"
 
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from "@/lib/supabase"
 import { revalidatePath } from "next/cache"
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-function getSupabaseClient() {
-  return createClient(supabaseUrl, supabaseServiceKey)
-}
 
 // 뉴스 테이블 존재 확인 함수
 export async function checkNewsTablesExist(): Promise<boolean> {
   try {
-    const supabase = getSupabaseClient()
+    const supabase = createClient()
 
     // news 테이블 존재 확인
     const { error } = await supabase.from("news").select("id").limit(1)
@@ -42,7 +35,7 @@ export async function getNews(limit = 10, offset = 0) {
       return { data: [], error: null, count: 0 }
     }
 
-    const supabase = getSupabaseClient()
+    const supabase = createClient()
 
     const { data, error, count } = await supabase
       .from("news")
@@ -147,7 +140,7 @@ export async function getNewsCategories() {
       return { data: [], error: null }
     }
 
-    const supabase = getSupabaseClient()
+    const supabase = createClient()
 
     const { data, error } = await supabase
       .from("news_categories")
@@ -175,7 +168,7 @@ export async function getNewsTags() {
       return { data: [], error: null }
     }
 
-    const supabase = getSupabaseClient()
+    const supabase = createClient()
 
     const { data, error } = await supabase.from("news_tags").select("id, name, created_at, updated_at").order("name")
 
@@ -210,7 +203,7 @@ export async function createNews(newsData: {
       return { data: null, error: "News tables do not exist" }
     }
 
-    const supabase = getSupabaseClient()
+    const supabase = createClient()
 
     const insertData = {
       title: String(newsData.title),
@@ -266,7 +259,7 @@ export async function updateNews(
       return { data: null, error: "News tables do not exist" }
     }
 
-    const supabase = getSupabaseClient()
+    const supabase = createClient()
 
     const updateData: any = {
       updated_at: new Date().toISOString(),
@@ -310,7 +303,7 @@ export async function deleteNews(id: number) {
       return { error: "News tables do not exist" }
     }
 
-    const supabase = getSupabaseClient()
+    const supabase = createClient()
 
     const { error } = await supabase.from("news").delete().eq("id", Number(id))
 
@@ -335,7 +328,7 @@ export async function incrementNewsViewCount(id: number) {
       return { error: "News tables do not exist" }
     }
 
-    const supabase = getSupabaseClient()
+    const supabase = createClient()
 
     // RPC 함수가 없을 수 있으므로 직접 업데이트
     const { data: currentNews } = await supabase.from("news").select("view_count").eq("id", Number(id)).single()

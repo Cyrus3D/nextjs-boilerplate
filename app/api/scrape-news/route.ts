@@ -1,14 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createClient } from "@/lib/supabase"
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-function getSupabaseClient() {
-  return createClient(supabaseUrl, supabaseServiceKey)
-}
 
 // 웹 스크래핑을 위한 간단한 HTML 파싱 함수
 async function scrapeWebContent(url: string) {
@@ -231,7 +224,7 @@ export async function POST(request: NextRequest) {
     })
 
     // 3. 데이터베이스에 저장
-    const supabase = getSupabaseClient()
+    const supabase = createClient()
 
     // 카테고리 ID 찾기/생성
     const categoryId = await findOrCreateCategory(supabase, analysisResult.category)
