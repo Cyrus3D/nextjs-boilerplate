@@ -3,44 +3,34 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ExternalLink, Calendar, User, Eye, Star, X } from "lucide-react"
-import type { NewsArticle } from "@/types/news"
+import { Calendar, Clock, ExternalLink, Eye, Globe, Tag } from "lucide-react"
+import type { NewsItem } from "@/types/news"
+import { incrementNewsViewCount } from "@/lib/admin-news-actions"
+import { useEffect } from "react"
 
 interface NewsDetailModalProps {
+  news: NewsItem | null
   isOpen: boolean
   onClose: () => void
-  news: NewsArticle | null
 }
 
-export default function NewsDetailModal({ isOpen, onClose, news }: NewsDetailModalProps) {
-  // Early return if news is null or undefined
+export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailModalProps) {
+  // Increment view count when modal opens
+  useEffect(() => {
+    if (isOpen && news?.id) {
+      incrementNewsViewCount(news.id)
+    }
+  }, [isOpen, news?.id])
+
   if (!news) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>뉴스를 찾을 수 없습니다</DialogTitle>
-          </DialogHeader>
-          <div className="p-6 text-center">
-            <p className="text-muted-foreground">요청하신 뉴스를 찾을 수 없습니다.</p>
-            <Button onClick={onClose} className="mt-4">
-              닫기
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
+    return null
   }
 
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return "날짜 없음"
-
+  const formatDate = (dateString: string) => {
     try {
-      const date = new Date(String(dateString))
-      if (isNaN(date.getTime())) return "잘못된 날짜"
-
-      return date.toLocaleDateString("ko-KR", {
+      return new Date(dateString).toLocaleDateString("ko-KR", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -48,133 +38,152 @@ export default function NewsDetailModal({ isOpen, onClose, news }: NewsDetailMod
         minute: "2-digit",
       })
     } catch {
-      return String(dateString)
+      return "날짜 정보 없음"
     }
   }
 
-  const formatContent = (content: string | null | undefined) => {
-    const safeContent = String(content || "내용이 없습니다.")
-    return safeContent.split("\n").map((paragraph, index) => (
-      <p key={index} className="mb-4 leading-relaxed">
-        {paragraph || "\u00A0"} {/* Non-breaking space for empty paragraphs */}
-      </p>
-    ))
+  const handleSourceClick = () => {
+    if (news.source_url) {
+      window.open(news.source_url, "_blank", "noopener,noreferrer")
+    }
   }
-
-  const safeTitle = String(news.title || "제목 없음")
-  const safeSummary = String(news.summary || "")
-  const safeContent = String(news.content || "내용이 없습니다.")
-  const safeAuthor = news.author ? String(news.author) : null
-  const safeSourceUrl = news.source_url ? String(news.source_url) : null
-  const safeImageUrl = news.image_url ? String(news.image_url) : null
-  const safePublishedAt = String(news.published_at || "")
-  const safeViewCount = Number(news.view_count) || 0
-  const safeOriginalLanguage = String(news.original_language || "ko")
-  const safeIsFeatured = Boolean(news.is_featured)
-  const safeIsTranslated = Boolean(news.is_translated)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-        <DialogHeader className="p-6 pb-4 border-b">
+        <DialogHeader className="p-6 pb-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <DialogTitle className="text-xl font-bold leading-tight mb-3">{safeTitle}</DialogTitle>
+              <DialogTitle className="text-xl font-bold leading-tight mb-3">
+                {String(news.title || "제목 없음")}
+              </DialogTitle>
 
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                {news.category && (
-                  <Badge variant="secondary" className={String(news.category.color_class || "")}>
-                    {String(news.category.name || "카테고리 없음")}
-                  </Badge>
-                )}
-
-                {safeIsFeatured && (
-                  <Badge variant="default" className="bg-yellow-500">
-                    <Star className="h-3 w-3 mr-1" />
-                    추천
-                  </Badge>
-                )}
-
-                {safeIsTranslated && <Badge variant="outline">번역됨</Badge>}
-
-                <Badge variant="outline">{safeOriginalLanguage.toUpperCase()}</Badge>
-              </div>
-
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                 <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>{formatDate(safePublishedAt)}</span>
+                  <Calendar className="w-4 h-4" />
+                  <span>{formatDate(String(news.published_at || news.created_at || ""))}</span>
                 </div>
 
-                {safeAuthor && (
+                <div className="flex items-center gap-1">
+                  <Globe className="w-4 h-4" />
+                  <span>{String(news.source || "알 수 없음")}</span>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Eye className="w-4 h-4" />
+                  <span>{Number(news.view_count || 0).toLocaleString()} 조회</span>
+                </div>
+
+                {news.reading_time && (
                   <div className="flex items-center gap-1">
-                    <User className="h-4 w-4" />
-                    <span>{safeAuthor}</span>
+                    <Clock className="w-4 h-4" />
+                    <span>{Number(news.reading_time)} 분 읽기</span>
                   </div>
                 )}
-
-                <div className="flex items-center gap-1">
-                  <Eye className="h-4 w-4" />
-                  <span>{safeViewCount.toLocaleString()} 조회</span>
-                </div>
               </div>
             </div>
 
-            <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0">
-              <X className="h-4 w-4" />
-            </Button>
+            {news.source_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSourceClick}
+                className="flex items-center gap-2 bg-transparent"
+              >
+                <ExternalLink className="w-4 h-4" />
+                원문 보기
+              </Button>
+            )}
           </div>
         </DialogHeader>
 
+        <Separator />
+
         <ScrollArea className="flex-1 p-6">
-          {safeImageUrl && (
-            <div className="mb-6">
-              <img
-                src={safeImageUrl || "/placeholder.svg"}
-                alt={safeTitle}
-                className="w-full max-h-96 object-cover rounded-lg"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.style.display = "none"
-                }}
-              />
-            </div>
-          )}
+          <div className="space-y-6">
+            {/* Summary */}
+            {news.summary && (
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                <h3 className="font-semibold text-blue-900 mb-2">요약</h3>
+                <p className="text-blue-800 leading-relaxed">{String(news.summary)}</p>
+              </div>
+            )}
 
-          {safeSummary && (
-            <div className="mb-6 p-4 bg-muted rounded-lg">
-              <h3 className="font-semibold mb-2">요약</h3>
-              <p className="text-muted-foreground leading-relaxed">{safeSummary}</p>
-            </div>
-          )}
+            {/* Content */}
+            {news.content && (
+              <div className="prose max-w-none">
+                <div
+                  className="text-gray-700 leading-relaxed whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{
+                    __html: String(news.content).replace(/\n/g, "<br />"),
+                  }}
+                />
+              </div>
+            )}
 
-          <div className="prose prose-sm max-w-none">{formatContent(safeContent)}</div>
+            {/* Korean Translation */}
+            {news.content_ko && news.content_ko !== news.content && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h3 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  한국어 번역
+                </h3>
+                <div
+                  className="text-green-800 leading-relaxed whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{
+                    __html: String(news.content_ko).replace(/\n/g, "<br />"),
+                  }}
+                />
+              </div>
+            )}
 
-          {news.tags && news.tags.length > 0 && (
-            <div className="mt-6 pt-4 border-t">
-              <h3 className="font-semibold mb-3">태그</h3>
+            {/* AI Analysis */}
+            {news.ai_analysis && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h3 className="font-semibold text-purple-900 mb-3">AI 분석</h3>
+                <div
+                  className="text-purple-800 leading-relaxed whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{
+                    __html: String(news.ai_analysis).replace(/\n/g, "<br />"),
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Tags */}
+            {Array.isArray(news.tags) && news.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {news.tags.map((tag) => (
-                  <Badge key={Number(tag.id)} variant="outline">
-                    #{String(tag.name || "태그")}
+                <Tag className="w-4 h-4 text-gray-500" />
+                {news.tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {String(tag)}
                   </Badge>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          {safeSourceUrl && (
-            <div className="mt-6 pt-4 border-t">
-              <Button
-                variant="outline"
-                onClick={() => window.open(safeSourceUrl, "_blank", "noopener,noreferrer")}
-                className="w-full"
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                원문 보기
-              </Button>
+            {/* Metadata */}
+            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <strong>카테고리:</strong> {String(news.category || "일반")}
+                </div>
+                <div>
+                  <strong>언어:</strong> {String(news.language || "알 수 없음")}
+                </div>
+                {news.author && (
+                  <div>
+                    <strong>작성자:</strong> {String(news.author)}
+                  </div>
+                )}
+                {news.location && (
+                  <div>
+                    <strong>지역:</strong> {String(news.location)}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>

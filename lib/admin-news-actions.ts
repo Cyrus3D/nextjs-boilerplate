@@ -1,406 +1,298 @@
 "use server"
 
-import { createClient } from "@supabase/supabase-js"
+import { supabase } from "./supabase"
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
-import type { NewsArticle, NewsCategory, NewsTag, AIAnalysisResult } from "@/types/news"
+import type { NewsItem } from "@/types/news"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+// Increment news view count
+export async function incrementNewsViewCount(newsId: number): Promise<void> {
+  if (!supabase) {
+    console.log("Supabase not configured, skipping news view count update")
+    return
+  }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+  try {
+    // Get current view count
+    const { data: currentData, error: fetchError } = await supabase
+      .from("news")
+      .select("view_count")
+      .eq("id", newsId)
+      .single()
 
-export interface NewsFormData {
-  title: string
-  content: string
-  summary?: string
-  category_id?: number
-  author?: string
-  source_url?: string
-  image_url?: string
-  is_featured: boolean
-  is_active: boolean
-  published_at?: string
-  original_language: string
-  is_translated: boolean
-  tag_names?: string[]
+    if (fetchError) {
+      console.error("Error fetching current news view count:", fetchError)
+      return
+    }
+
+    const currentViewCount = Number(currentData?.view_count) || 0
+
+    // Update view count
+    const { error: updateError } = await supabase
+      .from("news")
+      .update({
+        view_count: currentViewCount + 1,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", newsId)
+
+    if (updateError) {
+      console.error("Error updating news view count:", updateError)
+    }
+  } catch (error) {
+    console.error("Error incrementing news view count:", error)
+  }
 }
 
-// Check if news tables exist
-export async function checkNewsTablesExist(): Promise<boolean> {
+// Analyze news content with AI
+export async function analyzeNewsWithAI(content: string, title: string): Promise<string> {
   try {
-    const { error } = await supabase.from("news_articles").select("id").limit(1)
+    const { text } = await generateText({
+      model: openai("gpt-4o"),
+      system: `당신은 태국 현지 뉴스를 분석하는 전문가입니다. 
+      주어진 뉴스 내용을 분석하여 다음 사항들을 포함한 분석을 제공해주세요:
+      1. 주요 내용 요약
+      2. 태국 거주 한국인들에게 미치는 영향
+      3. 주목해야 할 포인트
+      4. 관련 배경 정보
+      
+      분석은 한국어로 작성하고, 명확하고 이해하기 쉽게 작성해주세요.`,
+      prompt: `뉴스 제목: ${title}\n\n뉴스 내용: ${content}`,
+    })
 
-    return !error
-  } catch {
+    return text
+  } catch (error) {
+    console.error("Error analyzing news with AI:", error)
+    return "AI 분석을 수행할 수 없습니다."
+  }
+}
+
+// Translate content to Korean
+export async function translateToKorean(content: string, language = "th"): Promise<string> {
+  try {
+    const { text } = await generateText({
+      model: openai("gpt-4o"),
+      system: `당신은 전문 번역가입니다. 주어진 텍스트를 자연스러운 한국어로 번역해주세요. 
+      원문의 의미와 뉘앙스를 정확히 전달하되, 한국어로 읽기 자연스럽게 번역해주세요.
+      뉴스 기사의 경우 정확성과 객관성을 유지해주세요.`,
+      prompt: `다음 ${language === "th" ? "태국어" : "영어"} 텍스트를 한국어로 번역해주세요:\n\n${content}`,
+    })
+
+    return text
+  } catch (error) {
+    console.error("Error translating content:", error)
+    return content // Return original content if translation fails
+  }
+}
+
+// Extract tags from content
+export async function extractTagsFromContent(title: string, content: string): Promise<string[]> {
+  try {
+    const { text } = await generateText({
+      model: openai("gpt-4o"),
+      system: `당신은 뉴스 콘텐츠에서 관련 태그를 추출하는 전문가입니다.
+      주어진 뉴스 제목과 내용을 분석하여 관련성이 높은 태그들을 추출해주세요.
+      태그는 한국어로 작성하고, 쉼표로 구분하여 최대 10개까지 제공해주세요.
+      태그는 구체적이고 검색에 유용한 키워드여야 합니다.`,
+      prompt: `뉴스 제목: ${title}\n\n뉴스 내용: ${content.substring(0, 1000)}...`,
+    })
+
+    // Parse tags from AI response
+    const tags = text
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0 && tag.length < 20)
+      .slice(0, 10)
+
+    return tags
+  } catch (error) {
+    console.error("Error extracting tags:", error)
+    return []
+  }
+}
+
+// Create or update news item
+export async function createOrUpdateNews(newsData: Partial<NewsItem>): Promise<NewsItem | null> {
+  if (!supabase) {
+    console.log("Supabase not configured")
+    return null
+  }
+
+  try {
+    const now = new Date().toISOString()
+
+    // Prepare data for insertion/update
+    const data = {
+      title: String(newsData.title || ""),
+      summary: newsData.summary ? String(newsData.summary) : null,
+      content: newsData.content ? String(newsData.content) : null,
+      content_ko: newsData.content_ko ? String(newsData.content_ko) : null,
+      source: newsData.source ? String(newsData.source) : null,
+      source_url: newsData.source_url ? String(newsData.source_url) : null,
+      author: newsData.author ? String(newsData.author) : null,
+      published_at: newsData.published_at ? String(newsData.published_at) : now,
+      category: newsData.category ? String(newsData.category) : "일반",
+      tags: Array.isArray(newsData.tags) ? newsData.tags : [],
+      language: newsData.language ? String(newsData.language) : "th",
+      location: newsData.location ? String(newsData.location) : null,
+      ai_analysis: newsData.ai_analysis ? String(newsData.ai_analysis) : null,
+      reading_time: newsData.reading_time ? Number(newsData.reading_time) : null,
+      view_count: Number(newsData.view_count) || 0,
+      is_featured: Boolean(newsData.is_featured),
+      is_active: Boolean(newsData.is_active ?? true),
+      updated_at: now,
+    }
+
+    let result
+    if (newsData.id) {
+      // Update existing news
+      const { data: updatedData, error } = await supabase
+        .from("news")
+        .update(data)
+        .eq("id", newsData.id)
+        .select()
+        .single()
+
+      if (error) throw error
+      result = updatedData
+    } else {
+      // Create new news
+      const { data: newData, error } = await supabase
+        .from("news")
+        .insert({ ...data, created_at: now })
+        .select()
+        .single()
+
+      if (error) throw error
+      result = newData
+    }
+
+    return result as NewsItem
+  } catch (error) {
+    console.error("Error creating/updating news:", error)
+    return null
+  }
+}
+
+// Get news by ID
+export async function getNewsById(id: number): Promise<NewsItem | null> {
+  if (!supabase) {
+    return null
+  }
+
+  try {
+    const { data, error } = await supabase.from("news").select("*").eq("id", id).eq("is_active", true).single()
+
+    if (error) throw error
+
+    return data as NewsItem
+  } catch (error) {
+    console.error("Error fetching news by ID:", error)
+    return null
+  }
+}
+
+// Get paginated news
+export async function getNewsPaginated(
+  page = 1,
+  limit = 20,
+  filters: {
+    category?: string
+    search?: string
+    language?: string
+    is_featured?: boolean
+  } = {},
+): Promise<{ news: NewsItem[]; total: number; hasMore: boolean }> {
+  if (!supabase) {
+    return { news: [], total: 0, hasMore: false }
+  }
+
+  try {
+    let query = supabase
+      .from("news")
+      .select("*", { count: "exact" })
+      .eq("is_active", true)
+      .order("published_at", { ascending: false })
+
+    // Apply filters
+    if (filters.category && filters.category !== "all") {
+      query = query.eq("category", filters.category)
+    }
+
+    if (filters.search) {
+      query = query.or(
+        `title.ilike.%${filters.search}%,content.ilike.%${filters.search}%,summary.ilike.%${filters.search}%`,
+      )
+    }
+
+    if (filters.language) {
+      query = query.eq("language", filters.language)
+    }
+
+    if (filters.is_featured !== undefined) {
+      query = query.eq("is_featured", filters.is_featured)
+    }
+
+    // Apply pagination
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+    query = query.range(from, to)
+
+    const { data, error, count } = await query
+
+    if (error) throw error
+
+    return {
+      news: Array.isArray(data) ? (data as NewsItem[]) : [],
+      total: count || 0,
+      hasMore: (count || 0) > page * limit,
+    }
+  } catch (error) {
+    console.error("Error fetching paginated news:", error)
+    return { news: [], total: 0, hasMore: false }
+  }
+}
+
+// Delete news
+export async function deleteNews(id: number): Promise<boolean> {
+  if (!supabase) {
+    return false
+  }
+
+  try {
+    const { error } = await supabase
+      .from("news")
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq("id", id)
+
+    if (error) throw error
+
+    return true
+  } catch (error) {
+    console.error("Error deleting news:", error)
     return false
   }
 }
 
-// Get news articles for admin
-export async function getNewsForAdmin(): Promise<NewsArticle[]> {
+// Scrape and process news from URL
+export async function scrapeAndProcessNews(url: string): Promise<NewsItem | null> {
   try {
-    const { data, error } = await supabase
-      .from("news_articles")
-      .select(`
-        *,
-        category:news_categories(id, name, color_class),
-        tags:news_article_tags(
-          tag:news_tags(id, name)
-        )
-      `)
-      .order("created_at", { ascending: false })
+    // This would typically use a web scraping service
+    // For now, we'll return a placeholder
+    console.log("Scraping news from URL:", url)
 
-    if (error) throw error
+    // In a real implementation, you would:
+    // 1. Fetch the webpage content
+    // 2. Extract title, content, author, etc.
+    // 3. Detect language
+    // 4. Translate if needed
+    // 5. Generate AI analysis
+    // 6. Extract tags
+    // 7. Save to database
 
-    return (data || []).map((article) => ({
-      ...article,
-      tags: article.tags?.map((t: any) => t.tag).filter(Boolean) || [],
-    }))
+    return null
   } catch (error) {
-    console.error("Error fetching news for admin:", error)
-    throw error
-  }
-}
-
-// Get news categories
-export async function getNewsCategories(): Promise<NewsCategory[]> {
-  try {
-    const { data, error } = await supabase.from("news_categories").select("*").order("name")
-
-    if (error) throw error
-    return data || []
-  } catch (error) {
-    console.error("Error fetching news categories:", error)
-    throw error
-  }
-}
-
-// Get news tags
-export async function getNewsTags(): Promise<NewsTag[]> {
-  try {
-    const { data, error } = await supabase.from("news_tags").select("*").order("name")
-
-    if (error) throw error
-    return data || []
-  } catch (error) {
-    console.error("Error fetching news tags:", error)
-    throw error
-  }
-}
-
-// Create news article
-export async function createNews(formData: NewsFormData): Promise<NewsArticle> {
-  try {
-    const { data, error } = await supabase
-      .from("news_articles")
-      .insert({
-        title: formData.title,
-        content: formData.content,
-        summary: formData.summary,
-        category_id: formData.category_id,
-        author: formData.author,
-        source_url: formData.source_url,
-        image_url: formData.image_url,
-        is_featured: formData.is_featured,
-        is_active: formData.is_active,
-        published_at: formData.published_at || new Date().toISOString(),
-        original_language: formData.original_language,
-        is_translated: formData.is_translated,
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-
-    // Handle tags
-    if (formData.tag_names && formData.tag_names.length > 0) {
-      await handleNewsTags(data.id, formData.tag_names)
-    }
-
-    return data
-  } catch (error) {
-    console.error("Error creating news:", error)
-    throw error
-  }
-}
-
-// Update news article
-export async function updateNews(id: number, formData: NewsFormData): Promise<NewsArticle> {
-  try {
-    const { data, error } = await supabase
-      .from("news_articles")
-      .update({
-        title: formData.title,
-        content: formData.content,
-        summary: formData.summary,
-        category_id: formData.category_id,
-        author: formData.author,
-        source_url: formData.source_url,
-        image_url: formData.image_url,
-        is_featured: formData.is_featured,
-        is_active: formData.is_active,
-        published_at: formData.published_at,
-        original_language: formData.original_language,
-        is_translated: formData.is_translated,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .select()
-      .single()
-
-    if (error) throw error
-
-    // Handle tags
-    if (formData.tag_names) {
-      await handleNewsTags(id, formData.tag_names)
-    }
-
-    return data
-  } catch (error) {
-    console.error("Error updating news:", error)
-    throw error
-  }
-}
-
-// Delete news article
-export async function deleteNews(id: number): Promise<void> {
-  try {
-    // Delete tags first
-    await supabase.from("news_article_tags").delete().eq("article_id", id)
-
-    // Delete article
-    const { error } = await supabase.from("news_articles").delete().eq("id", id)
-
-    if (error) throw error
-  } catch (error) {
-    console.error("Error deleting news:", error)
-    throw error
-  }
-}
-
-// Handle news tags
-async function handleNewsTags(articleId: number, tagNames: string[]): Promise<void> {
-  try {
-    // Delete existing tags
-    await supabase.from("news_article_tags").delete().eq("article_id", articleId)
-
-    if (tagNames.length === 0) return
-
-    // Create or get tags
-    const tagIds: number[] = []
-
-    for (const tagName of tagNames) {
-      if (!tagName.trim()) continue
-
-      // Try to find existing tag
-      const { data: existingTag } = await supabase.from("news_tags").select("id").eq("name", tagName.trim()).single()
-
-      if (existingTag) {
-        tagIds.push(existingTag.id)
-      } else {
-        // Create new tag
-        const { data: newTag, error } = await supabase
-          .from("news_tags")
-          .insert({ name: tagName.trim() })
-          .select("id")
-          .single()
-
-        if (error) throw error
-        if (newTag) tagIds.push(newTag.id)
-      }
-    }
-
-    // Link tags to article
-    if (tagIds.length > 0) {
-      const tagLinks = tagIds.map((tagId) => ({
-        article_id: articleId,
-        tag_id: tagId,
-      }))
-
-      await supabase.from("news_article_tags").insert(tagLinks)
-    }
-  } catch (error) {
-    console.error("Error handling news tags:", error)
-    throw error
-  }
-}
-
-// Increment news view count
-export async function incrementNewsViewCount(articleId: number): Promise<void> {
-  try {
-    const { error } = await supabase.rpc("increment_news_view_count", {
-      article_id: articleId,
-    })
-
-    if (error) throw error
-  } catch (error) {
-    console.error("Error incrementing news view count:", error)
-    // Don't throw error for view count increment failures
-  }
-}
-
-// Analyze news from URL using AI
-export async function analyzeNewsFromUrl(url: string): Promise<AIAnalysisResult> {
-  try {
-    // Fetch content from URL
-    const response = await fetch("/api/scrape-news", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ url }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch content: ${response.statusText}`)
-    }
-
-    const scrapedData = await response.json()
-
-    if (!scrapedData.success) {
-      throw new Error(scrapedData.message || "Failed to scrape content")
-    }
-
-    // Use AI to analyze the content
-    const { text } = await generateText({
-      model: openai("gpt-4o"),
-      system: `You are a news analysis AI. Analyze the provided news content and extract structured information.
-      
-      Return a JSON object with the following structure:
-      {
-        "title": "extracted or improved title",
-        "summary": "brief summary in 2-3 sentences",
-        "content": "cleaned and formatted content",
-        "category": "appropriate category (정치, 경제, 사회, 국제, 기술, 스포츠, 문화, 기타)",
-        "tags": ["relevant", "tags", "array"],
-        "author": "author name if available or null",
-        "language": "detected language code (ko, en, th, etc.)"
-      }
-      
-      Guidelines:
-      - Clean up the content by removing ads, navigation, and irrelevant text
-      - Improve formatting with proper paragraphs
-      - Extract meaningful tags (3-5 tags)
-      - Detect the primary language of the content
-      - If content is in Thai or English, keep it as-is for now
-      - Ensure all fields are properly filled`,
-      prompt: `Analyze this news content:
-      
-      Title: ${scrapedData.data.title}
-      Content: ${scrapedData.data.content}
-      Description: ${scrapedData.data.description}
-      URL: ${url}`,
-    })
-
-    try {
-      const analysisResult = JSON.parse(text)
-      return {
-        title: analysisResult.title || scrapedData.data.title,
-        summary: analysisResult.summary || scrapedData.data.description,
-        content: analysisResult.content || scrapedData.data.content,
-        category: analysisResult.category || "기타",
-        tags: Array.isArray(analysisResult.tags) ? analysisResult.tags : [],
-        author: analysisResult.author || null,
-        language: analysisResult.language || "ko",
-      }
-    } catch (parseError) {
-      // Fallback if JSON parsing fails
-      return {
-        title: scrapedData.data.title,
-        summary: scrapedData.data.description,
-        content: scrapedData.data.content,
-        category: "기타",
-        tags: [],
-        author: null,
-        language: "ko",
-      }
-    }
-  } catch (error) {
-    console.error("Error analyzing news from URL:", error)
-    throw error
-  }
-}
-
-// Translate news content
-export async function translateNews(
-  content: string,
-  fromLanguage = "auto",
-): Promise<{ translatedContent: string; detectedLanguage: string }> {
-  try {
-    const { text } = await generateText({
-      model: openai("gpt-4o"),
-      system: `You are a professional translator. Translate the provided text to Korean while maintaining the original meaning, tone, and structure.
-      
-      Return a JSON object with:
-      {
-        "translatedContent": "translated text in Korean",
-        "detectedLanguage": "detected source language code (en, th, ja, zh, etc.)"
-      }
-      
-      Guidelines:
-      - Maintain paragraph structure
-      - Keep proper nouns and names as appropriate
-      - Ensure natural Korean flow
-      - Preserve any formatting or structure`,
-      prompt: `Translate this content to Korean:
-      
-      ${content}`,
-    })
-
-    try {
-      const result = JSON.parse(text)
-      return {
-        translatedContent: result.translatedContent || content,
-        detectedLanguage: result.detectedLanguage || fromLanguage,
-      }
-    } catch (parseError) {
-      // Fallback if JSON parsing fails
-      return {
-        translatedContent: text, // Use the raw response as translation
-        detectedLanguage: fromLanguage,
-      }
-    }
-  } catch (error) {
-    console.error("Error translating news:", error)
-    throw error
-  }
-}
-
-// Get public news articles (for frontend)
-export async function getPublicNews(limit = 20, categoryId?: number, featured?: boolean): Promise<NewsArticle[]> {
-  try {
-    let query = supabase
-      .from("news_articles")
-      .select(`
-        *,
-        category:news_categories(id, name, color_class),
-        tags:news_article_tags(
-          tag:news_tags(id, name)
-        )
-      `)
-      .eq("is_active", true)
-      .order("published_at", { ascending: false })
-      .limit(limit)
-
-    if (categoryId) {
-      query = query.eq("category_id", categoryId)
-    }
-
-    if (featured !== undefined) {
-      query = query.eq("is_featured", featured)
-    }
-
-    const { data, error } = await query
-
-    if (error) throw error
-
-    return (data || []).map((article) => ({
-      ...article,
-      tags: article.tags?.map((t: any) => t.tag).filter(Boolean) || [],
-    }))
-  } catch (error) {
-    console.error("Error fetching public news:", error)
-    return []
+    console.error("Error scraping news:", error)
+    return null
   }
 }

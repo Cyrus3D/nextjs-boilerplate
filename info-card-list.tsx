@@ -100,7 +100,7 @@ export default function InfoCardList() {
   // Tab state
   const [activeTab, setActiveTab] = useState<string>("business")
 
-  // Business cards state
+  // Business cards state - Initialize as empty array
   const [cards, setCards] = useState<BusinessCardType[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
@@ -108,8 +108,8 @@ export default function InfoCardList() {
   const [selectedCard, setSelectedCard] = useState<BusinessCardType | null>(null)
   const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false)
 
-  // News state
-  const [news, setNews] = useState<NewsItem[]>(sampleNews)
+  // News state - Initialize as empty array
+  const [news, setNews] = useState<NewsItem[]>([])
   const [newsSearchTerm, setNewsSearchTerm] = useState<string>("")
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null)
   const [isNewsModalOpen, setIsNewsModalOpen] = useState(false)
@@ -215,7 +215,8 @@ export default function InfoCardList() {
     try {
       setIsCategoriesLoading(true)
       const fetchedCategories = await getCategories()
-      setCategories(fetchedCategories)
+      // Ensure categories is always an array
+      setCategories(Array.isArray(fetchedCategories) ? fetchedCategories : [])
     } catch (error) {
       console.error("Error fetching categories:", error)
       // Set fallback categories
@@ -245,15 +246,21 @@ export default function InfoCardList() {
 
       const result = await getBusinessCardsPaginated(page, 20, categoryFilter, searchTerm || undefined)
 
+      // Ensure result.cards is always an array
+      const resultCards = Array.isArray(result.cards) ? result.cards : []
+
       if (reset) {
-        setCards(result.cards)
+        setCards(resultCards)
       } else {
-        setCards((prev) => [...prev, ...result.cards])
+        setCards((prev) => {
+          const prevCards = Array.isArray(prev) ? prev : []
+          return [...prevCards, ...resultCards]
+        })
       }
 
-      setHasMore(result.hasMore)
-      setTotal(result.total)
-      setCurrentPage(page)
+      setHasMore(Boolean(result.hasMore))
+      setTotal(Number(result.total) || 0)
+      setCurrentPage(Number(page))
     } catch (error) {
       console.error("Error fetching cards:", error)
       if (reset) {
@@ -265,6 +272,18 @@ export default function InfoCardList() {
     }
   }
 
+  // Initialize news data
+  const initializeNews = () => {
+    try {
+      // Ensure sampleNews is an array
+      const newsData = Array.isArray(sampleNews) ? sampleNews : []
+      setNews(newsData)
+    } catch (error) {
+      console.error("Error initializing news:", error)
+      setNews([])
+    }
+  }
+
   // Initial data loading
   useEffect(() => {
     const loadInitialData = async () => {
@@ -273,6 +292,9 @@ export default function InfoCardList() {
 
       // Load business cards second (high priority)
       await fetchCards(1, true)
+
+      // Initialize news data
+      initializeNews()
 
       // Load weather and exchange rate in background (lower priority)
       setTimeout(() => {
@@ -317,7 +339,8 @@ export default function InfoCardList() {
 
   // Memoized filtered and sorted cards
   const sortedCards = useMemo(() => {
-    return [...cards].sort((a, b) => {
+    const cardsArray = Array.isArray(cards) ? cards : []
+    return [...cardsArray].sort((a, b) => {
       // Premium cards first
       if (a.isPremium && !b.isPremium) return -1
       if (!a.isPremium && b.isPremium) return 1
@@ -338,13 +361,19 @@ export default function InfoCardList() {
 
   // Filtered news based on search
   const filteredNews = useMemo(() => {
-    if (!newsSearchTerm) return news
+    const newsArray = Array.isArray(news) ? news : []
+    if (!newsSearchTerm) return newsArray
 
-    return news.filter(
+    return newsArray.filter(
       (item) =>
-        item.title.toLowerCase().includes(newsSearchTerm.toLowerCase()) ||
-        item.summary.toLowerCase().includes(newsSearchTerm.toLowerCase()) ||
-        item.tags.some((tag) => tag.toLowerCase().includes(newsSearchTerm.toLowerCase())),
+        String(item.title || "")
+          .toLowerCase()
+          .includes(newsSearchTerm.toLowerCase()) ||
+        String(item.summary || "")
+          .toLowerCase()
+          .includes(newsSearchTerm.toLowerCase()) ||
+        (Array.isArray(item.tags) &&
+          item.tags.some((tag) => String(tag).toLowerCase().includes(newsSearchTerm.toLowerCase()))),
     )
   }, [news, newsSearchTerm])
 
@@ -455,6 +484,7 @@ export default function InfoCardList() {
                     로딩 중...
                   </SelectItem>
                 ) : (
+                  Array.isArray(categories) &&
                   categories.map((category) => (
                     <SelectItem key={category.id} value={category.name}>
                       {category.name}
@@ -495,10 +525,10 @@ export default function InfoCardList() {
 
           {/* Business Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {isCardsLoading && cards.length === 0 ? (
+            {isCardsLoading && (!Array.isArray(sortedCards) || sortedCards.length === 0) ? (
               // Initial loading skeletons
               Array.from({ length: 8 }).map((_, index) => <CardSkeleton key={index} />)
-            ) : sortedCards.length > 0 ? (
+            ) : Array.isArray(sortedCards) && sortedCards.length > 0 ? (
               sortedCards.map((card, index) => (
                 <div key={card.id} className="h-full">
                   <BusinessCard card={card} onDetailClick={handleBusinessDetailClick} />
@@ -525,7 +555,7 @@ export default function InfoCardList() {
           </div>
 
           {/* Load More Button */}
-          {hasMore && !isCardsLoading && sortedCards.length > 0 && (
+          {hasMore && !isCardsLoading && Array.isArray(sortedCards) && sortedCards.length > 0 && (
             <div className="text-center">
               <Button onClick={handleLoadMore} variant="outline" size="lg" className="min-w-[200px] bg-transparent">
                 더 보기 ({sortedCards.length}/{total})
@@ -534,7 +564,7 @@ export default function InfoCardList() {
           )}
 
           {/* Loading indicator for pagination */}
-          {isCardsLoading && cards.length > 0 && (
+          {isCardsLoading && Array.isArray(cards) && cards.length > 0 && (
             <div className="text-center py-4">
               <Loader2 className="w-6 h-6 animate-spin mx-auto" />
               <p className="text-sm text-gray-500 mt-2">로딩 중...</p>
@@ -558,7 +588,7 @@ export default function InfoCardList() {
           {/* News Results Summary */}
           <div className="flex items-center justify-between text-sm text-gray-600">
             <span>
-              총 {filteredNews.length}개의 뉴스
+              총 {Array.isArray(filteredNews) ? filteredNews.length : 0}개의 뉴스
               {newsSearchTerm && ` (검색: "${newsSearchTerm}")`}
             </span>
             <div className="flex items-center gap-2">
@@ -574,7 +604,7 @@ export default function InfoCardList() {
 
           {/* News Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredNews.length > 0 ? (
+            {Array.isArray(filteredNews) && filteredNews.length > 0 ? (
               filteredNews.map((newsItem, index) => (
                 <div key={newsItem.id} className="h-full">
                   <NewsCard news={newsItem} onDetailClick={handleNewsDetailClick} />
