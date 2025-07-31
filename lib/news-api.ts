@@ -17,41 +17,71 @@ export async function getNewsArticlesPaginated(
       throw new Error("Supabase client not initialized")
     }
 
-    // RPC 함수를 사용하여 데이터 조회
-    const { data, error } = await supabase.rpc("get_news_articles_paginated", {
-      page_num: page,
-      page_size: pageSize,
-      category_filter: categoryFilter || null,
-      search_term: searchTerm || null,
-      include_inactive: false,
-    })
+    // 기본 쿼리 구성
+    let query = supabase
+      .from("news_articles")
+      .select(
+        `
+        id,
+        title,
+        summary,
+        content,
+        published_at,
+        source,
+        author,
+        image_url,
+        external_url,
+        view_count,
+        is_breaking,
+        is_pinned,
+        news_categories (
+          name,
+          color_class
+        )
+      `,
+        { count: "exact" },
+      )
+      .eq("is_active", true)
+
+    // 카테고리 필터 적용
+    if (categoryFilter && categoryFilter !== "all") {
+      query = query.eq("news_categories.name", categoryFilter)
+    }
+
+    // 검색어 필터 적용
+    if (searchTerm) {
+      query = query.or(`title.ilike.%${searchTerm}%,summary.ilike.%${searchTerm}%`)
+    }
+
+    // 정렬 및 페이지네이션
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    query = query
+      .order("is_pinned", { ascending: false })
+      .order("is_breaking", { ascending: false })
+      .order("published_at", { ascending: false })
+      .range(from, to)
+
+    const { data, error, count } = await query
 
     if (error) {
-      console.error("Error calling RPC function:", error)
+      console.error("Error fetching news articles:", error)
       throw error
     }
 
-    if (!data || data.length === 0) {
-      return {
-        articles: [],
-        total: 0,
-        hasMore: false,
-      }
-    }
-
-    const total = data[0]?.total_count || 0
-    const articles: NewsArticle[] = data.map((item: any) => ({
+    const articles: NewsArticle[] = (data || []).map((item: any) => ({
       id: item.id,
       title: item.title,
       summary: item.summary || "",
       content: item.content || "",
-      category: item.category_name || "기타",
+      category: item.news_categories?.name || "기타",
       publishedAt: item.published_at,
       source: item.source || "알 수 없음",
       author: item.author || null,
       imageUrl: item.image_url || null,
       url: item.external_url || null,
-      tags: item.tags || [],
+      tags: [], // 태그는 별도 쿼리로 가져올 수 있음
       viewCount: item.view_count || 0,
       isBreaking: item.is_breaking || false,
       isPinned: item.is_pinned || false,
@@ -59,8 +89,8 @@ export async function getNewsArticlesPaginated(
 
     return {
       articles,
-      total: Number(total),
-      hasMore: page * pageSize < total,
+      total: count || 0,
+      hasMore: (count || 0) > page * pageSize,
     }
   } catch (error) {
     console.error("Error in getNewsArticlesPaginated:", error)
@@ -77,10 +107,14 @@ export async function getNewsCategories(): Promise<NewsCategory[]> {
       throw new Error("Supabase client not initialized")
     }
 
-    const { data, error } = await supabase.rpc("get_news_categories")
+    const { data, error } = await supabase
+      .from("news_categories")
+      .select("id, name, color_class")
+      .eq("is_active", true)
+      .order("name")
 
     if (error) {
-      console.error("Error calling RPC function:", error)
+      console.error("Error fetching news categories:", error)
       throw error
     }
 
@@ -118,12 +152,17 @@ export async function incrementNewsViewCount(articleId: number): Promise<void> {
       return
     }
 
-    const { error } = await supabase.rpc("increment_news_view_count", {
-      article_id: articleId,
-    })
+    const { error } = await supabase
+      .from("news_articles")
+      .update({
+        view_count: supabase.raw("view_count + 1"),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", articleId)
+      .eq("is_active", true)
 
     if (error) {
-      console.error("Error calling RPC function:", error)
+      console.error("Error incrementing news view count:", error)
     }
   } catch (error) {
     console.error("Error in incrementNewsViewCount:", error)
@@ -137,12 +176,30 @@ export async function getPopularNews(limit = 10): Promise<NewsArticle[]> {
       throw new Error("Supabase client not initialized")
     }
 
-    const { data, error } = await supabase.rpc("get_popular_news", {
-      limit_count: limit,
-    })
+    const { data, error } = await supabase
+      .from("news_articles")
+      .select(
+        `
+        id,
+        title,
+        summary,
+        published_at,
+        source,
+        view_count,
+        is_breaking,
+        is_pinned,
+        news_categories (
+          name
+        )
+      `,
+      )
+      .eq("is_active", true)
+      .order("view_count", { ascending: false })
+      .order("published_at", { ascending: false })
+      .limit(limit)
 
     if (error) {
-      console.error("Error calling RPC function:", error)
+      console.error("Error fetching popular news:", error)
       throw error
     }
 
@@ -152,7 +209,7 @@ export async function getPopularNews(limit = 10): Promise<NewsArticle[]> {
         title: item.title,
         summary: item.summary || "",
         content: null,
-        category: item.category_name || "기타",
+        category: item.news_categories?.name || "기타",
         publishedAt: item.published_at,
         source: item.source || "알 수 없음",
         author: null,
@@ -177,12 +234,29 @@ export async function getLatestNews(limit = 10): Promise<NewsArticle[]> {
       throw new Error("Supabase client not initialized")
     }
 
-    const { data, error } = await supabase.rpc("get_latest_news", {
-      limit_count: limit,
-    })
+    const { data, error } = await supabase
+      .from("news_articles")
+      .select(
+        `
+        id,
+        title,
+        summary,
+        published_at,
+        source,
+        view_count,
+        is_breaking,
+        is_pinned,
+        news_categories (
+          name
+        )
+      `,
+      )
+      .eq("is_active", true)
+      .order("published_at", { ascending: false })
+      .limit(limit)
 
     if (error) {
-      console.error("Error calling RPC function:", error)
+      console.error("Error fetching latest news:", error)
       throw error
     }
 
@@ -192,7 +266,7 @@ export async function getLatestNews(limit = 10): Promise<NewsArticle[]> {
         title: item.title,
         summary: item.summary || "",
         content: null,
-        category: item.category_name || "기타",
+        category: item.news_categories?.name || "기타",
         publishedAt: item.published_at,
         source: item.source || "알 수 없음",
         author: null,
@@ -217,35 +291,55 @@ export async function getNewsArticleById(id: number): Promise<NewsArticle | null
       throw new Error("Supabase client not initialized")
     }
 
-    const { data, error } = await supabase.rpc("get_news_article_by_id", {
-      article_id: id,
-    })
+    const { data, error } = await supabase
+      .from("news_articles")
+      .select(
+        `
+        id,
+        title,
+        summary,
+        content,
+        published_at,
+        source,
+        author,
+        image_url,
+        external_url,
+        view_count,
+        is_breaking,
+        is_pinned,
+        news_categories (
+          name
+        )
+      `,
+      )
+      .eq("id", id)
+      .eq("is_active", true)
+      .single()
 
     if (error) {
-      console.error("Error calling RPC function:", error)
+      console.error("Error fetching news article:", error)
       throw error
     }
 
-    if (!data || data.length === 0) {
+    if (!data) {
       return null
     }
 
-    const item = data[0]
     return {
-      id: item.id,
-      title: item.title,
-      summary: item.summary || "",
-      content: item.content || "",
-      category: item.category_name || "기타",
-      publishedAt: item.published_at,
-      source: item.source || "알 수 없음",
-      author: item.author || null,
-      imageUrl: item.image_url || null,
-      url: item.external_url || null,
-      tags: item.tags || [],
-      viewCount: item.view_count || 0,
-      isBreaking: item.is_breaking || false,
-      isPinned: item.is_pinned || false,
+      id: data.id,
+      title: data.title,
+      summary: data.summary || "",
+      content: data.content || "",
+      category: data.news_categories?.name || "기타",
+      publishedAt: data.published_at,
+      source: data.source || "알 수 없음",
+      author: data.author || null,
+      imageUrl: data.image_url || null,
+      url: data.external_url || null,
+      tags: [], // 태그는 별도 쿼리로 가져올 수 있음
+      viewCount: data.view_count || 0,
+      isBreaking: data.is_breaking || false,
+      isPinned: data.is_pinned || false,
     }
   } catch (error) {
     console.error("Error in getNewsArticleById:", error)
@@ -306,7 +400,7 @@ function getSampleNewsData(
   let filteredArticles = [...SAMPLE_NEWS_ARTICLES]
 
   // 카테고리 필터 적용
-  if (categoryFilter) {
+  if (categoryFilter && categoryFilter !== "all") {
     filteredArticles = filteredArticles.filter((article) => article.category === categoryFilter)
   }
 
@@ -317,7 +411,7 @@ function getSampleNewsData(
       (article) =>
         article.title.toLowerCase().includes(searchLower) ||
         article.summary.toLowerCase().includes(searchLower) ||
-        article.content.toLowerCase().includes(searchLower) ||
+        (article.content && article.content.toLowerCase().includes(searchLower)) ||
         article.tags.some((tag) => tag.toLowerCase().includes(searchLower)),
     )
   }
