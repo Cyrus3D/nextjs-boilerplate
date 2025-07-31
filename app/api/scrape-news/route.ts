@@ -1,7 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase"
+import { createClient } from "@supabase/supabase-js"
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+function getSupabaseClient() {
+  return createClient(supabaseUrl, supabaseServiceKey)
+}
 
 // 웹 스크래핑을 위한 간단한 HTML 파싱 함수
 async function scrapeWebContent(url: string) {
@@ -40,11 +47,11 @@ async function scrapeWebContent(url: string) {
     const image = imgMatch ? imgMatch[1] : ""
 
     return {
-      title,
-      content: textContent.substring(0, 5000), // 처음 5000자만
-      description,
-      image,
-      url,
+      title: String(title),
+      content: String(textContent.substring(0, 5000)), // 처음 5000자만
+      description: String(description),
+      image: String(image),
+      url: String(url),
     }
   } catch (error) {
     console.error("Error scraping web content:", error)
@@ -85,14 +92,24 @@ async function analyzeNewsWithAI(scrapedData: any) {
     // JSON 파싱 시도
     try {
       const analysisResult = JSON.parse(text)
-      return analysisResult
+
+      // 안전한 타입 변환
+      return {
+        title: String(analysisResult.title || scrapedData.title || "제목 없음"),
+        summary: String(analysisResult.summary || scrapedData.description || "요약 없음"),
+        content: String(analysisResult.content || scrapedData.content || "내용 없음"),
+        category: String(analysisResult.category || "기타"),
+        tags: Array.isArray(analysisResult.tags) ? analysisResult.tags.map(String) : ["뉴스"],
+        author: analysisResult.author ? String(analysisResult.author) : null,
+        language: String(analysisResult.language || "ko"),
+      }
     } catch (parseError) {
       console.error("Failed to parse AI response as JSON:", parseError)
       // JSON 파싱 실패 시 기본값 반환
       return {
-        title: scrapedData.title || "제목 없음",
-        summary: scrapedData.description || "요약 없음",
-        content: scrapedData.content || "내용 없음",
+        title: String(scrapedData.title || "제목 없음"),
+        summary: String(scrapedData.description || "요약 없음"),
+        content: String(scrapedData.content || "내용 없음"),
         category: "기타",
         tags: ["뉴스"],
         author: null,
@@ -108,15 +125,17 @@ async function analyzeNewsWithAI(scrapedData: any) {
 // 카테고리 ID 찾기 또는 생성
 async function findOrCreateCategory(supabase: any, categoryName: string) {
   try {
+    const safeCategoryName = String(categoryName)
+
     // 기존 카테고리 찾기
     const { data: existingCategory } = await supabase
       .from("news_categories")
       .select("id")
-      .eq("name", categoryName)
+      .eq("name", safeCategoryName)
       .single()
 
     if (existingCategory) {
-      return existingCategory.id
+      return Number(existingCategory.id)
     }
 
     // 새 카테고리 생성
@@ -124,7 +143,7 @@ async function findOrCreateCategory(supabase: any, categoryName: string) {
       .from("news_categories")
       .insert([
         {
-          name: categoryName,
+          name: safeCategoryName,
           color_class: "bg-gray-100 text-gray-800",
           is_active: true,
         },
@@ -137,7 +156,7 @@ async function findOrCreateCategory(supabase: any, categoryName: string) {
       return null
     }
 
-    return newCategory.id
+    return Number(newCategory.id)
   } catch (error) {
     console.error("Error in findOrCreateCategory:", error)
     return null
@@ -147,24 +166,27 @@ async function findOrCreateCategory(supabase: any, categoryName: string) {
 // 태그 ID들 찾기 또는 생성
 async function findOrCreateTags(supabase: any, tagNames: string[]) {
   try {
-    const tagIds = []
+    const tagIds: number[] = []
 
     for (const tagName of tagNames) {
+      const safeTagName = String(tagName).trim()
+      if (!safeTagName) continue
+
       // 기존 태그 찾기
-      const { data: existingTag } = await supabase.from("news_tags").select("id").eq("name", tagName).single()
+      const { data: existingTag } = await supabase.from("news_tags").select("id").eq("name", safeTagName).single()
 
       if (existingTag) {
-        tagIds.push(existingTag.id)
+        tagIds.push(Number(existingTag.id))
       } else {
         // 새 태그 생성
         const { data: newTag, error } = await supabase
           .from("news_tags")
-          .insert([{ name: tagName }])
+          .insert([{ name: safeTagName }])
           .select("id")
           .single()
 
         if (!error && newTag) {
-          tagIds.push(newTag.id)
+          tagIds.push(Number(newTag.id))
         }
       }
     }
@@ -186,7 +208,7 @@ export async function POST(request: NextRequest) {
 
     // URL 유효성 검사
     try {
-      new URL(url)
+      new URL(String(url))
     } catch {
       return NextResponse.json({ success: false, error: "Invalid URL format" }, { status: 400 })
     }
@@ -194,41 +216,44 @@ export async function POST(request: NextRequest) {
     console.log("Starting news analysis for URL:", url)
 
     // 1. 웹 콘텐츠 스크래핑
-    const scrapedData = await scrapeWebContent(url)
-    console.log("Scraped data:", { title: scrapedData.title, contentLength: scrapedData.content.length })
+    const scrapedData = await scrapeWebContent(String(url))
+    console.log("Scraped data:", {
+      title: scrapedData.title.substring(0, 50) + "...",
+      contentLength: scrapedData.content.length,
+    })
 
     // 2. AI 분석
     const analysisResult = await analyzeNewsWithAI(scrapedData)
-    console.log("AI analysis result:", analysisResult)
+    console.log("AI analysis result:", {
+      title: analysisResult.title.substring(0, 50) + "...",
+      category: analysisResult.category,
+      tagsCount: analysisResult.tags.length,
+    })
 
     // 3. 데이터베이스에 저장
-    const supabase = createClient()
+    const supabase = getSupabaseClient()
 
     // 카테고리 ID 찾기/생성
     const categoryId = await findOrCreateCategory(supabase, analysisResult.category)
 
     // 뉴스 저장
-    const { data: newsData, error: newsError } = await supabase
-      .from("news")
-      .insert([
-        {
-          title: analysisResult.title,
-          summary: analysisResult.summary,
-          content: analysisResult.content,
-          category_id: categoryId,
-          author: analysisResult.author,
-          source_url: url,
-          image_url: scrapedData.image || null,
-          published_at: new Date().toISOString(),
-          view_count: 0,
-          is_featured: false,
-          is_active: true,
-          original_language: analysisResult.language || "ko",
-          is_translated: false,
-        },
-      ])
-      .select()
-      .single()
+    const newsInsertData = {
+      title: String(analysisResult.title),
+      summary: String(analysisResult.summary),
+      content: String(analysisResult.content),
+      category_id: categoryId ? Number(categoryId) : null,
+      author: analysisResult.author ? String(analysisResult.author) : null,
+      source_url: String(url),
+      image_url: scrapedData.image ? String(scrapedData.image) : null,
+      published_at: new Date().toISOString(),
+      view_count: 0,
+      is_featured: false,
+      is_active: true,
+      original_language: String(analysisResult.language),
+      is_translated: false,
+    }
+
+    const { data: newsData, error: newsError } = await supabase.from("news").insert([newsInsertData]).select().single()
 
     if (newsError) {
       console.error("Error saving news:", newsError)
@@ -242,8 +267,8 @@ export async function POST(request: NextRequest) {
       // 뉴스-태그 관계 저장
       if (tagIds.length > 0) {
         const newsTagRelations = tagIds.map((tagId) => ({
-          news_id: newsData.id,
-          tag_id: tagId,
+          news_id: Number(newsData.id),
+          tag_id: Number(tagId),
         }))
 
         await supabase.from("news_tag_relations").insert(newsTagRelations)
@@ -255,11 +280,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        id: newsData.id,
-        title: newsData.title,
-        summary: newsData.summary,
-        category: analysisResult.category,
-        tags: analysisResult.tags,
+        id: Number(newsData.id),
+        title: String(newsData.title),
+        summary: String(newsData.summary),
+        category: String(analysisResult.category),
+        tags: analysisResult.tags.map(String),
       },
       message: "News analyzed and saved successfully",
     })

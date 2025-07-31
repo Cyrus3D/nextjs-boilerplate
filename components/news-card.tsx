@@ -17,14 +17,14 @@ interface NewsCardProps {
       id: number
       name: string
       color_class?: string
-    }
+    } | null
     tags?: Array<{
       id: number
       name: string
     }>
-    author?: string
-    source_url?: string
-    image_url?: string
+    author?: string | null
+    source_url?: string | null
+    image_url?: string | null
     published_at: string
     view_count?: number
     is_featured?: boolean
@@ -38,25 +38,33 @@ export default function NewsCard({ news }: NewsCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [imageError, setImageError] = useState(false)
 
-  // 안전한 기본값 설정
+  // 안전한 기본값 설정 및 타입 변환
   const safeNews = {
-    ...news,
-    view_count: typeof news.view_count === "number" ? news.view_count : 0,
-    summary: news.summary || news.content?.substring(0, 150) + "..." || "요약 정보가 없습니다.",
-    tags: news.tags || [],
+    id: Number(news.id),
+    title: String(news.title || "제목 없음"),
+    summary: String(news.summary || news.content?.substring(0, 150) + "..." || "요약 정보가 없습니다."),
+    content: String(news.content || "내용 없음"),
+    view_count: Number(news.view_count) || 0,
+    tags: Array.isArray(news.tags) ? news.tags : [],
     category: news.category || null,
-    author: news.author || null,
-    source_url: news.source_url || null,
-    image_url: news.image_url || null,
-    is_featured: news.is_featured || false,
-    is_translated: news.is_translated || false,
-    original_language: news.original_language || "ko",
+    author: news.author ? String(news.author) : null,
+    source_url: news.source_url ? String(news.source_url) : null,
+    image_url: news.image_url ? String(news.image_url) : null,
+    published_at: String(news.published_at || new Date().toISOString()),
+    is_featured: Boolean(news.is_featured),
+    is_translated: Boolean(news.is_translated),
+    original_language: String(news.original_language || "ko"),
+    is_active: Boolean(news.is_active),
   }
 
   // 날짜 포맷팅 (안전하게)
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString("ko-KR", {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        return "날짜 정보 없음"
+      }
+      return date.toLocaleDateString("ko-KR", {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -64,6 +72,15 @@ export default function NewsCard({ news }: NewsCardProps) {
     } catch (error) {
       console.error("Date formatting error:", error)
       return "날짜 정보 없음"
+    }
+  }
+
+  // 조회수 포맷팅
+  const formatViewCount = (count: number) => {
+    try {
+      return count.toLocaleString()
+    } catch (error) {
+      return "0"
     }
   }
 
@@ -126,7 +143,7 @@ export default function NewsCard({ news }: NewsCardProps) {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1">
                 <Eye className="h-3 w-3" />
-                <span>{safeNews.view_count.toLocaleString()}</span>
+                <span>{formatViewCount(safeNews.view_count)}</span>
               </div>
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
@@ -155,7 +172,12 @@ export default function NewsCard({ news }: NewsCardProps) {
             </Button>
             {safeNews.source_url && (
               <Button variant="ghost" size="sm" asChild>
-                <a href={safeNews.source_url} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={safeNews.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <ExternalLink className="h-4 w-4" />
                 </a>
               </Button>

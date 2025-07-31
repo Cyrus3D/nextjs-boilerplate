@@ -1,18 +1,29 @@
 "use server"
 
-import { createClient } from "@/lib/supabase"
+import { createClient } from "@supabase/supabase-js"
 import { revalidatePath } from "next/cache"
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+function getSupabaseClient() {
+  return createClient(supabaseUrl, supabaseServiceKey)
+}
+
 // 뉴스 테이블 존재 확인 함수
-export async function checkNewsTablesExist() {
+export async function checkNewsTablesExist(): Promise<boolean> {
   try {
-    const supabase = createClient()
+    const supabase = getSupabaseClient()
 
     // news 테이블 존재 확인
-    const { data: newsCheck, error: newsError } = await supabase.from("news").select("id").limit(1)
+    const { error } = await supabase.from("news").select("id").limit(1)
 
-    if (newsError) {
-      console.log("News tables do not exist:", newsError.message)
+    if (error) {
+      if (error.message.includes("does not exist") || error.code === "42P01") {
+        console.log("News tables do not exist:", error.message)
+        return false
+      }
+      console.error("Error checking news tables:", error)
       return false
     }
 
@@ -31,17 +42,32 @@ export async function getNews(limit = 10, offset = 0) {
       return { data: [], error: null, count: 0 }
     }
 
-    const supabase = createClient()
+    const supabase = getSupabaseClient()
 
     const { data, error, count } = await supabase
       .from("news")
       .select(
         `
-        *,
-        category:news_categories(id, name, color_class),
-        tags:news_tags(
+        id,
+        title,
+        summary,
+        content,
+        author,
+        source_url,
+        image_url,
+        published_at,
+        view_count,
+        is_featured,
+        is_active,
+        original_language,
+        is_translated,
+        created_at,
+        updated_at,
+        category_id,
+        category:news_categories(
           id,
-          name
+          name,
+          color_class
         )
       `,
         { count: "exact" },
@@ -55,16 +81,55 @@ export async function getNews(limit = 10, offset = 0) {
       return { data: [], error: error.message, count: 0 }
     }
 
+    // 태그 정보 별도 조회
+    const newsIds = (data || []).map((item) => item.id)
+    let tagsData: any[] = []
+
+    if (newsIds.length > 0) {
+      const { data: tagRelations } = await supabase
+        .from("news_tag_relations")
+        .select(`
+          news_id,
+          tag:news_tags(
+            id,
+            name
+          )
+        `)
+        .in("news_id", newsIds)
+
+      tagsData = tagRelations || []
+    }
+
+    // 뉴스별 태그 그룹화
+    const tagsMap = new Map<number, any[]>()
+    tagsData.forEach((relation) => {
+      if (!tagsMap.has(relation.news_id)) {
+        tagsMap.set(relation.news_id, [])
+      }
+      if (relation.tag) {
+        tagsMap.get(relation.news_id)?.push(relation.tag)
+      }
+    })
+
     // 안전한 기본값 설정
     const safeData = (data || []).map((item) => ({
-      ...item,
-      view_count: item.view_count || 0,
-      summary: item.summary || item.content?.substring(0, 150) + "..." || "",
-      tags: item.tags || [],
-      category: item.category || null,
+      id: item.id,
+      title: item.title || "제목 없음",
+      summary: item.summary || (item.content ? item.content.substring(0, 150) + "..." : "요약 없음"),
+      content: item.content || "내용 없음",
       author: item.author || null,
       source_url: item.source_url || null,
       image_url: item.image_url || null,
+      published_at: item.published_at || new Date().toISOString(),
+      view_count: Number(item.view_count) || 0,
+      is_featured: Boolean(item.is_featured),
+      is_active: Boolean(item.is_active),
+      original_language: item.original_language || "ko",
+      is_translated: Boolean(item.is_translated),
+      created_at: item.created_at || new Date().toISOString(),
+      updated_at: item.updated_at || new Date().toISOString(),
+      category: item.category || null,
+      tags: tagsMap.get(item.id) || [],
     }))
 
     return { data: safeData, error: null, count: count || 0 }
@@ -82,9 +147,13 @@ export async function getNewsCategories() {
       return { data: [], error: null }
     }
 
-    const supabase = createClient()
+    const supabase = getSupabaseClient()
 
-    const { data, error } = await supabase.from("news_categories").select("*").eq("is_active", true).order("name")
+    const { data, error } = await supabase
+      .from("news_categories")
+      .select("id, name, color_class, is_active, created_at, updated_at")
+      .eq("is_active", true)
+      .order("name")
 
     if (error) {
       console.error("Error fetching news categories:", error)
@@ -106,9 +175,9 @@ export async function getNewsTags() {
       return { data: [], error: null }
     }
 
-    const supabase = createClient()
+    const supabase = getSupabaseClient()
 
-    const { data, error } = await supabase.from("news_tags").select("*").order("name")
+    const { data, error } = await supabase.from("news_tags").select("id, name, created_at, updated_at").order("name")
 
     if (error) {
       console.error("Error fetching news tags:", error)
@@ -141,20 +210,25 @@ export async function createNews(newsData: {
       return { data: null, error: "News tables do not exist" }
     }
 
-    const supabase = createClient()
+    const supabase = getSupabaseClient()
 
-    const { data, error } = await supabase
-      .from("news")
-      .insert([
-        {
-          ...newsData,
-          view_count: 0,
-          published_at: new Date().toISOString(),
-          is_active: true,
-        },
-      ])
-      .select()
-      .single()
+    const insertData = {
+      title: String(newsData.title),
+      content: String(newsData.content),
+      summary: newsData.summary ? String(newsData.summary) : null,
+      category_id: newsData.category_id ? Number(newsData.category_id) : null,
+      author: newsData.author ? String(newsData.author) : null,
+      source_url: newsData.source_url ? String(newsData.source_url) : null,
+      image_url: newsData.image_url ? String(newsData.image_url) : null,
+      is_featured: Boolean(newsData.is_featured),
+      original_language: newsData.original_language ? String(newsData.original_language) : "ko",
+      is_translated: Boolean(newsData.is_translated),
+      view_count: 0,
+      published_at: new Date().toISOString(),
+      is_active: true,
+    }
+
+    const { data, error } = await supabase.from("news").insert([insertData]).select().single()
 
     if (error) {
       console.error("Error creating news:", error)
@@ -192,9 +266,28 @@ export async function updateNews(
       return { data: null, error: "News tables do not exist" }
     }
 
-    const supabase = createClient()
+    const supabase = getSupabaseClient()
 
-    const { data, error } = await supabase.from("news").update(newsData).eq("id", id).select().single()
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    }
+
+    // 안전한 타입 변환
+    if (newsData.title !== undefined) updateData.title = String(newsData.title)
+    if (newsData.content !== undefined) updateData.content = String(newsData.content)
+    if (newsData.summary !== undefined) updateData.summary = newsData.summary ? String(newsData.summary) : null
+    if (newsData.category_id !== undefined)
+      updateData.category_id = newsData.category_id ? Number(newsData.category_id) : null
+    if (newsData.author !== undefined) updateData.author = newsData.author ? String(newsData.author) : null
+    if (newsData.source_url !== undefined)
+      updateData.source_url = newsData.source_url ? String(newsData.source_url) : null
+    if (newsData.image_url !== undefined) updateData.image_url = newsData.image_url ? String(newsData.image_url) : null
+    if (newsData.is_featured !== undefined) updateData.is_featured = Boolean(newsData.is_featured)
+    if (newsData.is_active !== undefined) updateData.is_active = Boolean(newsData.is_active)
+    if (newsData.original_language !== undefined) updateData.original_language = String(newsData.original_language)
+    if (newsData.is_translated !== undefined) updateData.is_translated = Boolean(newsData.is_translated)
+
+    const { data, error } = await supabase.from("news").update(updateData).eq("id", Number(id)).select().single()
 
     if (error) {
       console.error("Error updating news:", error)
@@ -217,9 +310,9 @@ export async function deleteNews(id: number) {
       return { error: "News tables do not exist" }
     }
 
-    const supabase = createClient()
+    const supabase = getSupabaseClient()
 
-    const { error } = await supabase.from("news").delete().eq("id", id)
+    const { error } = await supabase.from("news").delete().eq("id", Number(id))
 
     if (error) {
       console.error("Error deleting news:", error)
@@ -242,13 +335,20 @@ export async function incrementNewsViewCount(id: number) {
       return { error: "News tables do not exist" }
     }
 
-    const supabase = createClient()
+    const supabase = getSupabaseClient()
 
-    const { error } = await supabase.rpc("increment_news_view_count", { news_id: id })
+    // RPC 함수가 없을 수 있으므로 직접 업데이트
+    const { data: currentNews } = await supabase.from("news").select("view_count").eq("id", Number(id)).single()
 
-    if (error) {
-      console.error("Error incrementing view count:", error)
-      return { error: error.message }
+    if (currentNews) {
+      const newViewCount = (Number(currentNews.view_count) || 0) + 1
+
+      const { error } = await supabase.from("news").update({ view_count: newViewCount }).eq("id", Number(id))
+
+      if (error) {
+        console.error("Error incrementing view count:", error)
+        return { error: error.message }
+      }
     }
 
     return { error: null }
@@ -270,12 +370,13 @@ export async function analyzeAndSaveNews(url: string) {
     }
 
     // 뉴스 스크래핑 API 호출
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/scrape-news`, {
+    const apiUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    const response = await fetch(`${apiUrl}/api/scrape-news`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url: String(url) }),
     })
 
     if (!response.ok) {

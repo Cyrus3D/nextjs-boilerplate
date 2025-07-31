@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Eye, Calendar, ExternalLink, User, Tag, Globe } from "lucide-react"
+import { Eye, Calendar, ExternalLink, User, Tag, Globe, X } from "lucide-react"
 
 interface NewsDetailModalProps {
   news: {
@@ -36,10 +36,33 @@ interface NewsDetailModalProps {
 }
 
 export function NewsDetailModal({ news, isOpen, onClose }: NewsDetailModalProps) {
+  // 안전한 타입 변환
+  const safeNews = {
+    id: Number(news.id),
+    title: String(news.title || "제목 없음"),
+    summary: String(news.summary || "요약 정보가 없습니다."),
+    content: String(news.content || "내용 없음"),
+    view_count: Number(news.view_count) || 0,
+    tags: Array.isArray(news.tags) ? news.tags : [],
+    category: news.category || null,
+    author: news.author ? String(news.author) : null,
+    source_url: news.source_url ? String(news.source_url) : null,
+    image_url: news.image_url ? String(news.image_url) : null,
+    published_at: String(news.published_at || new Date().toISOString()),
+    is_featured: Boolean(news.is_featured),
+    is_translated: Boolean(news.is_translated),
+    original_language: String(news.original_language || "ko"),
+    is_active: Boolean(news.is_active),
+  }
+
   // 날짜 포맷팅
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString("ko-KR", {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        return "날짜 정보 없음"
+      }
+      return date.toLocaleDateString("ko-KR", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -51,6 +74,15 @@ export function NewsDetailModal({ news, isOpen, onClose }: NewsDetailModalProps)
     }
   }
 
+  // 조회수 포맷팅
+  const formatViewCount = (count: number) => {
+    try {
+      return count.toLocaleString()
+    } catch (error) {
+      return "0"
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0">
@@ -59,42 +91,45 @@ export function NewsDetailModal({ news, isOpen, onClose }: NewsDetailModalProps)
           <DialogHeader className="p-6 pb-4 border-b">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <DialogTitle className="text-xl font-bold leading-tight mb-2">{news.title}</DialogTitle>
+                <DialogTitle className="text-xl font-bold leading-tight mb-2">{safeNews.title}</DialogTitle>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    <span>{formatDate(news.published_at)}</span>
+                    <span>{formatDate(safeNews.published_at)}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Eye className="h-4 w-4" />
-                    <span>{news.view_count.toLocaleString()} 조회</span>
+                    <span>{formatViewCount(safeNews.view_count)} 조회</span>
                   </div>
-                  {news.author && (
+                  {safeNews.author && (
                     <div className="flex items-center gap-1">
                       <User className="h-4 w-4" />
-                      <span>{news.author}</span>
+                      <span>{safeNews.author}</span>
                     </div>
                   )}
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                {news.category && (
-                  <Badge variant="secondary" className={news.category.color_class || ""}>
-                    {news.category.name}
+                <Button variant="ghost" size="sm" onClick={onClose} className="self-end">
+                  <X className="h-4 w-4" />
+                </Button>
+                {safeNews.category && (
+                  <Badge variant="secondary" className={safeNews.category.color_class || ""}>
+                    {safeNews.category.name}
                   </Badge>
                 )}
-                {news.is_featured && <Badge className="bg-red-500 hover:bg-red-600">추천</Badge>}
-                {news.is_translated && <Badge variant="outline">번역됨</Badge>}
+                {safeNews.is_featured && <Badge className="bg-red-500 hover:bg-red-600">추천</Badge>}
+                {safeNews.is_translated && <Badge variant="outline">번역됨</Badge>}
               </div>
             </div>
           </DialogHeader>
 
           {/* 이미지 */}
-          {news.image_url && (
+          {safeNews.image_url && (
             <div className="px-6 pt-4">
               <img
-                src={news.image_url || "/placeholder.svg"}
-                alt={news.title}
+                src={safeNews.image_url || "/placeholder.svg"}
+                alt={safeNews.title}
                 className="w-full max-h-64 object-cover rounded-lg"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement
@@ -108,30 +143,27 @@ export function NewsDetailModal({ news, isOpen, onClose }: NewsDetailModalProps)
           <ScrollArea className="flex-1 px-6 py-4">
             <div className="space-y-4">
               {/* 요약 */}
-              {news.summary && (
+              {safeNews.summary && safeNews.summary !== "요약 정보가 없습니다." && (
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <h3 className="font-semibold mb-2">요약</h3>
-                  <p className="text-sm leading-relaxed">{news.summary}</p>
+                  <p className="text-sm leading-relaxed">{safeNews.summary}</p>
                 </div>
               )}
 
               {/* 본문 */}
               <div className="prose prose-sm max-w-none">
-                <div
-                  className="leading-relaxed whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{ __html: news.content }}
-                />
+                <div className="leading-relaxed whitespace-pre-wrap">{safeNews.content}</div>
               </div>
 
               {/* 태그 */}
-              {news.tags && news.tags.length > 0 && (
+              {safeNews.tags.length > 0 && (
                 <div className="pt-4 border-t">
                   <div className="flex items-center gap-2 mb-2">
                     <Tag className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">태그</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {news.tags.map((tag) => (
+                    {safeNews.tags.map((tag) => (
                       <Badge key={tag.id} variant="outline">
                         {tag.name}
                       </Badge>
@@ -141,12 +173,12 @@ export function NewsDetailModal({ news, isOpen, onClose }: NewsDetailModalProps)
               )}
 
               {/* 언어 정보 */}
-              {news.original_language && (
+              {safeNews.original_language && (
                 <div className="pt-4 border-t">
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">원본 언어: {news.original_language.toUpperCase()}</span>
-                    {news.is_translated && (
+                    <span className="text-sm">원본 언어: {safeNews.original_language.toUpperCase()}</span>
+                    {safeNews.is_translated && (
                       <Badge variant="outline" className="ml-2">
                         AI 번역됨
                       </Badge>
@@ -163,10 +195,10 @@ export function NewsDetailModal({ news, isOpen, onClose }: NewsDetailModalProps)
               <Button variant="outline" onClick={onClose}>
                 닫기
               </Button>
-              {news.source_url && (
+              {safeNews.source_url && (
                 <Button asChild>
                   <a
-                    href={news.source_url}
+                    href={safeNews.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2"
