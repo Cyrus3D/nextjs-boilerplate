@@ -566,7 +566,7 @@ export async function getNewsTags(): Promise<NewsTag[]> {
   }
 }
 
-// Analyze news from URL - Enhanced with actual web scraping
+// Analyze news from URL - Enhanced with automatic Korean translation
 export async function analyzeNewsFromUrl(url: string): Promise<{
   title: string
   content: string
@@ -599,7 +599,7 @@ export async function analyzeNewsFromUrl(url: string): Promise<{
         "summary": "3-4문장의 핵심 요약",
         "category": "정치|경제|사회|문화|스포츠|기술|국제|생활 중 하나",
         "author": "작성자명 (있는 경우, 없으면 null)",
-        "language": "ko|en|th 중 하나",
+        "language": "ko|en|th 중 하나 (원본 언어)",
         "tags": ["관련태그1", "관련태그2", "관련태그3"]
       }
       
@@ -607,7 +607,8 @@ export async function analyzeNewsFromUrl(url: string): Promise<{
       - 본문은 중요한 내용만 정리하되 충분한 정보 포함
       - 요약은 핵심 내용을 3-4문장으로 압축
       - 카테고리는 내용에 가장 적합한 것으로 선택
-      - 태그는 검색에 유용한 키워드로 3-5개 선정`,
+      - 태그는 검색에 유용한 키워드로 3-5개 선정
+      - language는 원본 콘텐츠의 언어를 정확히 감지`,
       prompt: `웹페이지 제목: ${scrapedData.title}
 
 웹페이지 설명: ${scrapedData.description}
@@ -625,7 +626,7 @@ ${scrapedData.content}
       const result = JSON.parse(text)
 
       // Validate and clean the result
-      const cleanResult = {
+      let cleanResult = {
         title: String(result.title || scrapedData.title || "제목 없음").trim(),
         content: String(result.content || scrapedData.content || "내용 없음").trim(),
         summary: String(result.summary || scrapedData.description || "요약 없음").trim(),
@@ -635,11 +636,91 @@ ${scrapedData.content}
         tags: Array.isArray(result.tags) ? result.tags.map((tag: any) => String(tag).trim()).filter(Boolean) : [],
       }
 
-      console.log("Cleaned analysis result:", {
+      // Step 3: Translate to Korean if not already in Korean
+      if (cleanResult.language !== "ko") {
+        console.log("Translating content to Korean...")
+
+        try {
+          // Translate title
+          const { text: translatedTitle } = await generateText({
+            model: openai("gpt-4o"),
+            system:
+              "당신은 전문 번역가입니다. 주어진 텍스트를 자연스러운 한국어로 번역해주세요. 뉴스 제목의 경우 간결하고 명확하게 번역해주세요.",
+            prompt: `다음 뉴스 제목을 한국어로 번역해주세요:\n\n${cleanResult.title}`,
+          })
+
+          // Translate content
+          const { text: translatedContent } = await generateText({
+            model: openai("gpt-4o"),
+            system:
+              "당신은 전문 번역가입니다. 주어진 뉴스 본문을 자연스러운 한국어로 번역해주세요. 원문의 의미와 뉘앙스를 정확히 전달하되, 한국어로 읽기 자연스럽게 번역해주세요.",
+            prompt: `다음 뉴스 본문을 한국어로 번역해주세요:\n\n${cleanResult.content}`,
+          })
+
+          // Translate summary
+          const { text: translatedSummary } = await generateText({
+            model: openai("gpt-4o"),
+            system: "당신은 전문 번역가입니다. 주어진 요약문을 자연스러운 한국어로 번역해주세요.",
+            prompt: `다음 뉴스 요약을 한국어로 번역해주세요:\n\n${cleanResult.summary}`,
+          })
+
+          // Translate author name if exists
+          let translatedAuthor = cleanResult.author
+          if (cleanResult.author) {
+            try {
+              const { text: authorTranslation } = await generateText({
+                model: openai("gpt-4o"),
+                system:
+                  "작성자 이름을 한국어로 번역하거나 한국어 표기법에 맞게 변환해주세요. 이미 한국어라면 그대로 반환해주세요.",
+                prompt: `다음 작성자 이름을 한국어로 변환해주세요:\n\n${cleanResult.author}`,
+              })
+              translatedAuthor = authorTranslation.trim()
+            } catch (error) {
+              console.error("Error translating author:", error)
+              // Keep original author name if translation fails
+            }
+          }
+
+          // Translate tags
+          const translatedTags: string[] = []
+          for (const tag of cleanResult.tags) {
+            try {
+              const { text: translatedTag } = await generateText({
+                model: openai("gpt-4o"),
+                system:
+                  "태그를 한국어로 번역해주세요. 이미 한국어라면 그대로 반환해주세요. 간단한 키워드 형태로 번역해주세요.",
+                prompt: `다음 태그를 한국어로 번역해주세요:\n\n${tag}`,
+              })
+              translatedTags.push(translatedTag.trim())
+            } catch (error) {
+              console.error("Error translating tag:", error)
+              translatedTags.push(tag) // Keep original tag if translation fails
+            }
+          }
+
+          // Update result with translations
+          cleanResult = {
+            ...cleanResult,
+            title: translatedTitle.trim(),
+            content: translatedContent.trim(),
+            summary: translatedSummary.trim(),
+            author: translatedAuthor,
+            tags: translatedTags,
+          }
+
+          console.log("Translation completed successfully")
+        } catch (translationError) {
+          console.error("Error during translation:", translationError)
+          // Continue with original content if translation fails
+        }
+      }
+
+      console.log("Final analysis result:", {
         title: cleanResult.title.substring(0, 50) + "...",
         contentLength: cleanResult.content.length,
         summaryLength: cleanResult.summary.length,
         category: cleanResult.category,
+        language: cleanResult.language,
         tagsCount: cleanResult.tags.length,
       })
 

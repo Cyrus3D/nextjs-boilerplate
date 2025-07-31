@@ -318,7 +318,7 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
     }
   }
 
-  // News URL Analysis - Enhanced
+  // News URL Analysis - Enhanced with automatic Korean translation
   const handleNewsAnalysis = async () => {
     if (!newsUrl.trim()) {
       toast({
@@ -361,7 +361,7 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
         }
       }
 
-      // Update form data with analysis results
+      // Update form data with analysis results (all fields are now in Korean)
       const updatedFormData = {
         ...newsFormData,
         title: analysisResult.title || "",
@@ -371,17 +371,17 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
         author: analysisResult.author || "",
         source_url: newsUrl,
         original_language: analysisResult.language || "ko",
-        is_translated: analysisResult.language !== "ko",
+        is_translated: analysisResult.language !== "ko", // Mark as translated if original was not Korean
         tag_names: Array.isArray(analysisResult.tags) ? analysisResult.tags : [],
       }
 
-      console.log("Updating form data:", updatedFormData)
+      console.log("Updating form data with Korean translations:", updatedFormData)
       setNewsFormData(updatedFormData)
       setNewsUrl("")
 
       toast({
         title: "성공",
-        description: "뉴스 분석이 완료되었습니다. 결과를 확인하고 저장해주세요.",
+        description: `뉴스 분석이 완료되었습니다. ${analysisResult.language !== "ko" ? "모든 내용이 한국어로 번역되었습니다." : ""} 결과를 확인하고 저장해주세요.`,
       })
     } catch (error) {
       console.error("뉴스 분석 오류:", error)
@@ -1267,7 +1267,7 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
                         <Info className="h-4 w-4" />
                         <AlertDescription>
                           유효한 뉴스 URL을 입력하면 AI가 해당 웹페이지의 내용을 분석하여 자동으로 제목, 내용, 요약,
-                          카테고리, 태그를 추출합니다.
+                          카테고리, 태그를 추출합니다. 외국어 콘텐츠는 자동으로 한국어로 번역됩니다.
                           <br />
                           <strong>지원 사이트:</strong> sanook.com, bangkokpost.com, thairath.co.th, matichon.co.th,
                           한국 외교부 등
