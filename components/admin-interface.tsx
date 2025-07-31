@@ -30,6 +30,7 @@ import {
   BarChart3,
   Database,
   ExternalLink,
+  Info,
 } from "lucide-react"
 
 // Import actions
@@ -326,6 +327,18 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
       toast({
         title: "오류",
         description: "분석할 URL을 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validate URL format
+    try {
+      new URL(newsUrl)
+    } catch {
+      toast({
+        title: "오류",
+        description: "유효한 URL을 입력해주세요. (예: https://example.com/news)",
         variant: "destructive",
       })
       return
@@ -1240,10 +1253,17 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
                         <Globe className="h-5 w-5" />
                         AI 뉴스 분석
                       </h3>
+                      <Alert className="mb-4">
+                        <Info className="h-4 w-4" />
+                        <AlertDescription>
+                          유효한 뉴스 URL을 입력하면 AI가 자동으로 제목, 내용, 요약, 카테고리, 태그를 분석합니다. 현재는
+                          시뮬레이션 모드로 작동하며, 실제 웹 스크래핑은 지원하지 않습니다.
+                        </AlertDescription>
+                      </Alert>
                       <div className="space-y-3">
                         <div className="flex gap-2">
                           <Input
-                            placeholder="뉴스 URL을 입력하세요"
+                            placeholder="뉴스 URL을 입력하세요 (예: https://example.com/news/article)"
                             value={newsUrl}
                             onChange={(e) => setNewsUrl(e.target.value)}
                           />

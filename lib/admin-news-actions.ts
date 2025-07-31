@@ -14,6 +14,33 @@ function checkSupabase() {
   return supabase
 }
 
+// Helper function to extract JSON from AI response
+function extractJsonFromResponse(text: string): any {
+  try {
+    // First try to parse as is
+    return JSON.parse(text)
+  } catch {
+    // Try to find JSON within the text
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0])
+      } catch {
+        // If still fails, try to clean up common issues
+        const cleanedText = text
+          .replace(/```json\n?/g, "")
+          .replace(/\n?```/g, "")
+          .replace(/^[^{]*/, "")
+          .replace(/[^}]*$/, "")
+          .trim()
+
+        return JSON.parse(cleanedText)
+      }
+    }
+    throw new Error("JSON을 찾을 수 없습니다")
+  }
+}
+
 // AI를 사용한 뉴스 분석
 export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResult> {
   if (!url.trim()) {
@@ -21,40 +48,52 @@ export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResul
   }
 
   try {
-    // URL에서 내용 추출 (실제로는 웹 스크래핑이 필요하지만, 여기서는 시뮬레이션)
     const { text: analysisResult } = await generateText({
       model: openai("gpt-4o"),
-      prompt: `다음 URL의 뉴스를 분석해주세요: ${url}
+      prompt: `Please analyze the news from this URL: ${url}
 
-      다음 형식으로 JSON을 반환해주세요:
-      {
-        "title": "뉴스 제목",
-        "content": "뉴스 본문 (최소 200자 이상)",
-        "summary": "뉴스 요약 (100자 내외)",
-        "category": "카테고리명 (일반뉴스, 비즈니스, 기술, 건강, 여행, 음식, 교육, 스포츠, 문화, 정치 중 하나)",
-        "tags": ["태그1", "태그2", "태그3"],
-        "language": "언어코드 (ko, en, th 중 하나)",
-        "author": "작성자명 (있는 경우)"
-      }
+IMPORTANT: You must respond ONLY with valid JSON in the exact format below. Do not include any other text, explanations, or markdown formatting.
 
-      JSON만 반환하고 다른 텍스트는 포함하지 마세요.`,
-      temperature: 0.3,
+{
+  "title": "News title in Korean",
+  "content": "Full news content in Korean (minimum 200 characters)",
+  "summary": "News summary in Korean (around 100 characters)",
+  "category": "Category name (choose one: 일반뉴스, 비즈니스, 기술, 건강, 여행, 음식, 교육, 스포츠, 문화, 정치)",
+  "tags": ["tag1", "tag2", "tag3"],
+  "language": "Language code (ko, en, or th)",
+  "author": "Author name if available, otherwise null"
+}
+
+Return ONLY the JSON object, nothing else.`,
+      temperature: 0.1,
     })
 
-    const cleanedResult = analysisResult.replace(/```json\n?|\n?```/g, "").trim()
-    const parsedData = JSON.parse(cleanedResult)
+    console.log("AI Response:", analysisResult)
+
+    const parsedData = extractJsonFromResponse(analysisResult)
+
+    // Validate required fields
+    if (!parsedData.title || !parsedData.content) {
+      throw new Error("AI 응답에서 필수 필드(제목, 내용)를 찾을 수 없습니다.")
+    }
 
     return {
       title: parsedData.title || "제목 없음",
       content: parsedData.content || "내용 없음",
-      summary: parsedData.summary || "요약 없음",
+      summary: parsedData.summary || parsedData.content.substring(0, 100) + "...",
       category: parsedData.category || "일반뉴스",
-      tags: parsedData.tags || [],
+      tags: Array.isArray(parsedData.tags) ? parsedData.tags : [],
       language: parsedData.language || "ko",
       author: parsedData.author || null,
     }
   } catch (error) {
     console.error("뉴스 분석 오류:", error)
+
+    // If it's a JSON parsing error, provide a more helpful message
+    if (error instanceof SyntaxError || (error instanceof Error && error.message.includes("JSON"))) {
+      throw new Error("AI 응답을 파싱할 수 없습니다. URL이 유효한 뉴스 페이지인지 확인해주세요.")
+    }
+
     throw new Error(`뉴스 분석 중 오류가 발생했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`)
   }
 }
@@ -67,23 +106,24 @@ export async function translateNews(
   try {
     const { text: result } = await generateText({
       model: openai("gpt-4o"),
-      prompt: `다음 텍스트를 분석하고 한국어로 번역해주세요.
+      prompt: `Translate the following text to Korean and detect the original language.
 
-      텍스트: "${content}"
+Text: "${content}"
 
-      다음 형식으로 JSON을 반환해주세요:
-      {
-        "translatedContent": "한국어로 번역된 내용",
-        "detectedLanguage": "감지된 언어코드 (ko, en, th 중 하나)"
-      }
+IMPORTANT: Respond ONLY with valid JSON in this exact format:
+{
+  "translatedContent": "Korean translation of the content",
+  "detectedLanguage": "Detected language code (ko, en, or th)"
+}
 
-      만약 원문이 이미 한국어라면 원문을 그대로 반환하고 detectedLanguage를 "ko"로 설정하세요.
-      JSON만 반환하고 다른 텍스트는 포함하지 마세요.`,
+If the original text is already in Korean, return it as is and set detectedLanguage to "ko".
+Return ONLY the JSON object, nothing else.`,
       temperature: 0.1,
     })
 
-    const cleanedResult = result.replace(/```json\n?|\n?```/g, "").trim()
-    const parsedData = JSON.parse(cleanedResult)
+    console.log("Translation Response:", result)
+
+    const parsedData = extractJsonFromResponse(result)
 
     return {
       translatedContent: parsedData.translatedContent || content,
