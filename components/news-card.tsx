@@ -43,21 +43,105 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
     }
   }
 
-  const getSourceAbbreviation = (source: string) => {
-    if (!source) return "기타"
+  const getSourceBadgeFromUrl = (sourceUrl: string, source: string) => {
+    if (!sourceUrl && !source) return "기타"
 
-    // 한글 첫 글자들만 추출 (최대 4글자)
-    const koreanChars = source.match(/[가-힣]/g)
-    if (koreanChars && koreanChars.length > 0) {
-      return koreanChars.slice(0, 4).join("")
+    // URL to Korean pronunciation mapping
+    const urlToBadgeMap: { [key: string]: string } = {
+      // Thai news sources
+      "thaipbs.or.th": "타이피비에스",
+      "bangkokpost.com": "방콕포스트",
+      "nationthailand.com": "네이션",
+      "thairath.co.th": "타이랏",
+      "khaosod.co.th": "카오솟",
+      "matichon.co.th": "마티촌",
+      "dailynews.co.th": "데일리뉴스",
+      "posttoday.com": "포스트투데이",
+      "manager.co.th": "매니저",
+      "sanook.com": "사누크",
+      "kapook.com": "카푸크",
+      "mthai.com": "엠타이",
+      "thansettakij.com": "탄셋타킷",
+      "prachachat.net": "프라차챗",
+      "workpointnews.com": "워크포인트",
+      "ch3plus.com": "채널3",
+      "tnn.co.th": "티엔엔",
+      "springnews.co.th": "스프링뉴스",
+      "amarintv.com": "아마린",
+      "newsk.net": "뉴스케이",
+
+      // Korean news sources
+      "chosun.com": "조선일보",
+      "joongang.co.kr": "중앙일보",
+      "donga.com": "동아일보",
+      "hani.co.kr": "한겨레",
+      "khan.co.kr": "경향신문",
+      "mk.co.kr": "매일경제",
+      "hankyung.com": "한국경제",
+      "ytn.co.kr": "와이티엔",
+      "sbs.co.kr": "에스비에스",
+      "kbs.co.kr": "케이비에스",
+      "mbc.co.kr": "엠비씨",
+      "jtbc.co.kr": "제이티비씨",
+      "news1.kr": "뉴스원",
+      "newsis.com": "뉴시스",
+      "yonhapnews.co.kr": "연합뉴스",
+
+      // International sources
+      "cnn.com": "씨엔엔",
+      "bbc.com": "비비씨",
+      "reuters.com": "로이터",
+      "ap.org": "에이피",
+      "bloomberg.com": "블룸버그",
+      "wsj.com": "월스트리트",
+      "nytimes.com": "뉴욕타임스",
+      "washingtonpost.com": "워싱턴포스트",
+      "theguardian.com": "가디언",
+      "ft.com": "파이낸셜",
+      "economist.com": "이코노미스트",
+      "time.com": "타임",
+      "newsweek.com": "뉴스위크",
+      "forbes.com": "포브스",
+      "techcrunch.com": "테크크런치",
+      "wired.com": "와이어드",
+      "engadget.com": "엔가젯",
+      "theverge.com": "더버지",
+      "arstechnica.com": "아르스테크니카",
     }
 
-    // 영문의 경우 첫 글자들만 (최대 4글자)
-    const words = source.split(/\s+/)
-    return words
-      .map((word) => word.charAt(0).toUpperCase())
-      .join("")
-      .slice(0, 4)
+    // Extract domain from URL
+    let domain = ""
+    if (sourceUrl) {
+      try {
+        const url = new URL(sourceUrl.startsWith("http") ? sourceUrl : `https://${sourceUrl}`)
+        domain = url.hostname.replace("www.", "")
+      } catch {
+        // If URL parsing fails, try to extract domain from string
+        const match = sourceUrl.match(/(?:https?:\/\/)?(?:www\.)?([^/\s]+)/i)
+        domain = match ? match[1] : ""
+      }
+    }
+
+    // Check if we have a mapping for this domain
+    if (domain && urlToBadgeMap[domain]) {
+      return urlToBadgeMap[domain]
+    }
+
+    // Fallback: use source name and truncate to 4 characters
+    if (source) {
+      const koreanChars = source.match(/[가-힣]/g)
+      if (koreanChars && koreanChars.length > 0) {
+        return koreanChars.slice(0, 4).join("")
+      }
+
+      const words = source.split(/\s+/)
+      return words
+        .map((word) => word.charAt(0).toUpperCase())
+        .join("")
+        .slice(0, 4)
+    }
+
+    return "기타"
   }
 
   return (
@@ -67,7 +151,7 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
           <div className="flex items-center gap-2">
             {/* Source Badge - First */}
             <Badge className="bg-gray-200 text-gray-800 text-xs">
-              {getSourceAbbreviation(String(news.source || ""))}
+              {getSourceBadgeFromUrl(String(news.source_url || ""), String(news.source || ""))}
             </Badge>
 
             {/* Category Badge - Second */}
