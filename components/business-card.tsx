@@ -111,21 +111,21 @@ export default function BusinessCard({ card, onDetailClick }: BusinessCardProps)
   const normalizedImageUrl = hasValidImage ? normalizeImageUrl(String(card.image)) : ""
 
   return (
-    <Card className="w-full h-full flex flex-col hover:shadow-lg transition-shadow duration-200 cursor-pointer group">
-      <CardHeader className="pb-3 flex-shrink-0" onClick={() => onDetailClick(card)}>
+    <Card className="h-full hover:shadow-lg transition-shadow duration-200 cursor-pointer group">
+      <CardHeader className="pb-3" onClick={() => onDetailClick(card)}>
         <div className="flex justify-between items-start mb-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Business Badge - First with unique color */}
-            <Badge className={`${businessBadgeInfo.color} text-xs font-medium flex items-center gap-1`}>
-              {card.isPremium && <Crown className="w-3 h-3" />}
-              {card.isPromoted && !card.isPremium && <Star className="w-3 h-3" />}
+          <div className="flex items-center gap-2">
+            {/* Business Badge - First with unique color (뉴스 카드의 소스 배지와 동일한 위치) */}
+            <Badge className={`${businessBadgeInfo.color} text-xs font-medium`}>
+              {card.isPremium && <Crown className="w-3 h-3 mr-1" />}
+              {card.isPromoted && !card.isPremium && <Star className="w-3 h-3 mr-1" />}
               {businessBadgeInfo.name}
             </Badge>
 
-            {/* Category Badge - Second */}
+            {/* Category Badge - Second (뉴스 카드의 카테고리 배지와 동일한 위치) */}
             <Badge className={`${getCategoryColor(String(card.category))} text-xs`}>{String(card.category)}</Badge>
           </div>
-          <div className="flex items-center gap-1 text-xs text-gray-500 flex-shrink-0">
+          <div className="flex items-center gap-1 text-xs text-gray-500">
             <Globe className="w-3 h-3" />
             <span>KR</span>
           </div>
@@ -135,8 +135,8 @@ export default function BusinessCard({ card, onDetailClick }: BusinessCardProps)
           {String(card.title || "")}
         </h3>
 
-        {/* Image Area - 고정 높이 */}
-        <div className="h-[7.5rem] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mb-2 overflow-hidden relative flex-shrink-0">
+        {/* Image Area - 뉴스 카드와 완전히 동일한 구조 및 크기 */}
+        <div className="h-[7.5rem] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mb-2 overflow-hidden relative">
           {hasValidImage && !imageError ? (
             <>
               <img
@@ -162,7 +162,7 @@ export default function BusinessCard({ card, onDetailClick }: BusinessCardProps)
               )}
             </>
           ) : (
-            <div className="text-center text-gray-500 flex flex-col items-center justify-center">
+            <div className={`image-placeholder text-center text-gray-500 flex flex-col items-center justify-center`}>
               <div className="text-2xl mb-1">🏢</div>
               <div className="text-xs">업체 이미지</div>
             </div>
@@ -174,34 +174,34 @@ export default function BusinessCard({ card, onDetailClick }: BusinessCardProps)
         </p>
       </CardHeader>
 
-      <CardContent className="space-y-3 flex-grow flex flex-col">
-        {/* Meta Information */}
-        <div className="space-y-2 text-sm text-gray-600 flex-grow">
+      <CardContent className="space-y-3">
+        {/* Meta Information - 뉴스 카드와 동일한 구조 */}
+        <div className="space-y-2 text-sm text-gray-600">
           {card.location && (
             <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 flex-shrink-0" />
+              <MapPin className="w-4 h-4" />
               <span className="truncate">{String(card.location)}</span>
             </div>
           )}
 
           {card.phone && (
             <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 flex-shrink-0" />
+              <Phone className="w-4 h-4" />
               <span className="truncate">{String(card.phone)}</span>
             </div>
           )}
 
           {card.hours && (
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 flex-shrink-0" />
+              <Clock className="w-4 h-4" />
               <span className="truncate">{String(card.hours)}</span>
             </div>
           )}
 
-          {/* Contact Methods */}
+          {/* Contact Methods - 뉴스 카드의 위치 정보와 유사한 스타일 */}
           {(card.kakaoId || card.lineId || card.website) && (
             <div className="flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 flex-shrink-0" />
+              <MessageCircle className="w-4 h-4" />
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 {card.kakaoId && <span className="text-xs bg-yellow-100 px-2 py-1 rounded">카톡</span>}
                 {card.lineId && <span className="text-xs bg-green-100 px-2 py-1 rounded">라인</span>}
@@ -215,7 +215,7 @@ export default function BusinessCard({ card, onDetailClick }: BusinessCardProps)
           )}
         </div>
 
-        {/* Tags */}
+        {/* Tags - 뉴스 카드와 동일한 구조 */}
         {Array.isArray(card.tags) && card.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {card.tags.slice(0, 3).map((tag, index) => (
@@ -231,7 +231,7 @@ export default function BusinessCard({ card, onDetailClick }: BusinessCardProps)
           </div>
         )}
 
-        {/* Business Special Info */}
+        {/* Business Special Info - 뉴스 카드의 AI 분석과 유사한 스타일 */}
         {(card.price || card.promotion) && (
           <div className="space-y-2">
             {card.price && (
@@ -247,8 +247,8 @@ export default function BusinessCard({ card, onDetailClick }: BusinessCardProps)
           </div>
         )}
 
-        {/* Stats - 하단 고정 */}
-        <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t mt-auto">
+        {/* Stats - 뉴스 카드와 완전히 동일한 구조 */}
+        <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
           <div className="flex items-center gap-1">
             <Eye className="w-3 h-3" />
             <span>{Number(card.exposureCount || 0).toLocaleString()} 노출</span>
@@ -256,10 +256,10 @@ export default function BusinessCard({ card, onDetailClick }: BusinessCardProps)
           <span>{formatDate(String(card.created_at))}</span>
         </div>
 
-        {/* Action Button - 하단 고정 */}
+        {/* Action Button - 뉴스 카드와 완전히 동일한 구조 */}
         <Button
           onClick={() => onDetailClick(card)}
-          className="w-full bg-transparent hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300 mt-2"
+          className="w-full bg-transparent hover:bg-blue-50 text-blue-600 border border-blue-200 hover:border-blue-300"
           variant="outline"
         >
           자세히 보기

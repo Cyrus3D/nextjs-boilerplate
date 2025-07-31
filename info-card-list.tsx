@@ -199,12 +199,10 @@ const InfoCardList = () => {
             </div>
           ) : (
             <>
-              {/* 개선된 그리드 레이아웃 */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 auto-rows-fr">
+              {/* 뉴스 카드와 동일한 그리드 레이아웃 */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 {businessCards.map((card) => (
-                  <div key={card.id} className="flex">
-                    <BusinessCard card={card} onDetailClick={setSelectedBusiness} />
-                  </div>
+                  <BusinessCard key={card.id} card={card} onDetailClick={setSelectedBusiness} />
                 ))}
               </div>
 
