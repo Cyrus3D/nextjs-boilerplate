@@ -1,6 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
 import * as cheerio from "cheerio"
 
+interface ScrapedContent {
+  title: string
+  content: string
+  description: string
+  imageUrl: string
+  finalUrl: string
+  source: string
+  contentLength: number
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json()
@@ -9,10 +19,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "URL이 필요합니다." }, { status: 400 })
     }
 
-    console.log("스크래핑 시작:", url)
+    console.log(`스크래핑 시작: ${url}`)
 
-    // 더 나은 헤더로 실제 브라우저처럼 요청
+    // URL 유효성 검사
+    let validUrl: URL
+    try {
+      validUrl = new URL(url)
+    } catch {
+      return NextResponse.json({ error: "유효하지 않은 URL입니다." }, { status: 400 })
+    }
+
+    // 웹페이지 가져오기 (리다이렉트 자동 처리)
     const response = await fetch(url, {
+      method: "GET",
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -26,157 +45,157 @@ export async function POST(request: NextRequest) {
     })
 
     if (!response.ok) {
-      console.error("HTTP 오류:", response.status, response.statusText)
+      console.error(`HTTP 오류: ${response.status} ${response.statusText}`)
       return NextResponse.json(
-        {
-          error: `HTTP 오류: ${response.status} ${response.statusText}`,
-        },
+        { error: `웹페이지를 가져올 수 없습니다: ${response.status} ${response.statusText}` },
         { status: response.status },
       )
     }
 
     const html = await response.text()
-    console.log("HTML 길이:", html.length)
-    console.log("최종 URL:", response.url)
+    const finalUrl = response.url // 최종 리다이렉트된 URL
 
-    // 리다이렉트 페이지나 오류 페이지 감지
+    console.log(`HTML 가져오기 완료: ${html.length}자, 최종 URL: ${finalUrl}`)
+
+    // HTML 콘텐츠 검증
+    if (html.length < 500) {
+      return NextResponse.json({ error: "웹페이지 내용이 너무 짧습니다." }, { status: 400 })
+    }
+
+    // 리다이렉트 페이지 감지
     const redirectPatterns = [
       /redirecting/i,
-      /redirect/i,
-      /loading/i,
       /please wait/i,
+      /loading/i,
       /잠시만 기다려/i,
       /리다이렉트/i,
-      /페이지를 찾을 수 없습니다/i,
-      /404/i,
-      /error/i,
-      /access denied/i,
-      /접근이 거부되었습니다/i,
+      /javascript.*required/i,
+      /enable.*javascript/i,
     ]
 
     const isRedirectPage = redirectPatterns.some((pattern) => pattern.test(html))
 
     if (isRedirectPage) {
-      console.error("리다이렉트 또는 오류 페이지 감지됨")
-      return NextResponse.json(
-        {
-          error: "페이지에 접근할 수 없습니다. 리다이렉트 또는 오류 페이지입니다.",
-        },
-        { status: 400 },
-      )
+      console.error("리다이렉트 페이지 감지됨")
+      return NextResponse.json({ error: "리다이렉트 페이지입니다. 실제 콘텐츠를 가져올 수 없습니다." }, { status: 400 })
     }
 
-    // HTML이 너무 짧으면 유효하지 않은 콘텐츠로 간주
-    if (html.length < 500) {
-      console.error("HTML 콘텐츠가 너무 짧음:", html.length)
-      return NextResponse.json(
-        {
-          error: "페이지 콘텐츠가 충분하지 않습니다.",
-        },
-        { status: 400 },
-      )
-    }
-
+    // Cheerio로 HTML 파싱
     const $ = cheerio.load(html)
 
-    // 메타 태그에서 정보 추출
-    const ogTitle = $('meta[property="og:title"]').attr("content") || ""
-    const ogDescription = $('meta[property="og:description"]').attr("content") || ""
-    const ogImage = $('meta[property="og:image"]').attr("content") || ""
-    const metaDescription = $('meta[name="description"]').attr("content") || ""
+    // 제목 추출 (여러 방법 시도)
+    let title = ""
+    const titleSelectors = [
+      'meta[property="og:title"]',
+      'meta[name="twitter:title"]',
+      "h1",
+      "title",
+      ".article-title",
+      ".news-title",
+      ".post-title",
+    ]
 
-    // 제목 추출 (우선순위: og:title > title 태그 > h1)
-    const title = ogTitle || $("title").text().trim() || $("h1").first().text().trim()
+    for (const selector of titleSelectors) {
+      const element = $(selector).first()
+      if (element.length) {
+        title = element.attr("content") || element.text().trim()
+        if (title && title.length > 5) break
+      }
+    }
 
-    // 본문 추출 (다양한 선택자 시도)
+    // 본문 내용 추출
+    let content = ""
     const contentSelectors = [
-      "article",
+      'meta[property="og:description"]',
       ".article-content",
       ".news-content",
       ".post-content",
       ".content",
+      "article",
       ".entry-content",
       "main",
       ".main-content",
-      "#content",
-      ".story-body",
-      ".article-body",
     ]
 
-    let content = ""
     for (const selector of contentSelectors) {
-      const element = $(selector)
-      if (element.length > 0) {
-        // 스크립트, 스타일, 광고 등 제거
-        element.find("script, style, .ad, .advertisement, .social-share, .related-articles").remove()
+      const element = $(selector).first()
+      if (element.length) {
         content = element.text().trim()
-        if (content.length > 200) {
+        if (content && content.length > 200) break
+      }
+    }
+
+    // 메타 설명 추출
+    let description = ""
+    const descriptionSelectors = ['meta[name="description"]', 'meta[property="og:description"]']
+
+    for (const selector of descriptionSelectors) {
+      const element = $(selector).first()
+      if (element.length) {
+        description = element.attr("content") || ""
+        if (description && description.length > 10) break
+      }
+    }
+
+    // 이미지 URL 추출
+    let imageUrl = ""
+    const imageSelectors = ['meta[property="og:image"]', 'meta[name="twitter:image"]', ".article-image img"]
+
+    for (const selector of imageSelectors) {
+      const element = $(selector).first()
+      if (element.length) {
+        imageUrl = element.attr("content") || element.attr("src") || ""
+        if (imageUrl) {
+          // 상대 URL을 절대 URL로 변환
+          if (imageUrl.startsWith("/")) {
+            imageUrl = new URL(imageUrl, finalUrl).href
+          }
           break
         }
       }
     }
 
-    // 본문이 충분하지 않으면 전체 body에서 추출
-    if (content.length < 200) {
-      $("script, style, nav, header, footer, .ad, .advertisement, .menu, .sidebar").remove()
-      content = $("body").text().trim()
-    }
+    // 소스 도메인 추출
+    const source = new URL(finalUrl).hostname
 
-    // 텍스트 정리
-    content = content.replace(/\s+/g, " ").replace(/\n+/g, "\n").trim()
-
-    // 이미지 URL 처리
-    let imageUrl = ogImage
-    if (imageUrl && !imageUrl.startsWith("http")) {
-      const baseUrl = new URL(response.url).origin
-      imageUrl = new URL(imageUrl, baseUrl).href
-    }
-
-    // 최종 검증
+    // 결과 검증
     if (!title || title.length < 5) {
-      console.error("제목이 너무 짧거나 없음:", title)
-      return NextResponse.json(
-        {
-          error: "페이지 제목을 찾을 수 없습니다.",
-        },
-        { status: 400 },
-      )
+      console.error("제목을 찾을 수 없음")
+      return NextResponse.json({ error: "웹페이지에서 제목을 찾을 수 없습니다." }, { status: 400 })
     }
 
-    if (content.length < 100) {
-      console.error("본문이 너무 짧음:", content.length)
-      return NextResponse.json(
-        {
-          error: "페이지 본문이 충분하지 않습니다.",
-        },
-        { status: 400 },
-      )
+    if (!content || content.length < 100) {
+      console.error("본문 내용이 부족함")
+      return NextResponse.json({ error: "웹페이지에서 충분한 본문 내용을 찾을 수 없습니다." }, { status: 400 })
     }
 
     // 뉴스 콘텐츠인지 확인
-    const newsKeywords = ["뉴스", "기사", "보도", "취재", "기자", "뉴스룸", "news", "article", "reporter"]
+    const newsKeywords = ["뉴스", "기사", "보도", "취재", "news", "article", "report"]
     const hasNewsKeywords = newsKeywords.some(
-      (keyword) => html.toLowerCase().includes(keyword) || title.toLowerCase().includes(keyword),
+      (keyword) =>
+        title.toLowerCase().includes(keyword) ||
+        content.toLowerCase().includes(keyword) ||
+        html.toLowerCase().includes(keyword),
     )
 
     if (!hasNewsKeywords && content.length < 500) {
-      console.warn("뉴스 콘텐츠가 아닐 수 있음")
+      console.error("뉴스 콘텐츠가 아닌 것으로 판단됨")
+      return NextResponse.json({ error: "뉴스 기사가 아닌 것으로 보입니다." }, { status: 400 })
     }
 
-    const result = {
+    const result: ScrapedContent = {
       title: title.substring(0, 200), // 제목 길이 제한
-      content: content.substring(0, 5000), // 본문 길이 제한
-      description: ogDescription || metaDescription || content.substring(0, 300),
-      imageUrl: imageUrl || "",
-      finalUrl: response.url,
-      source: new URL(response.url).hostname,
-      scrapedAt: new Date().toISOString(),
+      content: content.substring(0, 5000), // 내용 길이 제한
+      description: description.substring(0, 500), // 설명 길이 제한
+      imageUrl,
+      finalUrl,
+      source,
+      contentLength: content.length,
     }
 
-    console.log("스크래핑 완료:", {
+    console.log(`스크래핑 완료:`, {
       title: result.title.substring(0, 50) + "...",
-      contentLength: result.content.length,
-      hasImage: !!result.imageUrl,
+      contentLength: result.contentLength,
       source: result.source,
     })
 
