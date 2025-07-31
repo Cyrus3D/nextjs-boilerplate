@@ -66,9 +66,27 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
           {String(news.title || "")}
         </h3>
 
-        {/* Image Placeholder */}
-        <div className="h-[7.5rem] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mb-2">
-          <div className="text-center text-gray-500">
+        {/* Image Area */}
+        <div className="h-[7.5rem] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
+          {news.image_url ? (
+            <img
+              src={String(news.image_url) || "/placeholder.svg"}
+              alt={String(news.title || "뉴스 이미지")}
+              className="w-full h-full object-cover rounded-lg"
+              crossOrigin="anonymous"
+              loading="lazy"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.style.display = "none"
+                const placeholder = target.nextElementSibling as HTMLElement
+                if (placeholder) placeholder.style.display = "block"
+              }}
+            />
+          ) : null}
+          <div
+            className={`text-center text-gray-500 ${news.image_url ? "hidden" : "block"}`}
+            style={{ display: news.image_url ? "none" : "block" }}
+          >
             <div className="text-2xl mb-1">📷</div>
             <div className="text-xs">이미지 영역</div>
           </div>
