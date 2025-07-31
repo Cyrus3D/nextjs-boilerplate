@@ -122,10 +122,17 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                             src={String(url) || "/placeholder.svg"}
                             alt={`뉴스 이미지 ${index + 1}`}
                             className="w-full h-auto max-h-64 object-cover hover:scale-105 transition-transform duration-200"
+                            loading="lazy"
+                            decoding="async"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
                               target.style.display = "none"
                             }}
+                            onLoad={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.opacity = "1"
+                            }}
+                            style={{ opacity: 0, transition: "opacity 0.3s ease-in-out" }}
                           />
                         </div>
                       ))
@@ -135,10 +142,17 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                           src={String(news.image_url) || "/placeholder.svg"}
                           alt="뉴스 이미지"
                           className="w-full h-auto max-h-64 object-cover hover:scale-105 transition-transform duration-200"
+                          loading="lazy"
+                          decoding="async"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement
                             target.style.display = "none"
                           }}
+                          onLoad={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.style.opacity = "1"
+                          }}
+                          style={{ opacity: 0, transition: "opacity 0.3s ease-in-out" }}
                         />
                       </div>
                     )}
