@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { Loader2 } from "lucide-react"
 
 const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
   <div
@@ -49,64 +48,56 @@ const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 )
 CardFooter.displayName = "CardFooter"
 
+// 데이터베이스 이미지 로딩을 위한 CardImage 컴포넌트
 interface CardImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
-  src?: string
-  alt: string
   fallback?: string
 }
 
 const CardImage = React.forwardRef<HTMLImageElement, CardImageProps>(
-  ({ className, src, alt, fallback = "/placeholder.svg?height=200&width=300", ...props }, ref) => {
-    const [isLoading, setIsLoading] = React.useState(true)
-    const [hasError, setHasError] = React.useState(false)
-    const [imageSrc, setImageSrc] = React.useState(src || fallback)
+  ({ className, src, alt, fallback = "/placeholder.svg", onError, ...props }, ref) => {
+    const [imageError, setImageError] = React.useState(false)
+    const [imageLoading, setImageLoading] = React.useState(true)
 
-    React.useEffect(() => {
-      if (!src) {
-        setImageSrc(fallback)
-        setIsLoading(false)
-        return
-      }
-
-      setIsLoading(true)
-      setHasError(false)
-
-      const img = new Image()
-      img.crossOrigin = "anonymous"
-
-      img.onload = () => {
-        setImageSrc(src)
-        setIsLoading(false)
-        setHasError(false)
-      }
-
-      img.onerror = () => {
-        console.warn(`Failed to load image: ${src}`)
-        setImageSrc(fallback)
-        setIsLoading(false)
-        setHasError(true)
-      }
-
-      img.src = src
-    }, [src, fallback])
-
-    if (isLoading) {
-      return (
-        <div className={cn("flex items-center justify-center bg-muted", className)}>
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      )
+    const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+      console.warn(`Failed to load image: ${src}`)
+      setImageError(true)
+      setImageLoading(false)
+      onError?.(e)
     }
 
+    const handleLoad = () => {
+      setImageLoading(false)
+    }
+
+    React.useEffect(() => {
+      if (src) {
+        setImageError(false)
+        setImageLoading(true)
+      }
+    }, [src])
+
     return (
-      <img
-        ref={ref}
-        src={imageSrc || "/placeholder.svg"}
-        alt={alt}
-        className={cn("object-cover transition-transform duration-200 group-hover:scale-105", className)}
-        crossOrigin="anonymous"
-        {...props}
-      />
+      <div className="relative">
+        {imageLoading && !imageError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        )}
+        <img
+          ref={ref}
+          src={imageError ? fallback : src}
+          alt={alt}
+          className={cn(
+            "transition-all duration-300 group-hover:scale-105",
+            imageLoading ? "opacity-0" : "opacity-100",
+            className,
+          )}
+          crossOrigin="anonymous"
+          onError={handleError}
+          onLoad={handleLoad}
+          {...props}
+        />
+      </div>
     )
   },
 )

@@ -11,7 +11,7 @@ interface NewsCardProps {
   onClick?: () => void
 }
 
-export function NewsCard({ news, onClick }: NewsCardProps) {
+export default function NewsCard({ news, onClick }: NewsCardProps) {
   const formatDate = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleDateString("ko-KR", {
