@@ -1,186 +1,164 @@
-import type { NewsItem } from "../types/news"
+import type { NewsItem } from "@/types/news"
 
 export const sampleNews: NewsItem[] = [
   {
     id: 1,
-    title: "태국 방콕 한인 커뮤니티 새로운 문화센터 개관",
-    summary: "방콕 한인 커뮤니티가 새로운 문화센터를 개관하여 다양한 문화 프로그램과 한국어 교육을 제공할 예정입니다.",
-    content: `방콕 한인 커뮤니티가 오랫동안 준비해온 새로운 문화센터가 드디어 개관했습니다. 
+    title: "태국 한인 커뮤니티 새로운 문화센터 개관",
+    summary: "방콕 시내에 한인들을 위한 새로운 문화센터가 개관하여 다양한 문화 프로그램을 제공할 예정입니다.",
+    content: `태국 방콕에 한인 커뮤니티를 위한 새로운 문화센터가 개관했습니다. 
 
-이번에 개관한 문화센터는 총 3층 규모로, 1층에는 한국 전통 문화 전시관과 도서관이, 2층에는 한국어 교실과 세미나실이, 3층에는 다목적 홀과 카페가 마련되어 있습니다.
+이번에 개관한 문화센터는 총 3층 규모로, 1층에는 전시공간과 카페, 2층에는 강의실과 회의실, 3층에는 공연장이 마련되어 있습니다.
 
-문화센터에서는 매주 한국어 교육 프로그램을 운영하며, 한국 전통 문화 체험 프로그램, K-pop 댄스 클래스, 한국 요리 교실 등 다양한 프로그램을 제공할 예정입니다.
+문화센터에서는 한국어 교육, 전통문화 체험, 요리 교실, 음악 공연 등 다양한 프로그램을 운영할 계획입니다. 특히 태국 현지인들을 대상으로 한 한국 문화 체험 프로그램도 준비되어 있어 한태 문화 교류의 중심지 역할을 할 것으로 기대됩니다.
 
-한인회 관계자는 "이번 문화센터 개관을 통해 태국 현지인들에게 한국 문화를 더욱 널리 알리고, 한인 커뮤니티의 결속을 다지는 계기가 되기를 바란다"고 말했습니다.`,
-    imageUrl: "/placeholder.svg?height=200&width=400",
+문화센터 관계자는 "한인 커뮤니티의 결속을 다지고, 태국 현지인들과의 문화 교류를 통해 상호 이해를 증진시키는 것이 목표"라고 밝혔습니다.`,
+    imageUrl: "/placeholder.svg?height=300&width=500&text=문화센터",
     source: "태국 한인 뉴스",
-    originalUrl: "https://example.com/korean-cultural-center-bangkok",
-    publishedAt: "2024-01-15T10:00:00Z",
+    originalUrl: "https://example.com/news/cultural-center-opening",
+    publishedAt: "2024-01-15T09:00:00Z",
     category: "문화",
-    tags: ["한인커뮤니티", "문화센터", "방콕", "한국문화"],
+    tags: ["한인사회", "문화센터", "방콕", "커뮤니티"],
     viewCount: 1250,
     isActive: true,
     isFeatured: true,
-    createdAt: "2024-01-15T10:00:00Z",
-    updatedAt: "2024-01-15T10:00:00Z",
+    createdAt: "2024-01-15T09:00:00Z",
+    updatedAt: "2024-01-15T09:00:00Z",
     originalLanguage: "ko",
     isTranslated: false,
   },
   {
     id: 2,
-    title: "태국 정부, 한국인 관광객 대상 비자 면제 기간 연장 발표",
-    summary: "태국 정부가 한국인 관광객에 대한 무비자 입국 허용 기간을 기존 30일에서 45일로 연장한다고 발표했습니다.",
-    content: `태국 정부가 한국인 관광객 유치를 위해 무비자 입국 허용 기간을 연장한다고 발표했습니다.
+    title: "태국 경제 성장률 전망 상향 조정",
+    summary: "태국 중앙은행이 올해 경제 성장률 전망을 기존 3.2%에서 3.8%로 상향 조정했다고 발표했습니다.",
+    content: `태국 중앙은행(BOT)이 2024년 경제 성장률 전망을 기존 3.2%에서 3.8%로 상향 조정했다고 발표했습니다.
 
-태국 관광청에 따르면, 한국인 관광객은 2024년 2월 1일부터 무비자로 최대 45일까지 태국에 체류할 수 있게 됩니다. 기존에는 30일이었던 체류 기간이 15일 연장된 것입니다.
+이번 상향 조정은 관광업 회복세와 수출 증가, 내수 소비 개선 등이 주요 요인으로 분석됩니다. 특히 중국과 한국 등 주요 관광객 송출국의 여행 수요 회복이 태국 경제에 긍정적인 영향을 미치고 있는 것으로 나타났습니다.
 
-이번 조치는 코로나19 이후 회복되고 있는 관광 산업을 더욱 활성화하기 위한 것으로, 한국인 관광객들이 더 여유롭게 태국을 여행할 수 있게 되었습니다.
+중앙은행 관계자는 "글로벌 경제 불확실성에도 불구하고 태국 경제의 기초 체력이 견고하다"며 "특히 서비스업과 제조업 부문의 회복세가 뚜렷하다"고 설명했습니다.
 
-태국 관광청 관계자는 "한국은 태국의 주요 관광객 송출국 중 하나로, 이번 비자 면제 기간 연장을 통해 더 많은 한국인 관광객들이 태국을 방문하기를 기대한다"고 말했습니다.
-
-단, 이번 연장 조치는 관광 목적으로만 적용되며, 비즈니스나 기타 목적의 방문에는 기존 규정이 적용됩니다.`,
-    imageUrl: "/placeholder.svg?height=200&width=400",
-    source: "태국 관광청",
-    originalUrl: "https://example.com/thailand-visa-extension-korean",
-    publishedAt: "2024-01-20T14:30:00Z",
-    category: "정치",
-    tags: ["비자면제", "관광", "태국정부", "한국인관광객"],
-    viewCount: 2100,
-    isActive: true,
-    isFeatured: true,
-    createdAt: "2024-01-20T14:30:00Z",
-    updatedAt: "2024-01-20T14:30:00Z",
-    originalLanguage: "th",
-    isTranslated: true,
-  },
-  {
-    id: 3,
-    title: "방콕 한인 식당가, 새로운 K-푸드 트렌드로 현지인들 사이에서 인기",
-    summary:
-      "방콕의 한인 식당들이 현지 입맛에 맞춘 퓨전 한식을 선보이며 태국 현지인들 사이에서 큰 인기를 얻고 있습니다.",
-    content: `방콕의 한인 식당가가 새로운 변화를 맞고 있습니다. 전통 한식에 태국 현지 재료와 조리법을 접목한 퓨전 한식이 태국 현지인들 사이에서 큰 인기를 얻고 있기 때문입니다.
-
-특히 톰얌 김치찌개, 팟타이 비빔밥, 망고 빙수 등 태국 현지 재료를 활용한 창의적인 메뉴들이 젊은 태국인들 사이에서 화제가 되고 있습니다.
-
-방콕 시내 한인 식당 '서울키친'의 김 사장은 "처음에는 전통 한식만 고집했지만, 현지 고객들의 입맛을 고려한 메뉴 개발을 통해 매출이 30% 이상 증가했다"고 말했습니다.
-
-이러한 트렌드는 K-pop, K-드라마의 인기와 함께 한국 문화에 대한 태국인들의 관심이 높아진 것과 무관하지 않습니다. 실제로 많은 태국 젊은이들이 한국 드라마에서 본 음식을 직접 맛보기 위해 한인 식당을 찾고 있습니다.
-
-한인 식당 업계에서는 이러한 트렌드를 활용해 더욱 다양한 퓨전 메뉴 개발에 나서고 있으며, 태국 현지 식재료 공급업체들과의 협력도 강화하고 있습니다.`,
-    imageUrl: "/placeholder.svg?height=200&width=400",
-    source: "방콕 비즈니스 투데이",
-    originalUrl: "https://example.com/korean-fusion-food-bangkok",
-    publishedAt: "2024-01-18T16:45:00Z",
-    category: "생활",
-    tags: ["한식", "퓨전요리", "방콕", "K-푸드", "한인식당"],
+한편, 인플레이션율은 목표 범위인 1-3% 내에서 안정적으로 관리되고 있으며, 기준금리는 당분간 현 수준을 유지할 것으로 전망됩니다.`,
+    imageUrl: "/placeholder.svg?height=300&width=500&text=경제성장",
+    source: "태국 경제 일보",
+    originalUrl: "https://example.com/news/thailand-economic-growth",
+    publishedAt: "2024-01-14T14:30:00Z",
+    category: "경제",
+    tags: ["경제성장", "중앙은행", "관광업", "수출"],
     viewCount: 890,
     isActive: true,
     isFeatured: false,
-    createdAt: "2024-01-18T16:45:00Z",
-    updatedAt: "2024-01-18T16:45:00Z",
+    createdAt: "2024-01-14T14:30:00Z",
+    updatedAt: "2024-01-14T14:30:00Z",
+    originalLanguage: "ko",
+    isTranslated: false,
+  },
+  {
+    id: 3,
+    title: "방콕 지하철 새 노선 개통으로 교통 편의성 크게 향상",
+    summary: "방콕 대중교통공사가 새로운 지하철 노선을 개통하여 시민들의 교통 편의성이 크게 향상될 것으로 기대됩니다.",
+    content: `방콕 대중교통공사(BMCL)가 새로운 지하철 노선인 '퍼플라인 연장선'을 정식 개통했다고 발표했습니다.
+
+이번에 개통된 노선은 기존 퍼플라인을 방콕 중심부까지 연장한 것으로, 총 8개 역이 새롭게 추가되었습니다. 이로써 방콕 북부 지역 주민들의 도심 접근성이 크게 개선될 것으로 예상됩니다.
+
+새 노선은 첨단 기술을 적용한 무인 운행 시스템을 도입하여 운행 간격을 기존 5분에서 3분으로 단축했습니다. 또한 모든 역사에 장애인 편의시설과 에어컨 시설을 완비하여 승객 편의성을 높였습니다.
+
+방콕 시장은 "이번 노선 개통으로 교통 체증 완화와 대기오염 감소에도 기여할 것"이라며 "앞으로도 대중교통 인프라 확충에 지속적으로 투자하겠다"고 밝혔습니다.
+
+개통 첫 주에는 기념 이벤트로 모든 승객에게 50% 할인 혜택을 제공할 예정입니다.`,
+    imageUrl: "/placeholder.svg?height=300&width=500&text=지하철",
+    source: "방콕 교통 뉴스",
+    originalUrl: "https://example.com/news/bangkok-subway-new-line",
+    publishedAt: "2024-01-13T11:15:00Z",
+    category: "사회",
+    tags: ["교통", "지하철", "방콕", "인프라"],
+    viewCount: 2100,
+    isActive: true,
+    isFeatured: true,
+    createdAt: "2024-01-13T11:15:00Z",
+    updatedAt: "2024-01-13T11:15:00Z",
     originalLanguage: "ko",
     isTranslated: false,
   },
   {
     id: 4,
-    title: "태국 스타트업 생태계에서 활약하는 한국인 창업가들",
-    summary: "태국의 스타트업 생태계에서 한국인 창업가들이 혁신적인 기술과 아이디어로 주목받고 있습니다.",
-    content: `태국의 스타트업 생태계에서 한국인 창업가들의 활약이 눈에 띄고 있습니다.
+    title: "태국 정부, 디지털 노마드 비자 신설 발표",
+    summary: "태국 정부가 원격 근무자들을 위한 새로운 디지털 노마드 비자를 신설한다고 발표했습니다.",
+    content: `태국 정부가 글로벌 원격 근무 트렌드에 맞춰 '디지털 노마드 비자(Digital Nomad Visa)'를 새롭게 신설한다고 발표했습니다.
 
-방콕을 중심으로 한 태국의 스타트업 생태계는 최근 몇 년간 급속한 성장을 보이고 있으며, 이 과정에서 한국인 창업가들이 중요한 역할을 하고 있습니다.
+이 비자는 원격으로 일하는 외국인 전문직 종사자들이 태국에서 최대 1년간 체류할 수 있도록 하는 제도입니다. 기존 관광비자와 달리 장기 체류가 가능하며, 비자 연장도 가능합니다.
 
-특히 핀테크, 이커머스, 푸드테크 분야에서 한국인이 설립한 스타트업들이 주목받고 있습니다. 한국의 IT 기술력과 태국의 시장 잠재력이 결합되어 시너지 효과를 내고 있는 것입니다.
+신청 자격은 월 소득 5만 바트 이상의 원격 근무자로, IT, 디자인, 마케팅, 컨설팅 등 다양한 분야의 전문직이 대상입니다. 신청 시 고용 증명서, 소득 증명서, 건강보험 가입 증명서 등이 필요합니다.
 
-방콕에서 배달 앱을 운영하는 한국인 창업가 이 모 씨는 "한국의 배달 문화와 기술을 태국 시장에 맞게 현지화하여 성공할 수 있었다"며 "언어와 문화의 차이를 극복하는 것이 가장 큰 도전이었지만, 현지 파트너들과의 협력을 통해 해결할 수 있었다"고 말했습니다.
+태국 관광청 관계자는 "코로나19 이후 원격 근무가 일반화되면서 장기 체류 관광객이 증가하고 있다"며 "이들을 적극 유치하여 관광 수입 증대와 지역 경제 활성화를 도모하겠다"고 설명했습니다.
 
-태국 정부도 외국인 창업가들을 적극 지원하고 있으며, 특히 한국인 창업가들에게는 별도의 지원 프로그램을 운영하고 있습니다.
-
-업계 전문가들은 한국과 태국 간의 경제 협력이 더욱 강화되면서, 양국 스타트업 생태계의 교류도 더욱 활발해질 것으로 전망하고 있습니다.`,
-    imageUrl: "/placeholder.svg?height=200&width=400",
-    source: "테크 아시아",
-    originalUrl: "https://example.com/korean-startups-thailand",
-    publishedAt: "2024-01-22T11:20:00Z",
-    category: "기술",
-    tags: ["스타트업", "창업", "핀테크", "한국인창업가", "태국"],
-    viewCount: 1560,
+새 비자는 다음 달부터 온라인으로 신청할 수 있으며, 처리 기간은 약 2주 정도 소요될 예정입니다.`,
+    imageUrl: "/placeholder.svg?height=300&width=500&text=디지털노마드",
+    source: "태국 정부 공보",
+    originalUrl: "https://example.com/news/digital-nomad-visa",
+    publishedAt: "2024-01-12T16:45:00Z",
+    category: "정치",
+    tags: ["비자", "디지털노마드", "원격근무", "정부정책"],
+    viewCount: 3200,
     isActive: true,
-    isFeatured: false,
-    createdAt: "2024-01-22T11:20:00Z",
-    updatedAt: "2024-01-22T11:20:00Z",
-    originalLanguage: "en",
-    isTranslated: true,
+    isFeatured: true,
+    createdAt: "2024-01-12T16:45:00Z",
+    updatedAt: "2024-01-12T16:45:00Z",
+    originalLanguage: "ko",
+    isTranslated: false,
   },
   {
     id: 5,
-    title: "치앙마이 한인 은퇴자 커뮤니티, 현지 봉사활동으로 화제",
-    summary: "치앙마이에 거주하는 한인 은퇴자들이 현지 사회를 위한 다양한 봉사활동을 펼치며 좋은 반응을 얻고 있습니다.",
-    content: `태국 북부 치앙마이에 거주하는 한인 은퇴자들이 현지 사회를 위한 봉사활동으로 주목받고 있습니다.
+    title: "푸켓 국제공항 새 터미널 건설 착공",
+    summary: "푸켓 국제공항의 새로운 터미널 건설이 착공되어 2026년 완공을 목표로 하고 있습니다.",
+    content: `푸켓 국제공항의 새로운 제3터미널 건설 공사가 정식 착공되었습니다.
 
-'치앙마이 한인 실버 봉사단'이라는 이름으로 활동하는 이들은 현지 고아원, 양로원, 장애인 시설 등을 정기적으로 방문하여 봉사활동을 펼치고 있습니다.
+새 터미널은 연간 1,500만 명의 승객을 수용할 수 있는 규모로 건설되며, 현재 공항 용량의 2배에 달합니다. 총 건설비는 200억 바트가 투입될 예정입니다.
 
-특히 한국어 교육 봉사, 한국 전통 문화 체험 프로그램, 의료 봉사 등 다양한 분야에서 활동하고 있어 현지 주민들로부터 큰 호응을 얻고 있습니다.
+터미널에는 최신 자동화 시설과 친환경 기술이 적용됩니다. 태양광 발전 시설, 빗물 재활용 시스템, 에너지 효율적인 냉방 시스템 등을 도입하여 탄소 중립을 목표로 하고 있습니다.
 
-봉사단 대표인 김 모 씨(67세)는 "은퇴 후 제2의 인생을 태국에서 보내면서, 우리를 따뜻하게 받아준 현지 사회에 보답하고 싶었다"며 "언어는 달라도 마음은 통한다는 것을 매번 느끼고 있다"고 말했습니다.
+또한 승객 편의를 위해 더 많은 면세점과 레스토랑, 휴게 시설이 마련될 예정입니다. 특히 태국 전통 문화를 체험할 수 있는 문화 공간도 조성되어 관광객들에게 특별한 경험을 제공할 계획입니다.
 
-현재 봉사단에는 50여 명의 한인 은퇴자들이 참여하고 있으며, 매월 정기 모임을 통해 봉사 계획을 세우고 있습니다.
+공항 관계자는 "푸켓은 태국의 대표적인 관광지로서 늘어나는 관광객 수요에 대응하기 위해 인프라 확충이 필수적"이라며 "새 터미널 완공으로 더 많은 관광객을 유치할 수 있을 것"이라고 기대감을 표했습니다.
 
-치앙마이 시청 관계자는 "한인 은퇴자들의 봉사활동이 지역 사회에 큰 도움이 되고 있으며, 이러한 활동이 한국과 태국의 우정을 더욱 돈독하게 만들고 있다"고 평가했습니다.
-
-이들의 활동은 현지 언론에도 여러 차례 소개되면서, 다른 외국인 커뮤니티에도 좋은 영향을 미치고 있습니다.`,
-    imageUrl: "/placeholder.svg?height=200&width=400",
-    source: "치앙마이 뉴스",
-    originalUrl: "https://example.com/korean-retirees-volunteer-chiangmai",
-    publishedAt: "2024-01-25T09:15:00Z",
+건설 공사는 2026년 말 완공을 목표로 하고 있으며, 공사 기간 중에도 기존 터미널 운영에는 차질이 없도록 할 예정입니다.`,
+    imageUrl: "/placeholder.svg?height=300&width=500&text=공항터미널",
+    source: "푸켓 공항 공사",
+    originalUrl: "https://example.com/news/phuket-airport-terminal",
+    publishedAt: "2024-01-11T10:20:00Z",
     category: "사회",
-    tags: ["봉사활동", "은퇴자", "치앙마이", "한인커뮤니티", "사회공헌"],
-    viewCount: 720,
+    tags: ["공항", "푸켓", "인프라", "관광"],
+    viewCount: 1800,
     isActive: true,
     isFeatured: false,
-    createdAt: "2024-01-25T09:15:00Z",
-    updatedAt: "2024-01-25T09:15:00Z",
+    createdAt: "2024-01-11T10:20:00Z",
+    updatedAt: "2024-01-11T10:20:00Z",
     originalLanguage: "ko",
     isTranslated: false,
   },
 ]
 
-export const newsCategories = [
-  { id: "all", name: "전체", color: "bg-gray-100 text-gray-800" },
-  { id: "정치", name: "정치", color: "bg-red-100 text-red-800" },
-  { id: "경제", name: "경제", color: "bg-blue-100 text-blue-800" },
-  { id: "사회", name: "사회", color: "bg-green-100 text-green-800" },
-  { id: "문화", name: "문화", color: "bg-purple-100 text-purple-800" },
-  { id: "스포츠", name: "스포츠", color: "bg-orange-100 text-orange-800" },
-  { id: "국제", name: "국제", color: "bg-indigo-100 text-indigo-800" },
-  { id: "생활", name: "생활", color: "bg-pink-100 text-pink-800" },
-  { id: "기술", name: "기술", color: "bg-cyan-100 text-cyan-800" },
+// 뉴스 카테고리별 통계
+export const newsCategoryStats = {
+  정치: 1,
+  경제: 1,
+  사회: 2,
+  문화: 1,
+  스포츠: 0,
+  국제: 0,
+  생활: 0,
+  기술: 0,
+  일반: 0,
+}
+
+// 인기 태그
+export const popularTags = [
+  "한인사회",
+  "경제성장",
+  "교통",
+  "관광",
+  "정부정책",
+  "인프라",
+  "문화",
+  "비자",
+  "공항",
+  "방콕",
 ]
-
-export function getNewsByCategory(category: string): NewsItem[] {
-  if (category === "all") {
-    return sampleNews
-  }
-  return sampleNews.filter((news) => news.category === category)
-}
-
-export function getFeaturedNews(): NewsItem[] {
-  return sampleNews.filter((news) => news.isFeatured && news.isActive)
-}
-
-export function getRecentNews(limit = 5): NewsItem[] {
-  return sampleNews
-    .filter((news) => news.isActive)
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    .slice(0, limit)
-}
-
-export function searchNews(query: string): NewsItem[] {
-  const lowercaseQuery = query.toLowerCase()
-  return sampleNews.filter(
-    (news) =>
-      news.isActive &&
-      (news.title.toLowerCase().includes(lowercaseQuery) ||
-        news.summary.toLowerCase().includes(lowercaseQuery) ||
-        news.content.toLowerCase().includes(lowercaseQuery) ||
-        news.tags.some((tag) => tag.toLowerCase().includes(lowercaseQuery))),
-  )
-}
