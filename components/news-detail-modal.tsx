@@ -103,7 +103,10 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
           <ScrollArea className="h-full">
             <div className="space-y-6 pr-4">
               {/* Main Image Area */}
-              {news.image_url ? (
+              {news.image_url &&
+              String(news.image_url).trim().length > 0 &&
+              String(news.image_url).trim() !== "null" &&
+              String(news.image_url).trim() !== "undefined" ? (
                 <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
                   {Array.isArray(news.image_url) ? (
                     // Multiple images - show first one as main image
@@ -142,7 +145,7 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                   )}
                 </div>
               ) : (
-                // Fallback placeholder when no image - with enhanced debug info
+                // Enhanced image handling with better validation
                 <div className="w-full h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
                   <div className="text-center text-gray-500">
                     <div className="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -155,47 +158,50 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                         />
                       </svg>
                     </div>
-                    <p className="text-sm font-medium">이미지 없음</p>
-                    <p className="text-xs">대표 이미지가 없습니다</p>
-                    {/* Enhanced debug info for specific URL */}
-                    <div className="mt-2 text-xs text-red-500 bg-red-50 p-2 rounded border max-w-md">
-                      <strong>🔍 상세 디버그:</strong>
+                    <p className="text-sm font-medium">이미지 로드 중...</p>
+                    <p className="text-xs">이미지를 불러오고 있습니다</p>
+
+                    {/* Enhanced debug info */}
+                    <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded border max-w-md">
+                      <strong>🔍 이미지 URL 분석:</strong>
                       <br />
-                      <strong>image_url 원본:</strong> {JSON.stringify(news.image_url)}
+                      <strong>원본 값:</strong> {JSON.stringify(news.image_url)}
                       <br />
                       <strong>타입:</strong> {typeof news.image_url}
                       <br />
-                      <strong>길이:</strong> {Array.isArray(news.image_url) ? news.image_url.length : "N/A"}
+                      <strong>문자열 길이:</strong> {String(news.image_url || "").length}
                       <br />
-                      <strong>Truthy 체크:</strong> {news.image_url ? "✅ true" : "❌ false"}
-                      <br />
-                      <strong>빈 문자열 체크:</strong> {news.image_url === "" ? "❌ 빈 문자열" : "✅ 빈 문자열 아님"}
-                      <br />
-                      <strong>null 체크:</strong> {news.image_url === null ? "❌ null" : "✅ null 아님"}
-                      <br />
-                      <strong>undefined 체크:</strong>{" "}
-                      {news.image_url === undefined ? "❌ undefined" : "✅ undefined 아님"}
-                      <br />
-                      <strong>예상 URL 포함:</strong>{" "}
-                      {String(news.image_url).includes("innnews.co.th") ? "✅ 포함됨" : "❌ 포함 안됨"}
-                      <br />
-                      <strong>문자열 변환:</strong> "{String(news.image_url)}"
-                      <br />
-                      <strong>trim 후:</strong> "{String(news.image_url).trim()}"
-                      <br />
-                      {/* Test the actual URL */}
-                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
-                        <strong>🧪 URL 테스트:</strong>
-                        <br />
-                        <img
-                          src="https://www.innnews.co.th/wp-content/uploads/2025/07/%E0%B8%9B%E0%B8%81%E0%B8%95%E0%B8%95800.jpg"
-                          alt="테스트 이미지"
-                          className="w-20 h-20 object-cover mt-1 border"
-                          onLoad={() => console.log("✅ 테스트 URL 로드 성공")}
-                          onError={() => console.log("❌ 테스트 URL 로드 실패")}
-                        />
-                        <div className="text-xs mt-1">직접 URL 테스트</div>
-                      </div>
+                      <strong>URL 유효성:</strong>{" "}
+                      {news.image_url &&
+                      String(news.image_url).trim().length > 0 &&
+                      (String(news.image_url).startsWith("http") || String(news.image_url).startsWith("/"))
+                        ? "✅ 유효한 URL 형식"
+                        : "❌ 유효하지 않은 URL"}
+                      {/* Force render the image if URL exists */}
+                      {news.image_url && String(news.image_url).trim().length > 0 && (
+                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                          <strong>🖼️ 강제 렌더링 테스트:</strong>
+                          <br />
+                          <img
+                            src={String(news.image_url).trim() || "/placeholder.svg"}
+                            alt="강제 테스트 이미지"
+                            className="w-full h-20 object-cover mt-1 border rounded"
+                            onLoad={(e) => {
+                              console.log("✅ 강제 렌더링 성공:", news.image_url)
+                              // Hide placeholder and show main image
+                              const mainImageContainer = e.target
+                                .closest(".space-y-6")
+                                ?.querySelector(".w-full.h-48.bg-gray-100.rounded-lg.overflow-hidden")
+                              if (mainImageContainer) {
+                                mainImageContainer.style.display = "block"
+                              }
+                            }}
+                            onError={(e) => {
+                              console.log("❌ 강제 렌더링 실패:", news.image_url)
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
