@@ -72,7 +72,9 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
           {truncateText(String(news.title || ""), 80)}
         </h3>
 
-        <p className="text-gray-600 text-sm leading-relaxed">{truncateText(String(news.summary || ""), 150)}</p>
+        <p className="text-gray-600 text-sm leading-relaxed h-[4.5rem] overflow-hidden line-clamp-3">
+          {String(news.summary || "")}
+        </p>
       </CardHeader>
 
       <CardContent className="space-y-3">
