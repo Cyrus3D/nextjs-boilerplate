@@ -51,7 +51,7 @@ const getCategoryColor = (category: string) => {
   return colors[category as keyof typeof colors] || "bg-gray-500"
 }
 
-export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessDetailModalProps) {
+export function BusinessDetailModal({ card, isOpen, onClose }: BusinessDetailModalProps) {
   const [isFavorited, setIsFavorited] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
 
@@ -61,7 +61,7 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
 
   const handleCopy = async (text: string, field: string) => {
     try {
-      await navigator.clipboard.writeText(text)
+      await navigator.clipboard.writeText(String(text))
       setCopiedField(field)
       setTimeout(() => setCopiedField(null), 2000)
     } catch (err) {
@@ -70,33 +70,33 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
   }
 
   const handlePhoneClick = (phone: string) => {
-    window.open(`tel:${phone}`, "_self")
+    window.open(`tel:${String(phone)}`, "_self")
   }
 
   const handleMapClick = (location: string) => {
-    const searchQuery = encodeURIComponent(`${card.title} ${location} 방콕 태국`)
+    const searchQuery = encodeURIComponent(`${String(card.title)} ${String(location)} 방콕 태국`)
     window.open(`https://www.google.com/maps/search/?api=1&query=${searchQuery}`, "_blank")
   }
 
   const handleWebsiteClick = (url: string) => {
-    const fullUrl = url.startsWith("http") ? url : `https://${url}`
+    const fullUrl = String(url).startsWith("http") ? String(url) : `https://${String(url)}`
     window.open(fullUrl, "_blank")
   }
 
   const handleKakaoClick = (kakaoId: string) => {
-    window.open(`https://open.kakao.com/o/${kakaoId}`, "_blank")
+    window.open(`https://open.kakao.com/o/${String(kakaoId)}`, "_blank")
   }
 
   const handleLineClick = (lineId: string) => {
-    window.open(`https://line.me/ti/p/${lineId}`, "_blank")
+    window.open(`https://line.me/ti/p/${String(lineId)}`, "_blank")
   }
 
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: card.title,
-          text: card.description,
+          title: String(card.title),
+          text: String(card.description),
           url: window.location.href,
         })
       } catch (err) {
@@ -139,11 +139,35 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
   ]
 
   const socialLinks = [
-    { platform: "facebook", url: card.facebookUrl, icon: Facebook, label: "Facebook", color: "bg-blue-600" },
-    { platform: "instagram", url: card.instagramUrl, icon: Instagram, label: "Instagram", color: "bg-pink-500" },
-    { platform: "youtube", url: card.youtubeUrl, icon: Youtube, label: "YouTube", color: "bg-red-600" },
-    { platform: "tiktok", url: card.tiktokUrl, icon: Hash, label: "TikTok", color: "bg-black" },
-  ].filter((link) => link.url && link.url.trim() !== "")
+    {
+      platform: "facebook",
+      url: card.facebookUrl,
+      icon: Facebook,
+      label: "Facebook",
+      color: "bg-blue-600",
+    },
+    {
+      platform: "instagram",
+      url: card.instagramUrl,
+      icon: Instagram,
+      label: "Instagram",
+      color: "bg-pink-500",
+    },
+    {
+      platform: "youtube",
+      url: card.youtubeUrl,
+      icon: Youtube,
+      label: "YouTube",
+      color: "bg-red-600",
+    },
+    {
+      platform: "tiktok",
+      url: card.tiktokUrl,
+      icon: Hash,
+      label: "TikTok",
+      color: "bg-black",
+    },
+  ].filter((link) => link.url && String(link.url).trim() !== "")
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -152,8 +176,8 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
           {/* Header with Hero Image */}
           <div className="relative h-60 sm:h-48 lg:h-52 flex-shrink-0">
             <img
-              src={card.image || "/placeholder.svg?height=256&width=800"}
-              alt={card.title}
+              src={String(card.image) || "/placeholder.svg?height=256&width=800"}
+              alt={String(card.title)}
               className="w-full h-full object-cover"
             />
 
@@ -201,18 +225,20 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                         프리미엄
                       </Badge>
                     )}
-                    <Badge className={`${getCategoryColor(card.category)} text-white shadow-lg`}>{card.category}</Badge>
+                    <Badge className={`${getCategoryColor(String(card.category))} text-white shadow-lg`}>
+                      {String(card.category)}
+                    </Badge>
                   </div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 leading-tight">{card.title}</h1>
+                  <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 leading-tight">{String(card.title)}</h1>
                   <div className="flex items-center gap-4 text-white/80 text-sm">
                     <div className="flex items-center gap-1">
                       <Eye className="h-4 w-4" />
-                      <span>{card.exposureCount || 0}회 조회</span>
+                      <span>{Number(card.exposureCount || 0)}회 조회</span>
                     </div>
                     {card.lastExposedAt && (
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        <span>{new Date(card.lastExposedAt).toLocaleDateString("ko-KR")}</span>
+                        <span>{new Date(String(card.lastExposedAt)).toLocaleDateString("ko-KR")}</span>
                       </div>
                     )}
                   </div>
@@ -246,7 +272,7 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
               {/* Description */}
               <div>
                 <h2 className="text-lg font-semibold mb-2 text-gray-900">업체 소개</h2>
-                <p className="text-gray-700 leading-relaxed text-base">{card.description}</p>
+                <p className="text-gray-700 leading-relaxed text-base">{String(card.description)}</p>
               </div>
 
               {/* Special Offers */}
@@ -259,13 +285,13 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                         <div className="flex items-center justify-between">
                           <div>
                             <h3 className="font-semibold text-green-800 mb-1">가격 정보</h3>
-                            <p className="text-green-700 text-lg font-medium">{card.price}</p>
+                            <p className="text-green-700 text-lg font-medium">{String(card.price)}</p>
                           </div>
                           <Button
                             variant="outline"
                             size="sm"
                             className="text-green-700 border-green-300 hover:bg-green-100 bg-transparent w-12"
-                            onClick={() => handleCopy(card.price!, "price")}
+                            onClick={() => handleCopy(String(card.price), "price")}
                           >
                             {copiedField === "price" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                           </Button>
@@ -277,13 +303,13 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                         <div className="flex items-center justify-between">
                           <div>
                             <h3 className="font-semibold text-orange-800 mb-1">🎉 프로모션</h3>
-                            <p className="text-orange-700 text-lg font-medium">{card.promotion}</p>
+                            <p className="text-orange-700 text-lg font-medium">{String(card.promotion)}</p>
                           </div>
                           <Button
                             variant="outline"
                             size="sm"
                             className="text-orange-700 border-orange-300 hover:bg-orange-100 bg-transparent w-12"
-                            onClick={() => handleCopy(card.promotion!, "promotion")}
+                            onClick={() => handleCopy(String(card.promotion), "promotion")}
                           >
                             {copiedField === "promotion" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                           </Button>
@@ -307,17 +333,22 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-blue-900 mb-1">위치</h3>
-                        <p className="text-blue-800 mb-2 break-all">{card.location}</p>
+                        <p className="text-blue-800 mb-2 break-all">{String(card.location)}</p>
                       </div>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
-                          onClick={() => handleMapClick(card.location!)}
+                          onClick={() => handleMapClick(String(card.location))}
                           className="bg-blue-500 hover:bg-blue-600 w-28"
                         >
                           지도에서 보기
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleCopy(card.location!, "location")} className="w-12">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopy(String(card.location), "location")}
+                          className="w-12"
+                        >
                           {copiedField === "location" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                         </Button>
                       </div>
@@ -331,17 +362,22 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-green-900 mb-1">전화번호</h3>
-                        <p className="text-green-800 mb-2 font-mono break-all">{card.phone}</p>
+                        <p className="text-green-800 mb-2 font-mono break-all">{String(card.phone)}</p>
                       </div>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
-                          onClick={() => handlePhoneClick(card.phone!)}
+                          onClick={() => handlePhoneClick(String(card.phone))}
                           className="bg-green-500 hover:bg-green-600 w-28"
                         >
                           전화하기
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleCopy(card.phone!, "phone")} className="w-12">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopy(String(card.phone), "phone")}
+                          className="w-12"
+                        >
                           {copiedField === "phone" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                         </Button>
                       </div>
@@ -355,7 +391,7 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-purple-900 mb-1">운영시간</h3>
-                        <p className="text-purple-800 whitespace-pre-line break-all">{card.hours}</p>
+                        <p className="text-purple-800 whitespace-pre-line break-all">{String(card.hours)}</p>
                       </div>
                     </div>
                   )}
@@ -369,18 +405,23 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                         <h3 className="font-medium text-indigo-900 mb-1">
                           {urlType === "map" ? "지도 링크" : "웹사이트"}
                         </h3>
-                        <p className="text-indigo-800 mb-2 break-all text-sm">{card.website}</p>
+                        <p className="text-indigo-800 mb-2 break-all text-sm">{String(card.website)}</p>
                       </div>
                       <div className="flex gap-2">
                         <Button
                           size="sm"
-                          onClick={() => handleWebsiteClick(card.website!)}
+                          onClick={() => handleWebsiteClick(String(card.website))}
                           className="bg-indigo-500 hover:bg-indigo-600 w-28"
                         >
                           <ExternalLink className="h-4 w-4 mr-1" />
                           {urlType === "map" ? "지도 보기" : "사이트 방문"}
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleCopy(card.website!, "website")} className="w-12">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopy(String(card.website), "website")}
+                          className="w-12"
+                        >
                           {copiedField === "website" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                         </Button>
                       </div>
@@ -403,17 +444,22 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-medium text-yellow-900 mb-1">카카오톡 ID</h3>
-                            <p className="text-yellow-800 font-mono break-all">{card.kakaoId}</p>
+                            <p className="text-yellow-800 font-mono break-all">{String(card.kakaoId)}</p>
                           </div>
                           <div className="flex gap-2">
                             <Button
                               size="sm"
-                              onClick={() => handleKakaoClick(card.kakaoId!)}
+                              onClick={() => handleKakaoClick(String(card.kakaoId))}
                               className="bg-yellow-500 hover:bg-yellow-600 w-28"
                             >
                               카톡 열기
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleCopy(card.kakaoId!, "kakao")} className="w-12">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCopy(String(card.kakaoId), "kakao")}
+                              className="w-12"
+                            >
                               {copiedField === "kakao" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             </Button>
                           </div>
@@ -426,17 +472,22 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-medium text-green-900 mb-1">라인 ID</h3>
-                            <p className="text-green-800 font-mono break-all">{card.lineId}</p>
+                            <p className="text-green-800 font-mono break-all">{String(card.lineId)}</p>
                           </div>
                           <div className="flex gap-2">
                             <Button
                               size="sm"
-                              onClick={() => handleLineClick(card.lineId!)}
+                              onClick={() => handleLineClick(String(card.lineId))}
                               className="bg-green-500 hover:bg-green-600 w-28"
                             >
                               라인 열기
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleCopy(card.lineId!, "line")} className="w-12">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCopy(String(card.lineId), "line")}
+                              className="w-12"
+                            >
                               {copiedField === "line" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             </Button>
                           </div>
@@ -459,7 +510,7 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                           key={social.platform}
                           variant="outline"
                           className={`${social.color} text-white border-0 hover:opacity-90 h-12`}
-                          onClick={() => handleWebsiteClick(social.url!)}
+                          onClick={() => handleWebsiteClick(String(social.url))}
                         >
                           <social.icon className="h-5 w-5 mr-2" />
                           {social.label}
@@ -483,7 +534,7 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                           variant="secondary"
                           className="text-sm px-3 py-1 bg-gray-100 hover:bg-gray-200 cursor-pointer transition-colors"
                         >
-                          #{tag}
+                          #{String(tag)}
                         </Badge>
                       ))}
                     </div>
@@ -500,3 +551,5 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
     </Dialog>
   )
 }
+
+export default BusinessDetailModal
