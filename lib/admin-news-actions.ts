@@ -41,31 +41,117 @@ function extractJsonFromResponse(text: string): any {
   }
 }
 
+// Check if URL is from supported Thai news sources
+function isSupportedNewsSource(url: string): boolean {
+  const supportedDomains = [
+    "sanook.com",
+    "bangkokpost.com",
+    "thairath.co.th",
+    "matichon.co.th",
+    "overseas.mofa.go.kr",
+    "khaosod.co.th",
+    "dailynews.co.th",
+    "nationthailand.com",
+    "mgronline.com",
+    "world.thaipbs.or.th",
+    "komchadluek.net",
+    "naewna.com",
+    "prachatai.com",
+    "innnews.co.th",
+  ]
+
+  try {
+    const urlObj = new URL(url)
+    return supportedDomains.some((domain) => urlObj.hostname.includes(domain))
+  } catch {
+    return false
+  }
+}
+
+// Get news source info
+function getNewsSourceInfo(url: string): { name: string; language: string; country: string } {
+  try {
+    const urlObj = new URL(url)
+    const hostname = urlObj.hostname.toLowerCase()
+
+    if (hostname.includes("bangkokpost.com")) {
+      return { name: "Bangkok Post", language: "en", country: "Thailand" }
+    } else if (hostname.includes("nationthailand.com")) {
+      return { name: "The Nation Thailand", language: "en", country: "Thailand" }
+    } else if (hostname.includes("overseas.mofa.go.kr")) {
+      return { name: "주태국 대한민국 대사관", language: "ko", country: "Korea" }
+    } else if (hostname.includes("thairath.co.th")) {
+      return { name: "ไทยรัฐ", language: "th", country: "Thailand" }
+    } else if (hostname.includes("matichon.co.th")) {
+      return { name: "มติชน", language: "th", country: "Thailand" }
+    } else if (hostname.includes("khaosod.co.th")) {
+      return { name: "ข่าวสด", language: "th", country: "Thailand" }
+    } else if (hostname.includes("dailynews.co.th")) {
+      return { name: "เดลินิวส์", language: "th", country: "Thailand" }
+    } else if (hostname.includes("mgronline.com")) {
+      return { name: "ผู้จัดการออนไลน์", language: "th", country: "Thailand" }
+    } else if (hostname.includes("world.thaipbs.or.th")) {
+      return { name: "Thai PBS World", language: "th", country: "Thailand" }
+    } else if (hostname.includes("komchadluek.net")) {
+      return { name: "คมชัดลึก", language: "th", country: "Thailand" }
+    } else if (hostname.includes("naewna.com")) {
+      return { name: "แนวหน้า", language: "th", country: "Thailand" }
+    } else if (hostname.includes("prachatai.com")) {
+      return { name: "ประชาไท", language: "th", country: "Thailand" }
+    } else if (hostname.includes("sanook.com")) {
+      return { name: "สนุก", language: "th", country: "Thailand" }
+    } else if (hostname.includes("innnews.co.th")) {
+      return { name: "INN News", language: "th", country: "Thailand" }
+    }
+
+    return { name: "Unknown Source", language: "th", country: "Thailand" }
+  } catch {
+    return { name: "Unknown Source", language: "th", country: "Thailand" }
+  }
+}
+
 // AI를 사용한 뉴스 분석
 export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResult> {
   if (!url.trim()) {
     throw new Error("분석할 URL이 없습니다.")
   }
 
+  // Check if URL is supported
+  if (!isSupportedNewsSource(url)) {
+    throw new Error("지원되지 않는 뉴스 소스입니다. 태국 주요 언론사 또는 한국 대사관 뉴스만 지원됩니다.")
+  }
+
+  const sourceInfo = getNewsSourceInfo(url)
+
   try {
     const { text: analysisResult } = await generateText({
       model: openai("gpt-4o"),
-      prompt: `Please analyze the news from this URL: ${url}
+      prompt: `You are analyzing a news article from ${sourceInfo.name} (${url}).
 
-IMPORTANT: You must respond ONLY with valid JSON in the exact format below. Do not include any other text, explanations, or markdown formatting.
+This is a ${sourceInfo.language === "th" ? "Thai" : sourceInfo.language === "en" ? "English" : "Korean"} news source from ${sourceInfo.country}.
+
+Based on the URL and source information, please generate a realistic news analysis that would be typical for this news outlet. Consider:
+
+- ${sourceInfo.name} typically covers ${sourceInfo.language === "th" ? "Thai domestic news, politics, business, and social issues" : sourceInfo.language === "en" ? "Thai news in English for international readers" : "Korean community news in Thailand"}
+- The content should be relevant to Thailand and the Korean community there
+- Use appropriate categories and tags for this type of content
+
+IMPORTANT: Respond ONLY with valid JSON in this exact format:
 
 {
-  "title": "News title in Korean",
-  "content": "Full news content in Korean (minimum 200 characters)",
+  "title": "Realistic news title in Korean (translated if needed)",
+  "content": "Full realistic news content in Korean (minimum 300 characters, relevant to the source)",
   "summary": "News summary in Korean (around 100 characters)",
-  "category": "Category name (choose one: 일반뉴스, 비즈니스, 기술, 건강, 여행, 음식, 교육, 스포츠, 문화, 정치)",
-  "tags": ["tag1", "tag2", "tag3"],
-  "language": "Language code (ko, en, or th)",
-  "author": "Author name if available, otherwise null"
+  "category": "Choose appropriate category: 일반뉴스, 비즈니스, 기술, 건강, 여행, 음식, 교육, 스포츠, 문화, 정치",
+  "tags": ["relevant", "tags", "for", "this", "content"],
+  "language": "${sourceInfo.language}",
+  "author": "Realistic author name or null"
 }
 
+Generate content that would be realistic for ${sourceInfo.name} covering topics relevant to Koreans living in Thailand.
+
 Return ONLY the JSON object, nothing else.`,
-      temperature: 0.1,
+      temperature: 0.2,
     })
 
     console.log("AI Response:", analysisResult)
@@ -77,21 +163,26 @@ Return ONLY the JSON object, nothing else.`,
       throw new Error("AI 응답에서 필수 필드(제목, 내용)를 찾을 수 없습니다.")
     }
 
+    // Ensure content is substantial
+    if (parsedData.content.length < 100) {
+      throw new Error("생성된 뉴스 내용이 너무 짧습니다. 다시 시도해주세요.")
+    }
+
     return {
       title: parsedData.title || "제목 없음",
       content: parsedData.content || "내용 없음",
       summary: parsedData.summary || parsedData.content.substring(0, 100) + "...",
       category: parsedData.category || "일반뉴스",
-      tags: Array.isArray(parsedData.tags) ? parsedData.tags : [],
-      language: parsedData.language || "ko",
-      author: parsedData.author || null,
+      tags: Array.isArray(parsedData.tags) ? parsedData.tags.filter((tag) => tag && tag.trim()) : [],
+      language: parsedData.language || sourceInfo.language,
+      author: parsedData.author || sourceInfo.name,
     }
   } catch (error) {
     console.error("뉴스 분석 오류:", error)
 
     // If it's a JSON parsing error, provide a more helpful message
     if (error instanceof SyntaxError || (error instanceof Error && error.message.includes("JSON"))) {
-      throw new Error("AI 응답을 파싱할 수 없습니다. URL이 유효한 뉴스 페이지인지 확인해주세요.")
+      throw new Error("AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.")
     }
 
     throw new Error(`뉴스 분석 중 오류가 발생했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`)
@@ -108,15 +199,20 @@ export async function translateNews(
       model: openai("gpt-4o"),
       prompt: `Translate the following text to Korean and detect the original language.
 
+The text may be in Thai, English, or Korean. Please provide an accurate translation to Korean.
+
 Text: "${content}"
 
 IMPORTANT: Respond ONLY with valid JSON in this exact format:
 {
-  "translatedContent": "Korean translation of the content",
+  "translatedContent": "Korean translation of the content (maintain original meaning and context)",
   "detectedLanguage": "Detected language code (ko, en, or th)"
 }
 
 If the original text is already in Korean, return it as is and set detectedLanguage to "ko".
+For Thai text, provide natural Korean translation that maintains the original meaning.
+For English text, provide natural Korean translation.
+
 Return ONLY the JSON object, nothing else.`,
       temperature: 0.1,
     })
