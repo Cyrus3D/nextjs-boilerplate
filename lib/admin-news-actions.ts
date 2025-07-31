@@ -44,6 +44,101 @@ export async function incrementNewsViewCount(newsId: number): Promise<void> {
   }
 }
 
+// Scrape web content from URL
+async function scrapeWebContent(url: string): Promise<{
+  title: string
+  content: string
+  description: string
+  image: string
+}> {
+  try {
+    console.log("Scraping content from URL:", url)
+
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        DNT: "1",
+        Connection: "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+      },
+      timeout: 10000,
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const html = await response.text()
+    console.log("HTML content length:", html.length)
+
+    // Extract title
+    const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i)
+    let title = titleMatch ? titleMatch[1].replace(/\s+/g, " ").trim() : ""
+
+    // Try og:title if regular title is not good enough
+    const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']*)["'][^>]*>/i)
+    if (ogTitleMatch && ogTitleMatch[1].length > title.length) {
+      title = ogTitleMatch[1]
+    }
+
+    // Extract meta description
+    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["'][^>]*>/i)
+    let description = descMatch ? descMatch[1] : ""
+
+    // Try og:description if regular description is not available
+    const ogDescMatch = html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']*)["'][^>]*>/i)
+    if (ogDescMatch && (!description || ogDescMatch[1].length > description.length)) {
+      description = ogDescMatch[1]
+    }
+
+    // Extract image
+    const imgMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']*)["'][^>]*>/i)
+    const image = imgMatch ? imgMatch[1] : ""
+
+    // Extract main content by removing scripts, styles, and other non-content elements
+    let content = html
+      .replace(/<script[^>]*>.*?<\/script>/gis, "")
+      .replace(/<style[^>]*>.*?<\/style>/gis, "")
+      .replace(/<nav[^>]*>.*?<\/nav>/gis, "")
+      .replace(/<header[^>]*>.*?<\/header>/gis, "")
+      .replace(/<footer[^>]*>.*?<\/footer>/gis, "")
+      .replace(/<aside[^>]*>.*?<\/aside>/gis, "")
+      .replace(/<!--.*?-->/gs, "")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+
+    // Clean up HTML entities
+    content = content
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+
+    console.log("Extracted data:", {
+      title: title.substring(0, 100),
+      contentLength: content.length,
+      descriptionLength: description.length,
+    })
+
+    return {
+      title: title || "제목 없음",
+      content: content.substring(0, 8000), // Limit content length
+      description: description || "",
+      image: image || "",
+    }
+  } catch (error) {
+    console.error("Error scraping web content:", error)
+    throw new Error(`웹 콘텐츠를 가져올 수 없습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`)
+  }
+}
+
 // Analyze news content with AI
 export async function analyzeNewsWithAI(content: string, title: string): Promise<string> {
   try {
@@ -471,7 +566,7 @@ export async function getNewsTags(): Promise<NewsTag[]> {
   }
 }
 
-// Analyze news from URL
+// Analyze news from URL - Enhanced with actual web scraping
 export async function analyzeNewsFromUrl(url: string): Promise<{
   title: string
   content: string
@@ -482,49 +577,90 @@ export async function analyzeNewsFromUrl(url: string): Promise<{
   tags: string[]
 }> {
   try {
+    console.log("Starting news analysis for URL:", url)
+
+    // Step 1: Scrape the web content
+    const scrapedData = await scrapeWebContent(url)
+    console.log("Scraped data received:", {
+      titleLength: scrapedData.title.length,
+      contentLength: scrapedData.content.length,
+    })
+
+    // Step 2: Use AI to analyze and structure the content
     const { text } = await generateText({
       model: openai("gpt-4o"),
-      system: `당신은 뉴스 URL을 분석하는 전문가입니다. 
-      주어진 URL의 웹페이지 내용을 분석하여 다음 정보를 JSON 형태로 추출해주세요:
+      system: `당신은 뉴스 콘텐츠 분석 전문가입니다. 
+      주어진 웹페이지에서 추출된 내용을 분석하여 구조화된 뉴스 정보를 제공해주세요.
+      
+      다음 JSON 형식으로 정확히 응답해주세요:
       {
-        "title": "뉴스 제목",
-        "content": "뉴스 본문 내용",
-        "summary": "3-4문장의 요약",
-        "category": "카테고리 (정치, 경제, 사회, 문화, 스포츠, 기술 중 하나)",
-        "author": "작성자 (있는 경우)",
-        "language": "언어 코드 (ko, en, th 중 하나)",
-        "tags": ["태그1", "태그2", "태그3"]
+        "title": "정리된 뉴스 제목",
+        "content": "정리된 본문 내용 (최소 200자 이상)",
+        "summary": "3-4문장의 핵심 요약",
+        "category": "정치|경제|사회|문화|스포츠|기술|국제|생활 중 하나",
+        "author": "작성자명 (있는 경우, 없으면 null)",
+        "language": "ko|en|th 중 하나",
+        "tags": ["관련태그1", "관련태그2", "관련태그3"]
       }
       
-      만약 URL에 접근할 수 없거나 내용을 추출할 수 없다면, 빈 값들로 구성된 JSON을 반환해주세요.`,
-      prompt: `다음 URL의 뉴스 내용을 분석해주세요: ${url}`,
+      - 제목은 명확하고 간결하게 정리
+      - 본문은 중요한 내용만 정리하되 충분한 정보 포함
+      - 요약은 핵심 내용을 3-4문장으로 압축
+      - 카테고리는 내용에 가장 적합한 것으로 선택
+      - 태그는 검색에 유용한 키워드로 3-5개 선정`,
+      prompt: `웹페이지 제목: ${scrapedData.title}
+
+웹페이지 설명: ${scrapedData.description}
+
+웹페이지 본문:
+${scrapedData.content}
+
+위 내용을 분석하여 구조화된 뉴스 정보를 JSON 형식으로 제공해주세요.`,
+      maxTokens: 2000,
     })
+
+    console.log("AI analysis response:", text.substring(0, 200) + "...")
 
     try {
       const result = JSON.parse(text)
-      return {
-        title: result.title || "",
-        content: result.content || "",
-        summary: result.summary || "",
-        category: result.category || "일반",
-        author: result.author || undefined,
-        language: result.language || "ko",
-        tags: Array.isArray(result.tags) ? result.tags : [],
+
+      // Validate and clean the result
+      const cleanResult = {
+        title: String(result.title || scrapedData.title || "제목 없음").trim(),
+        content: String(result.content || scrapedData.content || "내용 없음").trim(),
+        summary: String(result.summary || scrapedData.description || "요약 없음").trim(),
+        category: String(result.category || "일반").trim(),
+        author: result.author ? String(result.author).trim() : undefined,
+        language: String(result.language || "ko").trim(),
+        tags: Array.isArray(result.tags) ? result.tags.map((tag: any) => String(tag).trim()).filter(Boolean) : [],
       }
+
+      console.log("Cleaned analysis result:", {
+        title: cleanResult.title.substring(0, 50) + "...",
+        contentLength: cleanResult.content.length,
+        summaryLength: cleanResult.summary.length,
+        category: cleanResult.category,
+        tagsCount: cleanResult.tags.length,
+      })
+
+      return cleanResult
     } catch (parseError) {
-      console.error("Error parsing AI response:", parseError)
+      console.error("Error parsing AI response as JSON:", parseError)
+      console.log("Raw AI response:", text)
+
+      // Fallback to scraped data if JSON parsing fails
       return {
-        title: "",
-        content: "",
-        summary: "",
+        title: scrapedData.title || "제목 없음",
+        content: scrapedData.content || "내용 없음",
+        summary: scrapedData.description || "요약 없음",
         category: "일반",
         language: "ko",
-        tags: [],
+        tags: ["뉴스"],
       }
     }
   } catch (error) {
     console.error("Error analyzing news from URL:", error)
-    throw new Error("뉴스 URL 분석에 실패했습니다. URL이 유효한지 확인해주세요.")
+    throw new Error(`뉴스 URL 분석에 실패했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`)
   }
 }
 

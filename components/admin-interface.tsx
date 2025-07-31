@@ -318,7 +318,7 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
     }
   }
 
-  // News URL Analysis
+  // News URL Analysis - Enhanced
   const handleNewsAnalysis = async () => {
     if (!newsUrl.trim()) {
       toast({
@@ -343,29 +343,42 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
 
     setIsAnalyzing(true)
     try {
+      console.log("Starting news analysis for URL:", newsUrl)
+
       const analysisResult = await analyzeNewsFromUrl(newsUrl)
+      console.log("Analysis result received:", analysisResult)
 
       // Find category ID
       let categoryId = undefined
-      const category = newsCategories.find((cat) => cat.name === analysisResult.category)
-      if (category) {
-        categoryId = category.id
+      if (analysisResult.category && newsCategories.length > 0) {
+        const category = newsCategories.find(
+          (cat) =>
+            cat.name.toLowerCase().includes(analysisResult.category.toLowerCase()) ||
+            analysisResult.category.toLowerCase().includes(cat.name.toLowerCase()),
+        )
+        if (category) {
+          categoryId = category.id
+        }
       }
 
-      setNewsFormData({
+      // Update form data with analysis results
+      const updatedFormData = {
         ...newsFormData,
-        title: analysisResult.title,
-        content: analysisResult.content,
-        summary: analysisResult.summary,
+        title: analysisResult.title || "",
+        content: analysisResult.content || "",
+        summary: analysisResult.summary || "",
         category_id: categoryId,
         author: analysisResult.author || "",
         source_url: newsUrl,
-        original_language: analysisResult.language,
+        original_language: analysisResult.language || "ko",
         is_translated: analysisResult.language !== "ko",
-        tag_names: analysisResult.tags,
-      })
+        tag_names: Array.isArray(analysisResult.tags) ? analysisResult.tags : [],
+      }
 
+      console.log("Updating form data:", updatedFormData)
+      setNewsFormData(updatedFormData)
       setNewsUrl("")
+
       toast({
         title: "성공",
         description: "뉴스 분석이 완료되었습니다. 결과를 확인하고 저장해주세요.",
