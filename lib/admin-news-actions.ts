@@ -636,82 +636,72 @@ ${scrapedData.content}
         tags: Array.isArray(result.tags) ? result.tags.map((tag: any) => String(tag).trim()).filter(Boolean) : [],
       }
 
-      // Step 3: Translate to Korean if not already in Korean
+      // Step 3: Enhanced translation to Korean if not already in Korean
       if (cleanResult.language !== "ko") {
-        console.log("Translating content to Korean...")
+        console.log(`Translating content from ${cleanResult.language} to Korean...`)
 
         try {
-          // Translate title
-          const { text: translatedTitle } = await generateText({
-            model: openai("gpt-4o"),
-            system:
-              "당신은 전문 번역가입니다. 주어진 텍스트를 자연스러운 한국어로 번역해주세요. 뉴스 제목의 경우 간결하고 명확하게 번역해주세요.",
-            prompt: `다음 뉴스 제목을 한국어로 번역해주세요:\n\n${cleanResult.title}`,
-          })
-
-          // Translate content
-          const { text: translatedContent } = await generateText({
-            model: openai("gpt-4o"),
-            system:
-              "당신은 전문 번역가입니다. 주어진 뉴스 본문을 자연스러운 한국어로 번역해주세요. 원문의 의미와 뉘앙스를 정확히 전달하되, 한국어로 읽기 자연스럽게 번역해주세요.",
-            prompt: `다음 뉴스 본문을 한국어로 번역해주세요:\n\n${cleanResult.content}`,
-          })
-
-          // Translate summary
-          const { text: translatedSummary } = await generateText({
-            model: openai("gpt-4o"),
-            system: "당신은 전문 번역가입니다. 주어진 요약문을 자연스러운 한국어로 번역해주세요.",
-            prompt: `다음 뉴스 요약을 한국어로 번역해주세요:\n\n${cleanResult.summary}`,
-          })
-
-          // Translate author name if exists
-          let translatedAuthor = cleanResult.author
-          if (cleanResult.author) {
-            try {
-              const { text: authorTranslation } = await generateText({
+          // Translate all fields in parallel for better performance
+          const [translatedTitle, translatedContent, translatedSummary, translatedAuthor, ...translatedTags] =
+            await Promise.all([
+              // Translate title
+              generateText({
                 model: openai("gpt-4o"),
                 system:
-                  "작성자 이름을 한국어로 번역하거나 한국어 표기법에 맞게 변환해주세요. 이미 한국어라면 그대로 반환해주세요.",
-                prompt: `다음 작성자 이름을 한국어로 변환해주세요:\n\n${cleanResult.author}`,
-              })
-              translatedAuthor = authorTranslation.trim()
-            } catch (error) {
-              console.error("Error translating author:", error)
-              // Keep original author name if translation fails
-            }
-          }
+                  "당신은 전문 번역가입니다. 뉴스 제목을 자연스러운 한국어로 번역해주세요. 간결하고 명확하게 번역해주세요.",
+                prompt: `다음 ${cleanResult.language === "th" ? "태국어" : "영어"} 뉴스 제목을 한국어로 번역해주세요:\n\n${cleanResult.title}`,
+              }).then((result) => result.text.trim()),
 
-          // Translate tags
-          const translatedTags: string[] = []
-          for (const tag of cleanResult.tags) {
-            try {
-              const { text: translatedTag } = await generateText({
+              // Translate content
+              generateText({
                 model: openai("gpt-4o"),
                 system:
-                  "태그를 한국어로 번역해주세요. 이미 한국어라면 그대로 반환해주세요. 간단한 키워드 형태로 번역해주세요.",
-                prompt: `다음 태그를 한국어로 번역해주세요:\n\n${tag}`,
-              })
-              translatedTags.push(translatedTag.trim())
-            } catch (error) {
-              console.error("Error translating tag:", error)
-              translatedTags.push(tag) // Keep original tag if translation fails
-            }
-          }
+                  "당신은 전문 번역가입니다. 뉴스 본문을 자연스러운 한국어로 번역해주세요. 원문의 의미와 뉘앙스를 정확히 전달하되, 한국어로 읽기 자연스럽게 번역해주세요.",
+                prompt: `다음 ${cleanResult.language === "th" ? "태국어" : "영어"} 뉴스 본문을 한국어로 번역해주세요:\n\n${cleanResult.content}`,
+              }).then((result) => result.text.trim()),
 
-          // Update result with translations
+              // Translate summary
+              generateText({
+                model: openai("gpt-4o"),
+                system: "당신은 전문 번역가입니다. 뉴스 요약을 자연스러운 한국어로 번역해주세요.",
+                prompt: `다음 ${cleanResult.language === "th" ? "태국어" : "영어"} 뉴스 요약을 한국어로 번역해주세요:\n\n${cleanResult.summary}`,
+              }).then((result) => result.text.trim()),
+
+              // Translate author name if exists
+              cleanResult.author
+                ? generateText({
+                    model: openai("gpt-4o"),
+                    system: "작성자 이름을 한국어 표기법에 맞게 변환해주세요. 이미 한국어라면 그대로 반환해주세요.",
+                    prompt: `다음 ${cleanResult.language === "th" ? "태국어" : "영어"} 작성자 이름을 한국어로 변환해주세요:\n\n${cleanResult.author}`,
+                  }).then((result) => result.text.trim())
+                : Promise.resolve(cleanResult.author),
+
+              // Translate tags
+              ...cleanResult.tags.map((tag) =>
+                generateText({
+                  model: openai("gpt-4o"),
+                  system: "태그를 한국어로 번역해주세요. 간단한 키워드 형태로 번역해주세요.",
+                  prompt: `다음 ${cleanResult.language === "th" ? "태국어" : "영어"} 태그를 한국어로 번역해주세요:\n\n${tag}`,
+                }).then((result) => result.text.trim()),
+              ),
+            ])
+
+          // Update result with all translations
           cleanResult = {
             ...cleanResult,
-            title: translatedTitle.trim(),
-            content: translatedContent.trim(),
-            summary: translatedSummary.trim(),
+            title: translatedTitle,
+            content: translatedContent,
+            summary: translatedSummary,
             author: translatedAuthor,
             tags: translatedTags,
+            language: "ko", // Update language to Korean after translation
           }
 
-          console.log("Translation completed successfully")
+          console.log("All content successfully translated to Korean")
         } catch (translationError) {
           console.error("Error during translation:", translationError)
           // Continue with original content if translation fails
+          console.log("Continuing with original content due to translation failure")
         }
       }
 

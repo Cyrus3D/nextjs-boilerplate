@@ -388,7 +388,11 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
 
       toast({
         title: "성공",
-        description: `뉴스 분석이 완료되었습니다. ${analysisResult.language !== "ko" ? "모든 내용이 한국어로 번역되었습니다." : ""} 결과를 확인하고 저장해주세요.`,
+        description: `뉴스 분석이 완료되었습니다. ${
+          analysisResult.language !== "ko"
+            ? "모든 내용이 한국어로 번역되어 입력되었습니다."
+            : "한국어 콘텐츠가 분석되어 입력되었습니다."
+        } 결과를 확인하고 저장해주세요.`,
       })
     } catch (error) {
       console.error("뉴스 분석 오류:", error)
@@ -1274,7 +1278,10 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
                         <Info className="h-4 w-4" />
                         <AlertDescription>
                           유효한 뉴스 URL을 입력하면 AI가 해당 웹페이지의 내용을 분석하여 자동으로 제목, 내용, 요약,
-                          카테고리, 태그를 추출합니다. 외국어 콘텐츠는 자동으로 한국어로 번역됩니다.
+                          카테고리, 태그를 추출합니다.{" "}
+                          <strong>외국어 콘텐츠는 자동으로 한국어로 번역되어 입력됩니다.</strong>
+                          <br />
+                          <strong>지원 언어:</strong> 태국어, 영어 → 한국어 자동 번역
                           <br />
                           <strong>지원 사이트:</strong> sanook.com, bangkokpost.com, thairath.co.th, matichon.co.th,
                           한국 외교부 등
