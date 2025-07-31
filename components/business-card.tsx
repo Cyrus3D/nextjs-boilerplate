@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { MapPin, Phone, Clock, Eye, Globe, Crown, Star, MessageCircle, Map } from "lucide-react"
 import { useState } from "react"
 import type { BusinessCardType } from "@/types/business-card"
-import { getUrlType } from "@/lib/utils"
 
 interface BusinessCardProps {
   card: BusinessCardType
@@ -110,6 +109,15 @@ export default function BusinessCard({ card, onDetailClick }: BusinessCardProps)
   // 유효한 이미지 URL이 있는지 확인
   const hasValidImage = isValidImageUrl(card.image)
   const normalizedImageUrl = hasValidImage ? normalizeImageUrl(String(card.image)) : ""
+
+  const getUrlType = (url: string | null | undefined): string => {
+    if (!url) return ""
+    const urlString = String(url).toLowerCase()
+    if (urlString.includes("maps.google") || urlString.includes("goo.gl/maps") || urlString.includes("map")) {
+      return "map"
+    }
+    return "website"
+  }
 
   const urlType = getUrlType(card.website)
 
