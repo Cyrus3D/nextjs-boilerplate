@@ -43,12 +43,6 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
     }
   }
 
-  const truncateText = (text: string, maxLength: number) => {
-    if (!text) return ""
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength) + "..."
-  }
-
   return (
     <Card className="h-full hover:shadow-lg transition-shadow duration-200 cursor-pointer group">
       <CardHeader className="pb-3" onClick={() => onDetailClick(news)}>
@@ -68,8 +62,8 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
           </div>
         </div>
 
-        <h3 className="font-semibold text-lg leading-tight group-hover:text-blue-600 transition-colors mb-2">
-          {truncateText(String(news.title || ""), 80)}
+        <h3 className="font-semibold text-lg leading-tight group-hover:text-blue-600 transition-colors mb-2 h-[3rem] overflow-hidden line-clamp-2">
+          {String(news.title || "")}
         </h3>
 
         <p className="text-gray-600 text-sm leading-relaxed h-[4.5rem] overflow-hidden line-clamp-3">
@@ -123,9 +117,7 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
         {/* AI Analysis Preview */}
         {news.ai_analysis && (
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
-            <p className="text-purple-800 text-xs font-medium">
-              🤖 AI 분석: {truncateText(String(news.ai_analysis), 100)}
-            </p>
+            <p className="text-purple-800 text-xs font-medium">🤖 AI 분석: {String(news.ai_analysis)}</p>
           </div>
         )}
 
