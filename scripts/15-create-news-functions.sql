@@ -13,8 +13,8 @@ RETURNS TABLE (
     content TEXT,
     category_name VARCHAR(50),
     published_at TIMESTAMP WITH TIME ZONE,
-    source VARCHAR(200),
-    author VARCHAR(200),
+    source VARCHAR(100),
+    author VARCHAR(100),
     image_url TEXT,
     external_url TEXT,
     view_count INTEGER,
@@ -35,7 +35,7 @@ BEGIN
             na.title,
             na.summary,
             na.content,
-            COALESCE(nc.name, '기타') as category_name,
+            nc.name as category_name,
             na.published_at,
             na.source,
             na.author,
@@ -50,33 +50,28 @@ BEGIN
         LEFT JOIN news_article_tags nat ON na.id = nat.article_id
         LEFT JOIN news_tags nt ON nat.tag_id = nt.id
         WHERE 
-            (include_inactive OR na.is_active = true)
+            (include_inactive OR na.is_active = TRUE)
             AND (category_filter IS NULL OR nc.name = category_filter)
             AND (search_term IS NULL OR 
                  na.title ILIKE '%' || search_term || '%' OR 
-                 na.summary ILIKE '%' || search_term || '%')
-        GROUP BY na.id, na.title, na.summary, na.content, nc.name, 
-                 na.published_at, na.source, na.author, na.image_url, 
-                 na.external_url, na.view_count, na.is_breaking, na.is_pinned
-        ORDER BY na.is_pinned DESC, na.is_breaking DESC, na.published_at DESC
-        LIMIT page_size OFFSET offset_val
+                 na.summary ILIKE '%' || search_term || '%' OR
+                 na.content ILIKE '%' || search_term || '%')
+        GROUP BY na.id, nc.name
     ),
-    total_count_query AS (
-        SELECT COUNT(*) as total
-        FROM news_articles na
-        LEFT JOIN news_categories nc ON na.category_id = nc.id
-        WHERE 
-            (include_inactive OR na.is_active = true)
-            AND (category_filter IS NULL OR nc.name = category_filter)
-            AND (search_term IS NULL OR 
-                 na.title ILIKE '%' || search_term || '%' OR 
-                 na.summary ILIKE '%' || search_term || '%')
+    total_count_cte AS (
+        SELECT COUNT(*) as total FROM filtered_articles
     )
     SELECT 
         fa.*,
-        tc.total as total_count
+        tc.total
     FROM filtered_articles fa
-    CROSS JOIN total_count_query tc;
+    CROSS JOIN total_count_cte tc
+    ORDER BY 
+        fa.is_pinned DESC,
+        fa.is_breaking DESC,
+        fa.published_at DESC
+    LIMIT page_size
+    OFFSET offset_val;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -89,9 +84,11 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT nc.id, nc.name, nc.color_class
+    SELECT 
+        nc.id,
+        nc.name,
+        nc.color_class
     FROM news_categories nc
-    WHERE nc.is_active = true
     ORDER BY nc.name;
 END;
 $$ LANGUAGE plpgsql;
@@ -101,9 +98,12 @@ CREATE OR REPLACE FUNCTION increment_news_view_count(article_id INTEGER)
 RETURNS VOID AS $$
 BEGIN
     UPDATE news_articles 
-    SET view_count = view_count + 1,
+    SET 
+        view_count = view_count + 1,
         updated_at = NOW()
-    WHERE id = article_id AND is_active = true;
+    WHERE 
+        id = article_id 
+        AND is_active = TRUE;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -115,7 +115,7 @@ RETURNS TABLE (
     summary TEXT,
     category_name VARCHAR(50),
     published_at TIMESTAMP WITH TIME ZONE,
-    source VARCHAR(200),
+    source VARCHAR(100),
     view_count INTEGER,
     is_breaking BOOLEAN,
     is_pinned BOOLEAN
@@ -126,7 +126,7 @@ BEGIN
         na.id,
         na.title,
         na.summary,
-        COALESCE(nc.name, '기타') as category_name,
+        nc.name as category_name,
         na.published_at,
         na.source,
         na.view_count,
@@ -134,8 +134,10 @@ BEGIN
         na.is_pinned
     FROM news_articles na
     LEFT JOIN news_categories nc ON na.category_id = nc.id
-    WHERE na.is_active = true
-    ORDER BY na.view_count DESC, na.published_at DESC
+    WHERE na.is_active = TRUE
+    ORDER BY 
+        na.view_count DESC,
+        na.published_at DESC
     LIMIT limit_count;
 END;
 $$ LANGUAGE plpgsql;
@@ -148,7 +150,7 @@ RETURNS TABLE (
     summary TEXT,
     category_name VARCHAR(50),
     published_at TIMESTAMP WITH TIME ZONE,
-    source VARCHAR(200),
+    source VARCHAR(100),
     view_count INTEGER,
     is_breaking BOOLEAN,
     is_pinned BOOLEAN
@@ -159,7 +161,7 @@ BEGIN
         na.id,
         na.title,
         na.summary,
-        COALESCE(nc.name, '기타') as category_name,
+        nc.name as category_name,
         na.published_at,
         na.source,
         na.view_count,
@@ -167,8 +169,9 @@ BEGIN
         na.is_pinned
     FROM news_articles na
     LEFT JOIN news_categories nc ON na.category_id = nc.id
-    WHERE na.is_active = true
-    ORDER BY na.published_at DESC
+    WHERE na.is_active = TRUE
+    ORDER BY 
+        na.published_at DESC
     LIMIT limit_count;
 END;
 $$ LANGUAGE plpgsql;
@@ -182,8 +185,8 @@ RETURNS TABLE (
     content TEXT,
     category_name VARCHAR(50),
     published_at TIMESTAMP WITH TIME ZONE,
-    source VARCHAR(200),
-    author VARCHAR(200),
+    source VARCHAR(100),
+    author VARCHAR(100),
     image_url TEXT,
     external_url TEXT,
     view_count INTEGER,
@@ -198,7 +201,7 @@ BEGIN
         na.title,
         na.summary,
         na.content,
-        COALESCE(nc.name, '기타') as category_name,
+        nc.name as category_name,
         na.published_at,
         na.source,
         na.author,
@@ -212,10 +215,10 @@ BEGIN
     LEFT JOIN news_categories nc ON na.category_id = nc.id
     LEFT JOIN news_article_tags nat ON na.id = nat.article_id
     LEFT JOIN news_tags nt ON nat.tag_id = nt.id
-    WHERE na.id = article_id AND na.is_active = true
-    GROUP BY na.id, na.title, na.summary, na.content, nc.name, 
-             na.published_at, na.source, na.author, na.image_url, 
-             na.external_url, na.view_count, na.is_breaking, na.is_pinned;
+    WHERE 
+        na.id = article_id 
+        AND na.is_active = TRUE
+    GROUP BY na.id, nc.name;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -227,7 +230,7 @@ RETURNS TABLE (
     summary TEXT,
     category_name VARCHAR(50),
     published_at TIMESTAMP WITH TIME ZONE,
-    source VARCHAR(200),
+    source VARCHAR(100),
     view_count INTEGER
 ) AS $$
 BEGIN
@@ -236,14 +239,17 @@ BEGIN
         na.id,
         na.title,
         na.summary,
-        COALESCE(nc.name, '기타') as category_name,
+        nc.name as category_name,
         na.published_at,
         na.source,
         na.view_count
     FROM news_articles na
     LEFT JOIN news_categories nc ON na.category_id = nc.id
-    WHERE na.is_active = true AND na.is_breaking = true
-    ORDER BY na.published_at DESC
+    WHERE 
+        na.is_active = TRUE 
+        AND na.is_breaking = TRUE
+    ORDER BY 
+        na.published_at DESC
     LIMIT limit_count;
 END;
 $$ LANGUAGE plpgsql;
@@ -256,9 +262,8 @@ RETURNS TABLE (
     summary TEXT,
     category_name VARCHAR(50),
     published_at TIMESTAMP WITH TIME ZONE,
-    source VARCHAR(200),
-    view_count INTEGER,
-    is_breaking BOOLEAN
+    source VARCHAR(100),
+    view_count INTEGER
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -266,14 +271,36 @@ BEGIN
         na.id,
         na.title,
         na.summary,
-        COALESCE(nc.name, '기타') as category_name,
+        nc.name as category_name,
         na.published_at,
         na.source,
-        na.view_count,
-        na.is_breaking
+        na.view_count
     FROM news_articles na
     LEFT JOIN news_categories nc ON na.category_id = nc.id
-    WHERE na.is_active = true AND na.is_pinned = true
-    ORDER BY na.is_breaking DESC, na.published_at DESC;
+    WHERE 
+        na.is_active = TRUE 
+        AND na.is_pinned = TRUE
+    ORDER BY 
+        na.published_at DESC;
 END;
 $$ LANGUAGE plpgsql;
+
+-- 함수 권한 설정
+GRANT EXECUTE ON FUNCTION get_news_articles_paginated TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION get_news_categories TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION increment_news_view_count TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION get_popular_news TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION get_latest_news TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION get_news_article_by_id TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION get_breaking_news TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION get_pinned_news TO anon, authenticated;
+
+-- 함수 생성 확인
+SELECT 
+    routine_name,
+    routine_type,
+    data_type
+FROM information_schema.routines 
+WHERE routine_schema = 'public' 
+AND routine_name LIKE '%news%'
+ORDER BY routine_name;
