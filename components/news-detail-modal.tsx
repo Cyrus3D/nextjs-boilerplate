@@ -102,23 +102,64 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
         <div className="flex-1 min-h-0 p-6">
           <ScrollArea className="h-full">
             <div className="space-y-6 pr-4">
-              {/* Image Placeholder */}
-              <div className="w-full h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <div className="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-lg flex items-center justify-center">
-                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-sm font-medium">이미지 영역</p>
-                  <p className="text-xs">뉴스 대표 이미지가 표시됩니다</p>
+              {/* Main Image Area */}
+              {news.image_url ? (
+                <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
+                  {Array.isArray(news.image_url) ? (
+                    // Multiple images - show first one as main image
+                    <img
+                      src={String(news.image_url[0]).trim() || "/placeholder.svg"}
+                      alt="뉴스 대표 이미지"
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                      loading="lazy"
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        console.log(`메인 이미지 로드 실패: ${news.image_url[0]}`)
+                        const target = e.target as HTMLImageElement
+                        target.src = "/placeholder.svg?height=192&width=400&text=이미지 로드 실패"
+                      }}
+                      onLoad={(e) => {
+                        console.log(`메인 이미지 로드 성공: ${news.image_url[0]}`)
+                      }}
+                    />
+                  ) : (
+                    // Single image
+                    <img
+                      src={String(news.image_url).trim() || "/placeholder.svg"}
+                      alt="뉴스 대표 이미지"
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                      loading="lazy"
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        console.log(`메인 이미지 로드 실패: ${news.image_url}`)
+                        const target = e.target as HTMLImageElement
+                        target.src = "/placeholder.svg?height=192&width=400&text=이미지 로드 실패"
+                      }}
+                      onLoad={(e) => {
+                        console.log(`메인 이미지 로드 성공: ${news.image_url}`)
+                      }}
+                    />
+                  )}
                 </div>
-              </div>
+              ) : (
+                // Fallback placeholder when no image
+                <div className="w-full h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                  <div className="text-center text-gray-500">
+                    <div className="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-lg flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-medium">이미지 없음</p>
+                    <p className="text-xs">대표 이미지가 없습니다</p>
+                  </div>
+                </div>
+              )}
 
               {/* Summary */}
               {news.summary && (
