@@ -803,7 +803,10 @@ export async function createNews(newsData: NewsFormData): Promise<NewsArticle> {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error("Database error creating news:", error)
+      throw new Error(`뉴스 생성 중 데이터베이스 오류: ${error.message}`)
+    }
 
     // Handle tags if provided
     if (newsData.tag_names && newsData.tag_names.length > 0) {
@@ -813,6 +816,9 @@ export async function createNews(newsData: NewsFormData): Promise<NewsArticle> {
     return data as NewsArticle
   } catch (error) {
     console.error("Error creating news:", error)
+    if (error instanceof Error) {
+      throw error
+    }
     throw new Error("뉴스 생성에 실패했습니다.")
   }
 }
@@ -845,7 +851,10 @@ export async function updateNews(id: number, newsData: NewsFormData): Promise<Ne
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error("Database error updating news:", error)
+      throw new Error(`뉴스 업데이트 중 데이터베이스 오류: ${error.message}`)
+    }
 
     // Handle tags if provided
     if (newsData.tag_names) {
@@ -855,6 +864,9 @@ export async function updateNews(id: number, newsData: NewsFormData): Promise<Ne
     return data as NewsArticle
   } catch (error) {
     console.error("Error updating news:", error)
+    if (error instanceof Error) {
+      throw error
+    }
     throw new Error("뉴스 업데이트에 실패했습니다.")
   }
 }
@@ -898,5 +910,30 @@ async function handleNewsTags(newsId: number, tagNames: string[]): Promise<void>
     }
   } catch (error) {
     console.error("Error handling news tags:", error)
+  }
+}
+
+// Check if news tables exist and refresh schema if needed
+export async function checkAndRefreshNewsSchema(): Promise<boolean> {
+  if (!supabase) {
+    return false
+  }
+
+  try {
+    // Try to select from news table to check if it exists
+    const { data, error } = await supabase
+      .from("news")
+      .select("id, title, content, author, original_language, is_translated")
+      .limit(1)
+
+    if (error) {
+      console.error("News table schema error:", error)
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error("Error checking news schema:", error)
+    return false
   }
 }
