@@ -3,22 +3,50 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { MapPin, Phone, Globe, Clock, Star, Eye, Calendar, ExternalLink, X, MessageCircle, Share2 } from "lucide-react"
+import {
+  MapPin,
+  Phone,
+  Clock,
+  Eye,
+  Globe,
+  ExternalLink,
+  X,
+  Crown,
+  Star,
+  MessageCircle,
+  Facebook,
+  Instagram,
+  Youtube,
+} from "lucide-react"
 import { useState } from "react"
 import type { BusinessCard } from "@/types/business-card"
 
 interface BusinessDetailModalProps {
-  business: BusinessCard | null
+  card: BusinessCard
   isOpen: boolean
   onClose: () => void
 }
 
-export default function BusinessDetailModal({ business, isOpen, onClose }: BusinessDetailModalProps) {
+export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessDetailModalProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
 
-  if (!business) return null
+  const getCategoryColor = (category: string) => {
+    const colors = {
+      음식점: "bg-red-100 text-red-800",
+      배송서비스: "bg-blue-100 text-blue-800",
+      여행서비스: "bg-green-100 text-green-800",
+      식품: "bg-orange-100 text-orange-800",
+      이벤트서비스: "bg-purple-100 text-purple-800",
+      방송서비스: "bg-indigo-100 text-indigo-800",
+      전자제품: "bg-cyan-100 text-cyan-800",
+      유흥업소: "bg-pink-100 text-pink-800",
+      교통서비스: "bg-emerald-100 text-emerald-800",
+      서비스: "bg-gray-100 text-gray-800",
+      프리미엄: "bg-yellow-100 text-yellow-800",
+    }
+    return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
+  }
 
   const formatDate = (dateString: string) => {
     try {
@@ -26,93 +54,93 @@ export default function BusinessDetailModal({ business, isOpen, onClose }: Busin
         year: "numeric",
         month: "long",
         day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       })
     } catch {
       return "날짜 정보 없음"
     }
   }
 
-  const handleExternalLink = (url: string) => {
-    if (url) {
-      window.open(url.startsWith("http") ? url : `https://${url}`, "_blank", "noopener,noreferrer")
+  // 이미지 URL 유효성 검증 함수
+  const isValidImageUrl = (url: string | null | undefined): boolean => {
+    if (!url) return false
+
+    const urlString = String(url).trim()
+    if (!urlString || urlString === "null" || urlString === "undefined") return false
+
+    // URL 형식 검증
+    try {
+      new URL(urlString.startsWith("http") ? urlString : `https://${urlString}`)
+      return true
+    } catch {
+      return false
     }
   }
 
-  const handlePhoneCall = (phone: string) => {
-    if (phone) {
-      window.open(`tel:${phone}`, "_self")
+  // 이미지 URL 정규화 함수
+  const normalizeImageUrl = (url: string): string => {
+    const urlString = url.trim()
+    if (urlString.startsWith("http")) {
+      return urlString
     }
+    return `https://${urlString}`
   }
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: business.title,
-          text: business.description,
-          url: window.location.href,
-        })
-      } catch (err) {
-        console.log("공유 취소됨")
-      }
-    } else {
-      // Fallback: 클립보드에 복사
-      navigator.clipboard.writeText(window.location.href)
-      alert("링크가 클립보드에 복사되었습니다!")
-    }
-  }
+  const hasValidImage = isValidImageUrl(card.image)
+  const normalizedImageUrl = hasValidImage ? normalizeImageUrl(String(card.image)) : ""
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="secondary" className="text-xs">
-                {business.category}
-              </Badge>
-              {business.is_premium && (
-                <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs">⭐ 프리미엄</Badge>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 mb-2">
+              <Badge className={`${getCategoryColor(String(card.category))} text-xs`}>{String(card.category)}</Badge>
+              {card.isPremium && (
+                <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs">
+                  <Crown className="w-3 h-3 mr-1" />
+                  프리미엄
+                </Badge>
               )}
-              {business.is_recommended && <Badge className="bg-green-500 text-white text-xs">👍 추천</Badge>}
+              {card.isPromoted && !card.isPremium && (
+                <Badge className="bg-blue-500 text-white text-xs">
+                  <Star className="w-3 h-3 mr-1" />
+                  추천업체
+                </Badge>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={handleShare}>
-                <Share2 className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="w-4 h-4" />
+              <span className="sr-only">닫기</span>
+            </Button>
           </div>
-
-          <DialogTitle className="text-2xl font-bold leading-tight mb-2">{business.title}</DialogTitle>
-
-          <DialogDescription className="sr-only">비즈니스 상세 정보를 표시하는 모달입니다.</DialogDescription>
-
-          {business.subtitle && <p className="text-lg text-gray-600 mb-4">{business.subtitle}</p>}
+          <DialogTitle className="text-2xl font-bold leading-tight pr-8">{String(card.title || "")}</DialogTitle>
+          <DialogDescription className="text-base text-gray-600 leading-relaxed">
+            {String(card.description || "")}
+          </DialogDescription>
         </DialogHeader>
 
-        {/* 이미지 영역 */}
-        {business.image && (
-          <div className="mb-6">
-            <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+        <div className="space-y-6">
+          {/* 이미지 영역 */}
+          {hasValidImage && (
+            <div className="relative w-full h-64 bg-gray-100 rounded-lg overflow-hidden">
               {!imageError ? (
                 <>
                   <img
-                    src={business.image || "/placeholder.svg"}
-                    alt={business.title}
+                    src={normalizedImageUrl || "/placeholder.svg"}
+                    alt={String(card.title || "업체 이미지")}
                     className={`w-full h-full object-cover transition-all duration-300 ${
-                      imageLoaded ? "opacity-100" : "opacity-0"
+                      imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95"
                     }`}
-                    loading="lazy"
                     onLoad={() => setImageLoaded(true)}
                     onError={() => setImageError(true)}
                   />
 
+                  {/* 로딩 스피너 */}
                   {!imageLoaded && !imageError && (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                     </div>
                   )}
                 </>
@@ -125,165 +153,158 @@ export default function BusinessDetailModal({ business, isOpen, onClose }: Busin
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 기본 정보 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="font-semibold text-lg mb-3">📞 연락처</h3>
-              <div className="space-y-2">
-                {business.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-green-600" />
-                    <button onClick={() => handlePhoneCall(business.phone!)} className="text-blue-600 hover:underline">
-                      {business.phone}
-                    </button>
-                  </div>
-                )}
-                {business.website && (
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-blue-600" />
-                    <button
-                      onClick={() => handleExternalLink(business.website!)}
-                      className="text-blue-600 hover:underline truncate"
-                    >
-                      {business.website}
-                    </button>
-                  </div>
-                )}
-                {business.address && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-red-600 mt-0.5" />
-                    <span className="text-sm">{business.address}</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <h3 className="font-semibold text-lg mb-3">📊 정보</h3>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm">{business.view_count?.toLocaleString() || 0} 조회</span>
+          {/* 연락처 정보 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {card.location && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <MapPin className="w-5 h-5 text-gray-600" />
+                <div>
+                  <div className="text-sm font-medium text-gray-900">위치</div>
+                  <div className="text-sm text-gray-600">{String(card.location)}</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm">등록일: {formatDate(business.created_at)}</span>
-                </div>
-                {business.rating && (
-                  <div className="flex items-center gap-2">
-                    <Star className="w-4 h-4 text-yellow-500" />
-                    <span className="text-sm">평점: {business.rating}/5.0</span>
+              </div>
+            )}
+
+            {card.phone && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Phone className="w-5 h-5 text-gray-600" />
+                <div>
+                  <div className="text-sm font-medium text-gray-900">전화번호</div>
+                  <div className="text-sm text-gray-600">
+                    <a href={`tel:${card.phone}`} className="hover:text-blue-600">
+                      {String(card.phone)}
+                    </a>
                   </div>
-                )}
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
 
-        {/* 설명 */}
-        {business.description && (
-          <div className="mb-6">
-            <h3 className="font-semibold text-lg mb-2">📝 설명</h3>
-            <div className="bg-gray-50 p-4 rounded-lg border">
-              <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{business.description}</p>
-            </div>
-          </div>
-        )}
-
-        {/* 운영 시간 */}
-        {business.hours && (
-          <div className="mb-6">
-            <h3 className="font-semibold text-lg mb-2">🕒 운영 시간</h3>
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-600" />
-                <span className="text-blue-800">{business.hours}</span>
+            {card.hours && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <Clock className="w-5 h-5 text-gray-600" />
+                <div>
+                  <div className="text-sm font-medium text-gray-900">운영시간</div>
+                  <div className="text-sm text-gray-600">{String(card.hours)}</div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* 태그 */}
-        {business.tags && business.tags.length > 0 && (
-          <div className="mb-6">
-            <h3 className="font-semibold text-lg mb-2">🏷️ 태그</h3>
+            {(card.kakaoId || card.lineId) && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <MessageCircle className="w-5 h-5 text-gray-600" />
+                <div>
+                  <div className="text-sm font-medium text-gray-900">메신저</div>
+                  <div className="flex gap-2 text-sm">
+                    {card.kakaoId && (
+                      <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">
+                        카톡: {String(card.kakaoId)}
+                      </span>
+                    )}
+                    {card.lineId && (
+                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                        라인: {String(card.lineId)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 가격 및 프로모션 정보 */}
+          {(card.price || card.promotion) && (
+            <div className="space-y-3">
+              {card.price && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-medium text-green-900 mb-2">💰 가격 정보</h4>
+                  <p className="text-green-800">{String(card.price)}</p>
+                </div>
+              )}
+              {card.promotion && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <h4 className="font-medium text-orange-900 mb-2">🎉 프로모션</h4>
+                  <p className="text-orange-800">{String(card.promotion)}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 태그 */}
+          {Array.isArray(card.tags) && card.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {business.tags.map((tag, index) => (
-                <Badge key={index} variant="outline" className="text-sm">
-                  #{tag}
+              {card.tags.map((tag, index) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  #{String(tag)}
                 </Badge>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 소셜 미디어 */}
-        {(business.facebook || business.instagram || business.line) && (
-          <div className="mb-6">
-            <h3 className="font-semibold text-lg mb-2">📱 소셜 미디어</h3>
-            <div className="flex gap-3">
-              {business.facebook && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExternalLink(business.facebook!)}
-                  className="text-blue-600"
-                >
-                  Facebook
-                </Button>
-              )}
-              {business.instagram && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExternalLink(business.instagram!)}
-                  className="text-pink-600"
-                >
-                  Instagram
-                </Button>
-              )}
-              {business.line && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExternalLink(business.line!)}
-                  className="text-green-600"
-                >
-                  <MessageCircle className="w-4 h-4 mr-1" />
-                  Line
-                </Button>
-              )}
+          {/* 소셜 미디어 링크 */}
+          {(card.facebookUrl || card.instagramUrl || card.youtubeUrl) && (
+            <div className="space-y-3">
+              <h4 className="font-medium text-gray-900">소셜 미디어</h4>
+              <div className="flex gap-3">
+                {card.facebookUrl && (
+                  <Button asChild variant="outline" size="sm">
+                    <a href={String(card.facebookUrl)} target="_blank" rel="noopener noreferrer">
+                      <Facebook className="w-4 h-4 mr-2" />
+                      Facebook
+                    </a>
+                  </Button>
+                )}
+                {card.instagramUrl && (
+                  <Button asChild variant="outline" size="sm">
+                    <a href={String(card.instagramUrl)} target="_blank" rel="noopener noreferrer">
+                      <Instagram className="w-4 h-4 mr-2" />
+                      Instagram
+                    </a>
+                  </Button>
+                )}
+                {card.youtubeUrl && (
+                  <Button asChild variant="outline" size="sm">
+                    <a href={String(card.youtubeUrl)} target="_blank" rel="noopener noreferrer">
+                      <Youtube className="w-4 h-4 mr-2" />
+                      YouTube
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 통계 정보 */}
+          <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              <span>노출 횟수: {Number(card.exposureCount || 0).toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4" />
+              <span>등록일: {formatDate(String(card.created_at))}</span>
             </div>
           </div>
-        )}
 
-        {/* 액션 버튼 */}
-        <div className="flex gap-3 pt-4 border-t">
-          {business.phone && (
-            <Button onClick={() => handlePhoneCall(business.phone!)} className="flex items-center gap-2">
-              <Phone className="w-4 h-4" />
-              전화하기
-            </Button>
+          {/* 웹사이트 링크 */}
+          {card.website && (
+            <div className="border-t pt-4">
+              <Button asChild variant="outline" className="w-full bg-transparent">
+                <a
+                  href={String(card.website)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  {card.website.includes("maps.google") || card.website.includes("goo.gl/maps")
+                    ? "지도에서 보기"
+                    : "웹사이트 방문"}
+                </a>
+              </Button>
+            </div>
           )}
-          {business.website && (
-            <Button
-              variant="outline"
-              onClick={() => handleExternalLink(business.website!)}
-              className="flex items-center gap-2"
-            >
-              <ExternalLink className="w-4 h-4" />
-              웹사이트 방문
-            </Button>
-          )}
-          <Button variant="outline" onClick={onClose}>
-            닫기
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
