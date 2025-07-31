@@ -12,6 +12,8 @@ WHERE original_language IS NULL OR is_translated IS NULL;
 CREATE INDEX IF NOT EXISTS idx_news_original_language ON news(original_language);
 CREATE INDEX IF NOT EXISTS idx_news_is_translated ON news(is_translated);
 
--- 컬럼 코멘트 추가
-COMMENT ON COLUMN news.original_language IS '원본 언어 코드 (ko: 한국어, en: 영어, th: 태국어)';
-COMMENT ON COLUMN news.is_translated IS '번역된 뉴스 여부 (true: 번역됨, false: 원본)';
+-- 뉴스 테이블 구조 확인
+SELECT column_name, data_type, is_nullable, column_default 
+FROM information_schema.columns 
+WHERE table_name = 'news' 
+ORDER BY ordinal_position;

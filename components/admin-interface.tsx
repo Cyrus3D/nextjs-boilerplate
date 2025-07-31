@@ -122,7 +122,7 @@ export default function AdminInterface() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<number | number[] | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("")
+  const [categoryFilter, setCategoryFilter] = useState("all")
 
   // 뉴스 폼 상태
   const [newsForm, setNewsForm] = useState<NewsFormData>({
@@ -425,7 +425,7 @@ export default function AdminInterface() {
       news.source.toLowerCase().includes(searchTerm.toLowerCase()) ||
       news.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    const matchesCategory = !categoryFilter || news.category === categoryFilter
+    const matchesCategory = categoryFilter === "all" || !categoryFilter || news.category === categoryFilter
 
     return matchesSearch && matchesCategory
   })
@@ -531,7 +531,7 @@ export default function AdminInterface() {
                     <SelectValue placeholder="카테고리 필터" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">모든 카테고리</SelectItem>
+                    <SelectItem value="all">모든 카테고리</SelectItem>
                     {NEWS_CATEGORIES.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}

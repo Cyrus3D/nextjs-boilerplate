@@ -1,164 +1,164 @@
-import type { NewsItem } from "@/types/news"
+import type { NewsData } from "@/types/news"
 
-export const sampleNews: NewsItem[] = [
+export const sampleNews: Omit<NewsData, "id" | "created_at" | "updated_at">[] = [
   {
-    id: 1,
-    title: "태국 한인 커뮤니티 새로운 문화센터 개관",
-    summary: "방콕 시내에 한인들을 위한 새로운 문화센터가 개관하여 다양한 문화 프로그램을 제공할 예정입니다.",
-    content: `태국 방콕에 한인 커뮤니티를 위한 새로운 문화센터가 개관했습니다. 
+    title: "태국 방콕에서 새로운 한인 문화센터 개관",
+    summary: "방콕 시내에 한인 커뮤니티를 위한 새로운 문화센터가 개관하여 다양한 문화 프로그램을 제공할 예정입니다.",
+    content: `방콕 시내 중심가에 위치한 새로운 한인 문화센터가 지난 주말 성대한 개관식을 가졌습니다. 
 
-이번에 개관한 문화센터는 총 3층 규모로, 1층에는 전시공간과 카페, 2층에는 강의실과 회의실, 3층에는 공연장이 마련되어 있습니다.
+이번에 개관한 문화센터는 총 3층 규모로, 1층에는 한국 전통 문화 전시관, 2층에는 다목적 강의실과 세미나실, 3층에는 한국어 교육센터가 마련되어 있습니다.
 
-문화센터에서는 한국어 교육, 전통문화 체험, 요리 교실, 음악 공연 등 다양한 프로그램을 운영할 계획입니다. 특히 태국 현지인들을 대상으로 한 한국 문화 체험 프로그램도 준비되어 있어 한태 문화 교류의 중심지 역할을 할 것으로 기대됩니다.
+문화센터 관계자는 "태국 거주 한인들과 한국 문화에 관심 있는 태국인들을 위한 다양한 프로그램을 운영할 계획"이라고 밝혔습니다. 
 
-문화센터 관계자는 "한인 커뮤니티의 결속을 다지고, 태국 현지인들과의 문화 교류를 통해 상호 이해를 증진시키는 것이 목표"라고 밝혔습니다.`,
-    imageUrl: "/placeholder.svg?height=300&width=500&text=문화센터",
-    source: "태국 한인 뉴스",
-    originalUrl: "https://example.com/news/cultural-center-opening",
-    publishedAt: "2024-01-15T09:00:00Z",
+주요 프로그램으로는 한국어 교육, 전통 문화 체험, K-pop 댄스 클래스, 한국 요리 교실 등이 있으며, 매월 한국 영화 상영회도 개최될 예정입니다.
+
+개관식에는 주태국 한국대사관 관계자와 현지 한인회 임원진, 태국 정부 관계자 등 200여 명이 참석했습니다.`,
+    image_url: "/placeholder.svg?height=400&width=600&text=한인문화센터",
+    source: "태국한인신문",
+    original_url: "https://example.com/korean-cultural-center-bangkok",
+    published_at: "2024-01-15T09:00:00Z",
     category: "문화",
-    tags: ["한인사회", "문화센터", "방콕", "커뮤니티"],
-    viewCount: 1250,
-    isActive: true,
-    isFeatured: true,
-    createdAt: "2024-01-15T09:00:00Z",
-    updatedAt: "2024-01-15T09:00:00Z",
-    originalLanguage: "ko",
-    isTranslated: false,
+    tags: ["한인문화센터", "방콕", "문화프로그램", "한국어교육"],
+    is_active: true,
+    is_featured: true,
+    view_count: 1250,
+    original_language: "ko",
+    is_translated: false,
   },
   {
-    id: 2,
-    title: "태국 경제 성장률 전망 상향 조정",
-    summary: "태국 중앙은행이 올해 경제 성장률 전망을 기존 3.2%에서 3.8%로 상향 조정했다고 발표했습니다.",
-    content: `태국 중앙은행(BOT)이 2024년 경제 성장률 전망을 기존 3.2%에서 3.8%로 상향 조정했다고 발표했습니다.
+    title: "태국 경제 성장률 3.2% 기록, 관광업 회복 기여",
+    summary:
+      "태국 정부가 발표한 최신 경제 지표에 따르면, 관광업 회복과 수출 증가로 인해 경제 성장률이 예상을 상회했습니다.",
+    content: `태국 국가경제사회개발위원회(NESDC)가 발표한 최신 경제 지표에 따르면, 태국의 경제 성장률이 전년 대비 3.2%를 기록했다고 밝혔습니다.
 
-이번 상향 조정은 관광업 회복세와 수출 증가, 내수 소비 개선 등이 주요 요인으로 분석됩니다. 특히 중국과 한국 등 주요 관광객 송출국의 여행 수요 회복이 태국 경제에 긍정적인 영향을 미치고 있는 것으로 나타났습니다.
+이는 당초 예상했던 2.8%를 크게 상회하는 수치로, 주요 성장 동력은 관광업 회복과 수출 증가인 것으로 분석됩니다.
 
-중앙은행 관계자는 "글로벌 경제 불확실성에도 불구하고 태국 경제의 기초 체력이 견고하다"며 "특히 서비스업과 제조업 부문의 회복세가 뚜렷하다"고 설명했습니다.
+특히 관광업의 경우, 코로나19 팬데믹 이후 점진적으로 회복되고 있으며, 작년 한 해 동안 약 2,800만 명의 외국인 관광객이 태국을 방문했습니다. 이는 전년 대비 45% 증가한 수치입니다.
 
-한편, 인플레이션율은 목표 범위인 1-3% 내에서 안정적으로 관리되고 있으며, 기준금리는 당분간 현 수준을 유지할 것으로 전망됩니다.`,
-    imageUrl: "/placeholder.svg?height=300&width=500&text=경제성장",
-    source: "태국 경제 일보",
-    originalUrl: "https://example.com/news/thailand-economic-growth",
-    publishedAt: "2024-01-14T14:30:00Z",
+수출 부문에서도 전자제품, 자동차 부품, 농산물 등의 수출이 크게 증가하여 경제 성장에 기여했습니다.
+
+NESDC 관계자는 "올해도 관광업과 수출업의 지속적인 성장이 예상되며, 경제 성장률은 3.5% 내외를 기록할 것으로 전망된다"고 말했습니다.
+
+한편, 인플레이션율은 2.1%로 안정적인 수준을 유지하고 있어, 태국 경제의 전반적인 회복세가 지속될 것으로 보입니다.`,
+    image_url: "/placeholder.svg?height=400&width=600&text=태국경제성장",
+    source: "방콕포스트",
+    original_url: "https://example.com/thailand-economic-growth",
+    published_at: "2024-01-14T14:30:00Z",
     category: "경제",
-    tags: ["경제성장", "중앙은행", "관광업", "수출"],
-    viewCount: 890,
-    isActive: true,
-    isFeatured: false,
-    createdAt: "2024-01-14T14:30:00Z",
-    updatedAt: "2024-01-14T14:30:00Z",
-    originalLanguage: "ko",
-    isTranslated: false,
+    tags: ["태국경제", "GDP성장률", "관광업", "수출"],
+    is_active: true,
+    is_featured: false,
+    view_count: 890,
+    original_language: "ko",
+    is_translated: false,
   },
   {
-    id: 3,
-    title: "방콕 지하철 새 노선 개통으로 교통 편의성 크게 향상",
-    summary: "방콕 대중교통공사가 새로운 지하철 노선을 개통하여 시민들의 교통 편의성이 크게 향상될 것으로 기대됩니다.",
+    title: "방콕 지하철 새 노선 개통, 교통 체증 완화 기대",
+    summary: "방콕 대중교통공사가 새로운 지하철 노선을 개통하여 시민들의 교통 편의성이 크게 향상될 것으로 예상됩니다.",
     content: `방콕 대중교통공사(BMCL)가 새로운 지하철 노선인 '퍼플라인 연장선'을 정식 개통했다고 발표했습니다.
 
-이번에 개통된 노선은 기존 퍼플라인을 방콕 중심부까지 연장한 것으로, 총 8개 역이 새롭게 추가되었습니다. 이로써 방콕 북부 지역 주민들의 도심 접근성이 크게 개선될 것으로 예상됩니다.
+이번에 개통된 노선은 기존 퍼플라인을 방콕 시내 중심부까지 연장한 것으로, 총 12개의 새로운 역이 추가되었습니다. 새 노선은 방콕 북부 지역과 시내 중심가를 직접 연결하여 시민들의 교통 편의성을 크게 향상시킬 것으로 기대됩니다.
 
-새 노선은 첨단 기술을 적용한 무인 운행 시스템을 도입하여 운행 간격을 기존 5분에서 3분으로 단축했습니다. 또한 모든 역사에 장애인 편의시설과 에어컨 시설을 완비하여 승객 편의성을 높였습니다.
+특히 새로운 노선은 쇼핑몰, 오피스 빌딩, 주거 지역을 효율적으로 연결하여 출퇴근 시간 교통 체증 완화에 크게 기여할 것으로 예상됩니다.
 
-방콕 시장은 "이번 노선 개통으로 교통 체증 완화와 대기오염 감소에도 기여할 것"이라며 "앞으로도 대중교통 인프라 확충에 지속적으로 투자하겠다"고 밝혔습니다.
+방콕 시장은 개통식에서 "이번 새 노선 개통으로 하루 약 50만 명의 승객이 이용할 것으로 예상되며, 이는 도로 교통량을 약 15% 감소시킬 것"이라고 밝혔습니다.
 
-개통 첫 주에는 기념 이벤트로 모든 승객에게 50% 할인 혜택을 제공할 예정입니다.`,
-    imageUrl: "/placeholder.svg?height=300&width=500&text=지하철",
-    source: "방콕 교통 뉴스",
-    originalUrl: "https://example.com/news/bangkok-subway-new-line",
-    publishedAt: "2024-01-13T11:15:00Z",
+새 노선의 운행 시간은 오전 5시 30분부터 자정까지이며, 배차 간격은 평일 기준 3-4분입니다. 요금은 기존 노선과 동일하게 거리에 따라 15-42바트입니다.
+
+시민들은 "출퇴근이 훨씬 편해질 것 같다"며 새 노선 개통을 환영하는 반응을 보이고 있습니다.`,
+    image_url: "/placeholder.svg?height=400&width=600&text=방콕지하철",
+    source: "네이션",
+    original_url: "https://example.com/bangkok-subway-new-line",
+    published_at: "2024-01-13T11:15:00Z",
     category: "사회",
-    tags: ["교통", "지하철", "방콕", "인프라"],
-    viewCount: 2100,
-    isActive: true,
-    isFeatured: true,
-    createdAt: "2024-01-13T11:15:00Z",
-    updatedAt: "2024-01-13T11:15:00Z",
-    originalLanguage: "ko",
-    isTranslated: false,
+    tags: ["방콕지하철", "퍼플라인", "대중교통", "교통체증"],
+    is_active: true,
+    is_featured: false,
+    view_count: 654,
+    original_language: "ko",
+    is_translated: false,
   },
   {
-    id: 4,
-    title: "태국 정부, 디지털 노마드 비자 신설 발표",
-    summary: "태국 정부가 원격 근무자들을 위한 새로운 디지털 노마드 비자를 신설한다고 발표했습니다.",
-    content: `태국 정부가 글로벌 원격 근무 트렌드에 맞춰 '디지털 노마드 비자(Digital Nomad Visa)'를 새롭게 신설한다고 발표했습니다.
+    title: "Thai Government Announces New Digital Nomad Visa Program",
+    summary:
+      "Thailand introduces a new visa category specifically designed for digital nomads and remote workers, aiming to attract international talent.",
+    content: `The Thai government has officially announced the launch of a new Digital Nomad Visa (DNV) program, designed to attract remote workers and digital nomads from around the world.
 
-이 비자는 원격으로 일하는 외국인 전문직 종사자들이 태국에서 최대 1년간 체류할 수 있도록 하는 제도입니다. 기존 관광비자와 달리 장기 체류가 가능하며, 비자 연장도 가능합니다.
+The new visa category, which will be available starting next month, allows holders to stay in Thailand for up to one year with the possibility of renewal. The program is part of Thailand's broader strategy to position itself as a hub for digital talent in Southeast Asia.
 
-신청 자격은 월 소득 5만 바트 이상의 원격 근무자로, IT, 디자인, 마케팅, 컨설팅 등 다양한 분야의 전문직이 대상입니다. 신청 시 고용 증명서, 소득 증명서, 건강보험 가입 증명서 등이 필요합니다.
+To qualify for the Digital Nomad Visa, applicants must demonstrate:
+- A minimum monthly income of $2,500 USD
+- Employment with a foreign company or proof of freelance income
+- Health insurance coverage
+- A clean criminal background check
 
-태국 관광청 관계자는 "코로나19 이후 원격 근무가 일반화되면서 장기 체류 관광객이 증가하고 있다"며 "이들을 적극 유치하여 관광 수입 증대와 지역 경제 활성화를 도모하겠다"고 설명했습니다.
+The visa application process will be entirely digital, with most applications processed within 15 business days. The application fee is set at 10,000 Thai Baht (approximately $280 USD).
 
-새 비자는 다음 달부터 온라인으로 신청할 수 있으며, 처리 기간은 약 2주 정도 소요될 예정입니다.`,
-    imageUrl: "/placeholder.svg?height=300&width=500&text=디지털노마드",
-    source: "태국 정부 공보",
-    originalUrl: "https://example.com/news/digital-nomad-visa",
-    publishedAt: "2024-01-12T16:45:00Z",
+Tourism and Sports Minister Phiphat Ratchakitprakarn stated, "This new visa program will help Thailand attract high-skilled professionals who can contribute to our digital economy while enjoying our rich culture and lifestyle."
+
+The program is expected to attract an estimated 100,000 digital nomads annually, potentially generating significant revenue for the tourism and service sectors.
+
+Major cities like Bangkok, Chiang Mai, and Phuket are preparing special co-working spaces and digital nomad-friendly accommodations to welcome the influx of remote workers.`,
+    image_url: "/placeholder.svg?height=400&width=600&text=Digital+Nomad+Visa",
+    source: "Bangkok Post",
+    original_url: "https://example.com/thailand-digital-nomad-visa",
+    published_at: "2024-01-12T16:45:00Z",
     category: "정치",
-    tags: ["비자", "디지털노마드", "원격근무", "정부정책"],
-    viewCount: 3200,
-    isActive: true,
-    isFeatured: true,
-    createdAt: "2024-01-12T16:45:00Z",
-    updatedAt: "2024-01-12T16:45:00Z",
-    originalLanguage: "ko",
-    isTranslated: false,
+    tags: ["디지털노마드", "비자", "원격근무", "태국정부"],
+    is_active: true,
+    is_featured: true,
+    view_count: 2100,
+    original_language: "en",
+    is_translated: true,
   },
   {
-    id: 5,
-    title: "푸켓 국제공항 새 터미널 건설 착공",
-    summary: "푸켓 국제공항의 새로운 터미널 건설이 착공되어 2026년 완공을 목표로 하고 있습니다.",
-    content: `푸켓 국제공항의 새로운 제3터미널 건설 공사가 정식 착공되었습니다.
+    title: "ประเทศไทยเปิดตัวโครงการ 'Smart City' ในกรุงเทพฯ",
+    summary: "รัฐบาลไทยเปิดตัวโครงการเมืองอัจฉริยะขนาดใหญ่ในกรุงเทพฯ เพื่อพัฒนาโครงสร้างพื้นฐานดิจิทัลและปรับปรุงคุณภาพชีวิตของประชาชน",
+    content: `รัฐบาลไทยได้เปิดตัวโครงการ 'Smart City Bangkok' อย่างเป็นทางการ ซึ่งเป็นโครงการขนาดใหญ่มูลค่า 50 พันล้านบาท เพื่อพัฒนากรุงเทพฯ ให้เป็นเมืองอัจฉริยะระดับโลก
 
-새 터미널은 연간 1,500만 명의 승객을 수용할 수 있는 규모로 건설되며, 현재 공항 용량의 2배에 달합니다. 총 건설비는 200억 바트가 투입될 예정입니다.
+โครงการนี้จะดำเนินการในระยะเวลา 5 ปี โดยมีเป้าหมายหลักในการพัฒนา:
+- ระบบการจราจรอัจฉริยะด้วยเทคโนโลยี AI
+- ระบบการจัดการขยะและพลังงานที่ยั่งยืน  
+- แพลตฟอร์มดิจิทัลสำหรับบริการภาครัฐ
+- เครือข่ายอินเทอร์เน็ตความเร็วสูง 5G ทั่วเมือง
 
-터미널에는 최신 자동화 시설과 친환경 기술이 적용됩니다. 태양광 발전 시설, 빗물 재활용 시스템, 에너지 효율적인 냉방 시스템 등을 도입하여 탄소 중립을 목표로 하고 있습니다.
+นายกรัฐมนตรีกล่าวในงานเปิดตัวว่า "โครงการ Smart City Bangkok จะเป็นต้นแบบสำหรับการพัฒนาเมืองอัจฉริยะในภูมิภาคเอเชียตะวันออกเฉียงใต้"
 
-또한 승객 편의를 위해 더 많은 면세점과 레스토랑, 휴게 시설이 마련될 예정입니다. 특히 태국 전통 문화를 체험할 수 있는 문화 공간도 조성되어 관광객들에게 특별한 경험을 제공할 계획입니다.
+ในระยะแรก โครงการจะเริ่มต้นในพื้นที่ 3 เขต ได้แก่ เขตปทุมวัน เขตวัฒนา และเขตคลองเตย ก่อนที่จะขยายไปยังพื้นที่อื่นๆ ในกรุงเทพฯ
 
-공항 관계자는 "푸켓은 태국의 대표적인 관광지로서 늘어나는 관광객 수요에 대응하기 위해 인프라 확충이 필수적"이라며 "새 터미널 완공으로 더 많은 관광객을 유치할 수 있을 것"이라고 기대감을 표했습니다.
+คาดว่าโครงการนี้จะสร้างงานใหม่ประมาณ 100,000 ตำแหน่ง และดึงดูดการลงทุนจากต่างประเทศมูลค่ากว่า 200 พันล้านบาท
 
-건설 공사는 2026년 말 완공을 목표로 하고 있으며, 공사 기간 중에도 기존 터미널 운영에는 차질이 없도록 할 예정입니다.`,
-    imageUrl: "/placeholder.svg?height=300&width=500&text=공항터미널",
-    source: "푸켓 공항 공사",
-    originalUrl: "https://example.com/news/phuket-airport-terminal",
-    publishedAt: "2024-01-11T10:20:00Z",
-    category: "사회",
-    tags: ["공항", "푸켓", "인프라", "관광"],
-    viewCount: 1800,
-    isActive: true,
-    isFeatured: false,
-    createdAt: "2024-01-11T10:20:00Z",
-    updatedAt: "2024-01-11T10:20:00Z",
-    originalLanguage: "ko",
-    isTranslated: false,
+ประชาชนสามารถติดตามความคืบหน้าของโครงการได้ผ่านแอปพลิเคชัน 'Bangkok Smart' ที่จะเปิดให้ดาวน์โหลดในเดือนหน้า`,
+    image_url: "/placeholder.svg?height=400&width=600&text=Smart+City+Bangkok",
+    source: "ไทยรัฐ",
+    original_url: "https://example.com/bangkok-smart-city-project",
+    published_at: "2024-01-11T13:20:00Z",
+    category: "기술",
+    tags: ["스마트시티", "방콕", "디지털전환", "AI기술"],
+    is_active: true,
+    is_featured: false,
+    view_count: 756,
+    original_language: "th",
+    is_translated: true,
   },
 ]
 
-// 뉴스 카테고리별 통계
-export const newsCategoryStats = {
-  정치: 1,
-  경제: 1,
-  사회: 2,
-  문화: 1,
-  스포츠: 0,
-  국제: 0,
-  생활: 0,
-  기술: 0,
-  일반: 0,
+// 뉴스 카테고리별 색상 매핑
+export const newsCategoryColors: Record<string, string> = {
+  정치: "bg-red-100 text-red-800",
+  경제: "bg-blue-100 text-blue-800",
+  사회: "bg-green-100 text-green-800",
+  문화: "bg-purple-100 text-purple-800",
+  스포츠: "bg-orange-100 text-orange-800",
+  국제: "bg-indigo-100 text-indigo-800",
+  생활: "bg-pink-100 text-pink-800",
+  기술: "bg-gray-100 text-gray-800",
+  일반: "bg-slate-100 text-slate-800",
 }
 
-// 인기 태그
-export const popularTags = [
-  "한인사회",
-  "경제성장",
-  "교통",
-  "관광",
-  "정부정책",
-  "인프라",
-  "문화",
-  "비자",
-  "공항",
-  "방콕",
-]
+// 언어별 정보
+export const languageInfo: Record<string, { name: string; flag: string }> = {
+  ko: { name: "한국어", flag: "🇰🇷" },
+  en: { name: "영어", flag: "🇺🇸" },
+  th: { name: "태국어", flag: "🇹🇭" },
+}
