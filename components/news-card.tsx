@@ -28,44 +28,68 @@ const getCategoryColor = (category: string) => {
 }
 
 const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+  try {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
 
-  if (diffInHours < 1) {
-    return "방금 전"
-  } else if (diffInHours < 24) {
-    return `${diffInHours}시간 전`
-  } else if (diffInHours < 48) {
-    return "어제"
-  } else {
-    return date.toLocaleDateString("ko-KR", {
-      month: "short",
-      day: "numeric",
-    })
+    if (diffInHours < 1) {
+      return "방금 전"
+    } else if (diffInHours < 24) {
+      return `${diffInHours}시간 전`
+    } else if (diffInHours < 48) {
+      return "어제"
+    } else {
+      return date.toLocaleDateString("ko-KR", {
+        month: "short",
+        day: "numeric",
+      })
+    }
+  } catch (error) {
+    return "날짜 정보 없음"
   }
 }
 
 export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
+  // 안전한 기본값 설정
+  const safeNews = {
+    ...news,
+    title: news.title || "제목 없음",
+    summary: news.summary || "요약 정보가 없습니다.",
+    category: news.category || "기타",
+    tags: Array.isArray(news.tags) ? news.tags : [],
+    viewCount: typeof news.viewCount === "number" ? news.viewCount : 0,
+    source: news.source || "출처 불명",
+    publishedAt: news.publishedAt || new Date().toISOString(),
+    originalUrl: news.originalUrl || "#",
+    imageUrl: news.imageUrl || "",
+  }
+
   const handleExternalLink = (e: React.MouseEvent) => {
     e.stopPropagation()
-    window.open(news.originalUrl, "_blank", "noopener,noreferrer")
+    if (safeNews.originalUrl && safeNews.originalUrl !== "#") {
+      window.open(safeNews.originalUrl, "_blank", "noopener,noreferrer")
+    }
   }
 
   return (
     <Card
       className="overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer h-full flex flex-col"
-      onClick={() => onDetailClick(news)}
+      onClick={() => onDetailClick(safeNews)}
     >
       <div className="relative">
         <img
-          src={news.imageUrl || "/placeholder.svg?height=200&width=400"}
-          alt={news.title}
+          src={safeNews.imageUrl || "/placeholder.svg?height=200&width=400"}
+          alt={safeNews.title}
           className="w-full h-48 object-cover"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement
+            target.src = "/placeholder.svg?height=200&width=400"
+          }}
         />
         <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
-          <Badge className={getCategoryColor(news.category)} variant="secondary">
-            {news.category}
+          <Badge className={getCategoryColor(safeNews.category)} variant="secondary">
+            {safeNews.category}
           </Badge>
         </div>
         <div className="absolute top-3 right-3">
@@ -74,6 +98,7 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
             variant="secondary"
             className="bg-white/90 hover:bg-white text-gray-700"
             onClick={handleExternalLink}
+            disabled={!safeNews.originalUrl || safeNews.originalUrl === "#"}
           >
             <ExternalLink className="h-3 w-3" />
           </Button>
@@ -81,8 +106,8 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
       </div>
 
       <CardHeader className="pb-3 flex-shrink-0">
-        <CardTitle className="text-lg mb-1 line-clamp-2 leading-tight">{news.title}</CardTitle>
-        <CardDescription className="text-sm line-clamp-3">{news.summary}</CardDescription>
+        <CardTitle className="text-lg mb-1 line-clamp-2 leading-tight">{safeNews.title}</CardTitle>
+        <CardDescription className="text-sm line-clamp-3">{safeNews.summary}</CardDescription>
       </CardHeader>
 
       <CardContent className="pt-0 flex-1 flex flex-col">
@@ -90,28 +115,28 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
           <div className="flex items-center justify-between text-xs text-gray-500">
             <div className="flex items-center gap-2">
               <Calendar className="h-3 w-3" />
-              <span>{formatDate(news.publishedAt)}</span>
+              <span>{formatDate(safeNews.publishedAt)}</span>
             </div>
             <div className="flex items-center gap-2">
               <Eye className="h-3 w-3" />
-              <span>{news.viewCount.toLocaleString()}</span>
+              <span>{safeNews.viewCount.toLocaleString()}</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2 text-xs text-gray-600">
             <Globe className="h-3 w-3" />
-            <span className="truncate">{news.source}</span>
+            <span className="truncate">{safeNews.source}</span>
           </div>
 
           <div className="flex flex-wrap gap-1">
-            {news.tags.slice(0, 3).map((tag, index) => (
+            {safeNews.tags.slice(0, 3).map((tag, index) => (
               <Badge key={index} variant="outline" className="text-xs">
                 {tag}
               </Badge>
             ))}
-            {news.tags.length > 3 && (
+            {safeNews.tags.length > 3 && (
               <Badge variant="outline" className="text-xs">
-                +{news.tags.length - 3}
+                +{safeNews.tags.length - 3}
               </Badge>
             )}
           </div>
@@ -124,13 +149,19 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
               variant="outline"
               onClick={(e) => {
                 e.stopPropagation()
-                onDetailClick(news)
+                onDetailClick(safeNews)
               }}
               className="flex-1 mr-2"
             >
               자세히 보기
             </Button>
-            <Button size="sm" variant="ghost" onClick={handleExternalLink} className="px-3">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleExternalLink}
+              className="px-3"
+              disabled={!safeNews.originalUrl || safeNews.originalUrl === "#"}
+            >
               <ExternalLink className="h-4 w-4" />
             </Button>
           </div>

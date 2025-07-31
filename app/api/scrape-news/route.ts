@@ -1,339 +1,193 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// Allowed domains for security
-const ALLOWED_DOMAINS = [
-  "sanook.com",
-  "bangkokpost.com",
-  "thairath.co.th",
-  "matichon.co.th",
-  "overseas.mofa.go.kr",
-  "khaosod.co.th",
-  "dailynews.co.th",
-  "nationthailand.com",
-  "mgronline.com",
-  "world.thaipbs.or.th",
-  "komchadluek.net",
-  "naewna.com",
-  "prachatai.com",
-  "innnews.co.th",
-]
-
-function isAllowedDomain(url: string): boolean {
-  try {
-    const urlObj = new URL(url)
-    return ALLOWED_DOMAINS.some((domain) => urlObj.hostname.includes(domain))
-  } catch {
-    return false
-  }
-}
-
-function extractTextContent(html: string): { title: string; content: string } {
-  // Remove script and style tags
-  let cleanHtml = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-  cleanHtml = cleanHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-  cleanHtml = cleanHtml.replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, "")
-
-  // Extract title - try multiple selectors
-  let title = ""
-  const titleSelectors = [
-    /<title[^>]*>([\s\S]*?)<\/title>/i,
-    /<h1[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/h1>/i,
-    /<h1[^>]*>([\s\S]*?)<\/h1>/i,
-    /<meta[^>]*property="og:title"[^>]*content="([^"]*)"[^>]*>/i,
-    /<meta[^>]*name="title"[^>]*content="([^"]*)"[^>]*>/i,
-  ]
-
-  for (const selector of titleSelectors) {
-    const match = cleanHtml.match(selector)
-    if (match && match[1] && match[1].trim()) {
-      title = match[1].trim()
-      break
-    }
-  }
-
-  // Remove HTML tags and extract text content
-  let textContent = cleanHtml.replace(/<[^>]+>/g, " ")
-
-  // Clean up whitespace and special characters
-  textContent = textContent
-    .replace(/\s+/g, " ")
-    .replace(/\n+/g, "\n")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#8217;/g, "'")
-    .replace(/&#8220;/g, '"')
-    .replace(/&#8221;/g, '"')
-    .trim()
-
-  // Remove common navigation and footer text patterns
-  const unwantedPatterns = [
-    /copyright.*$/gi,
-    /all rights reserved.*$/gi,
-    /privacy policy.*$/gi,
-    /terms of service.*$/gi,
-    /cookie policy.*$/gi,
-    /follow us.*$/gi,
-    /subscribe.*$/gi,
-    /advertisement.*$/gi,
-    /related articles.*$/gi,
-    /more news.*$/gi,
-    /share this.*$/gi,
-    /print.*$/gi,
-    /email.*$/gi,
-    /tags:.*$/gi,
-    /categories:.*$/gi,
-    /posted by.*$/gi,
-    /published.*$/gi,
-    /updated.*$/gi,
-    /source:.*$/gi,
-    /redirecting.*$/gi,
-    /loading.*$/gi,
-    /please wait.*$/gi,
-  ]
-
-  unwantedPatterns.forEach((pattern) => {
-    textContent = textContent.replace(pattern, "")
-  })
-
-  // Remove very short lines (likely navigation or ads)
-  const lines = textContent.split("\n")
-  const meaningfulLines = lines.filter((line) => {
-    const trimmed = line.trim()
-    return (
-      trimmed.length > 30 &&
-      !trimmed.match(/^(home|news|sports|business|contact|about|menu|search|login|register)$/i) &&
-      !trimmed.match(/^(click|tap|swipe|scroll|loading|redirecting)/i)
-    )
-  })
-
-  textContent = meaningfulLines.join("\n").trim()
-
-  // Limit content length to prevent overly long responses
-  if (textContent.length > 15000) {
-    textContent = textContent.substring(0, 15000) + "..."
-  }
-
-  return {
-    title: title.substring(0, 300), // Limit title length
-    content: textContent,
-  }
-}
+import * as cheerio from "cheerio"
 
 export async function POST(request: NextRequest) {
   try {
     const { url } = await request.json()
 
-    if (!url || typeof url !== "string") {
+    if (!url) {
       return NextResponse.json({ error: "URL이 필요합니다." }, { status: 400 })
     }
 
-    // Validate URL format
-    let validUrl: URL
-    try {
-      validUrl = new URL(url)
-    } catch {
-      return NextResponse.json({ error: "유효하지 않은 URL 형식입니다." }, { status: 400 })
-    }
+    console.log("스크래핑 시작:", url)
 
-    // Check if domain is allowed
-    if (!isAllowedDomain(url)) {
+    // 더 나은 헤더로 실제 브라우저처럼 요청
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        Connection: "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+      },
+      redirect: "follow", // 자동으로 리다이렉트 따라가기
+    })
+
+    if (!response.ok) {
+      console.error("HTTP 오류:", response.status, response.statusText)
       return NextResponse.json(
         {
-          error: "허용되지 않은 도메인입니다. 지원되는 뉴스 사이트만 사용할 수 있습니다.",
-          allowedDomains: ALLOWED_DOMAINS,
+          error: `HTTP 오류: ${response.status} ${response.statusText}`,
         },
-        { status: 403 },
+        { status: response.status },
       )
     }
 
-    console.log(`Starting to fetch URL: ${url}`)
+    const html = await response.text()
+    console.log("HTML 길이:", html.length)
+    console.log("최종 URL:", response.url)
 
-    // Fetch the webpage with better headers and error handling
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 25000) // 25 second timeout
+    // 리다이렉트 페이지나 오류 페이지 감지
+    const redirectPatterns = [
+      /redirecting/i,
+      /redirect/i,
+      /loading/i,
+      /please wait/i,
+      /잠시만 기다려/i,
+      /리다이렉트/i,
+      /페이지를 찾을 수 없습니다/i,
+      /404/i,
+      /error/i,
+      /access denied/i,
+      /접근이 거부되었습니다/i,
+    ]
 
-    try {
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-          "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7,th;q=0.6",
-          "Accept-Encoding": "gzip, deflate, br",
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-          "Sec-Fetch-Dest": "document",
-          "Sec-Fetch-Mode": "navigate",
-          "Sec-Fetch-Site": "none",
-          "Sec-Fetch-User": "?1",
-          "Upgrade-Insecure-Requests": "1",
-          DNT: "1",
-          Connection: "keep-alive",
+    const isRedirectPage = redirectPatterns.some((pattern) => pattern.test(html))
+
+    if (isRedirectPage) {
+      console.error("리다이렉트 또는 오류 페이지 감지됨")
+      return NextResponse.json(
+        {
+          error: "페이지에 접근할 수 없습니다. 리다이렉트 또는 오류 페이지입니다.",
         },
-        redirect: "follow", // Follow redirects automatically
-        mode: "cors",
-      })
-
-      clearTimeout(timeoutId)
-
-      console.log(`Response received - Status: ${response.status}, Final URL: ${response.url}`)
-
-      if (!response.ok) {
-        console.error(`HTTP Error: ${response.status} ${response.statusText}`)
-        return NextResponse.json(
-          {
-            error: `웹페이지를 가져올 수 없습니다. HTTP ${response.status}: ${response.statusText}`,
-            status: response.status,
-            finalUrl: response.url,
-          },
-          { status: response.status >= 500 ? 500 : 400 },
-        )
-      }
-
-      const contentType = response.headers.get("content-type") || ""
-      console.log(`Content-Type: ${contentType}`)
-
-      if (!contentType.includes("text/html")) {
-        return NextResponse.json(
-          {
-            error: `HTML 콘텐츠가 아닙니다. Content-Type: ${contentType}`,
-            contentType,
-          },
-          { status: 400 },
-        )
-      }
-
-      const html = await response.text()
-      console.log(`HTML content length: ${html.length}`)
-
-      if (!html || html.length < 500) {
-        return NextResponse.json(
-          {
-            error: "웹페이지 내용이 너무 짧거나 비어있습니다.",
-            contentLength: html?.length || 0,
-          },
-          { status: 400 },
-        )
-      }
-
-      // Check if we got a redirect page, error page, or insufficient content
-      const lowerHtml = html.toLowerCase()
-      const redirectIndicators = [
-        "redirecting",
-        "redirect",
-        "moved permanently",
-        "404 not found",
-        "access denied",
-        "forbidden",
-        "please wait",
-        "loading",
-        "javascript is required",
-        "enable javascript",
-      ]
-
-      const hasRedirectIndicator = redirectIndicators.some((indicator) => lowerHtml.includes(indicator))
-
-      if (hasRedirectIndicator) {
-        console.error("Detected redirect or error page")
-        return NextResponse.json(
-          {
-            error:
-              "웹페이지가 리다이렉트되었거나 접근할 수 없습니다. JavaScript가 필요한 페이지이거나 차단된 페이지일 수 있습니다.",
-            finalUrl: response.url,
-            indicators: redirectIndicators.filter((indicator) => lowerHtml.includes(indicator)),
-          },
-          { status: 400 },
-        )
-      }
-
-      const { title, content } = extractTextContent(html)
-      console.log(`Extracted - Title: "${title.substring(0, 100)}...", Content length: ${content.length}`)
-
-      if (!content || content.length < 300) {
-        console.error("Insufficient content extracted")
-        return NextResponse.json(
-          {
-            error: "추출된 텍스트 내용이 충분하지 않습니다. 뉴스 내용을 찾을 수 없습니다.",
-            extractedLength: content?.length || 0,
-            title: title || "제목 없음",
-            contentPreview: content?.substring(0, 200) || "",
-          },
-          { status: 400 },
-        )
-      }
-
-      // Additional validation - check if content looks like actual news
-      const newsIndicators = ["뉴스", "기사", "보도", "발표", "사건", "사고", "정치", "경제", "사회", "문화", "스포츠"]
-      const hasNewsContent = newsIndicators.some((indicator) => content.includes(indicator))
-
-      if (!hasNewsContent && content.length < 1000) {
-        console.error("Content doesn't appear to be news")
-        return NextResponse.json(
-          {
-            error: "뉴스 내용으로 보이지 않습니다. 다른 URL을 시도해보세요.",
-            contentPreview: content.substring(0, 200),
-          },
-          { status: 400 },
-        )
-      }
-
-      console.log("Successfully extracted content")
-
-      return NextResponse.json({
-        title: title || "제목 없음",
-        content,
-        url: response.url, // Use final URL after redirects
-        originalUrl: url,
-        extractedAt: new Date().toISOString(),
-        contentLength: content.length,
-        success: true,
-      })
-    } catch (fetchError) {
-      clearTimeout(timeoutId)
-
-      console.error("Fetch error:", fetchError)
-
-      if (fetchError instanceof Error) {
-        if (fetchError.name === "AbortError") {
-          return NextResponse.json(
-            { error: "요청 시간이 초과되었습니다. 웹사이트가 응답하지 않습니다." },
-            { status: 408 },
-          )
-        }
-
-        if (fetchError.message.includes("ENOTFOUND") || fetchError.message.includes("ECONNREFUSED")) {
-          return NextResponse.json({ error: "웹사이트에 연결할 수 없습니다. URL을 확인해주세요." }, { status: 400 })
-        }
-
-        return NextResponse.json(
-          {
-            error: `네트워크 오류: ${fetchError.message}`,
-            errorType: fetchError.name,
-          },
-          { status: 500 },
-        )
-      }
-
-      return NextResponse.json({ error: "알 수 없는 네트워크 오류가 발생했습니다." }, { status: 500 })
+        { status: 400 },
+      )
     }
+
+    // HTML이 너무 짧으면 유효하지 않은 콘텐츠로 간주
+    if (html.length < 500) {
+      console.error("HTML 콘텐츠가 너무 짧음:", html.length)
+      return NextResponse.json(
+        {
+          error: "페이지 콘텐츠가 충분하지 않습니다.",
+        },
+        { status: 400 },
+      )
+    }
+
+    const $ = cheerio.load(html)
+
+    // 메타 태그에서 정보 추출
+    const ogTitle = $('meta[property="og:title"]').attr("content") || ""
+    const ogDescription = $('meta[property="og:description"]').attr("content") || ""
+    const ogImage = $('meta[property="og:image"]').attr("content") || ""
+    const metaDescription = $('meta[name="description"]').attr("content") || ""
+
+    // 제목 추출 (우선순위: og:title > title 태그 > h1)
+    const title = ogTitle || $("title").text().trim() || $("h1").first().text().trim()
+
+    // 본문 추출 (다양한 선택자 시도)
+    const contentSelectors = [
+      "article",
+      ".article-content",
+      ".news-content",
+      ".post-content",
+      ".content",
+      ".entry-content",
+      "main",
+      ".main-content",
+      "#content",
+      ".story-body",
+      ".article-body",
+    ]
+
+    let content = ""
+    for (const selector of contentSelectors) {
+      const element = $(selector)
+      if (element.length > 0) {
+        // 스크립트, 스타일, 광고 등 제거
+        element.find("script, style, .ad, .advertisement, .social-share, .related-articles").remove()
+        content = element.text().trim()
+        if (content.length > 200) {
+          break
+        }
+      }
+    }
+
+    // 본문이 충분하지 않으면 전체 body에서 추출
+    if (content.length < 200) {
+      $("script, style, nav, header, footer, .ad, .advertisement, .menu, .sidebar").remove()
+      content = $("body").text().trim()
+    }
+
+    // 텍스트 정리
+    content = content.replace(/\s+/g, " ").replace(/\n+/g, "\n").trim()
+
+    // 이미지 URL 처리
+    let imageUrl = ogImage
+    if (imageUrl && !imageUrl.startsWith("http")) {
+      const baseUrl = new URL(response.url).origin
+      imageUrl = new URL(imageUrl, baseUrl).href
+    }
+
+    // 최종 검증
+    if (!title || title.length < 5) {
+      console.error("제목이 너무 짧거나 없음:", title)
+      return NextResponse.json(
+        {
+          error: "페이지 제목을 찾을 수 없습니다.",
+        },
+        { status: 400 },
+      )
+    }
+
+    if (content.length < 100) {
+      console.error("본문이 너무 짧음:", content.length)
+      return NextResponse.json(
+        {
+          error: "페이지 본문이 충분하지 않습니다.",
+        },
+        { status: 400 },
+      )
+    }
+
+    // 뉴스 콘텐츠인지 확인
+    const newsKeywords = ["뉴스", "기사", "보도", "취재", "기자", "뉴스룸", "news", "article", "reporter"]
+    const hasNewsKeywords = newsKeywords.some(
+      (keyword) => html.toLowerCase().includes(keyword) || title.toLowerCase().includes(keyword),
+    )
+
+    if (!hasNewsKeywords && content.length < 500) {
+      console.warn("뉴스 콘텐츠가 아닐 수 있음")
+    }
+
+    const result = {
+      title: title.substring(0, 200), // 제목 길이 제한
+      content: content.substring(0, 5000), // 본문 길이 제한
+      description: ogDescription || metaDescription || content.substring(0, 300),
+      imageUrl: imageUrl || "",
+      finalUrl: response.url,
+      source: new URL(response.url).hostname,
+      scrapedAt: new Date().toISOString(),
+    }
+
+    console.log("스크래핑 완료:", {
+      title: result.title.substring(0, 50) + "...",
+      contentLength: result.content.length,
+      hasImage: !!result.imageUrl,
+      source: result.source,
+    })
+
+    return NextResponse.json(result)
   } catch (error) {
-    console.error("Scraping error:", error)
-
-    if (error instanceof Error) {
-      return NextResponse.json(
-        {
-          error: `서버 오류: ${error.message}`,
-          errorType: error.name,
-        },
-        { status: 500 },
-      )
-    }
-
-    return NextResponse.json({ error: "서버 오류가 발생했습니다." }, { status: 500 })
+    console.error("스크래핑 오류:", error)
+    return NextResponse.json(
+      {
+        error: `스크래핑 중 오류가 발생했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+      },
+      { status: 500 },
+    )
   }
 }
