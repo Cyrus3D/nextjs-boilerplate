@@ -50,13 +50,13 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
   // 이미지 URL 유효성 검증 함수
   const isValidImageUrl = (url: string | null | undefined): boolean => {
     if (!url) return false
-    
+
     const urlString = String(url).trim()
     if (!urlString || urlString === "null" || urlString === "undefined") return false
-    
+
     // URL 형식 검증
     try {
-      new URL(urlString.startsWith('http') ? urlString : `https://${urlString}`)
+      new URL(urlString.startsWith("http") ? urlString : `https://${urlString}`)
       return true
     } catch {
       return false
@@ -66,7 +66,7 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
   // 이미지 URL 정규화 함수
   const normalizeImageUrl = (url: string): string => {
     const urlString = url.trim()
-    if (urlString.startsWith('http')) {
+    if (urlString.startsWith("http")) {
       return urlString
     }
     return `https://${urlString}`
@@ -218,10 +218,10 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
           {hasValidImage && !imageError ? (
             <>
               <img
-                src={normalizedImageUrl}
+                src={normalizedImageUrl || "/placeholder.svg"}
                 alt={String(news.title || "뉴스 이미지")}
                 className={`w-full h-full object-cover rounded-lg transition-all duration-300 hover:scale-105 ${
-                  imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+                  imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95"
                 }`}
                 loading="lazy"
                 onLoad={() => {
@@ -233,7 +233,7 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
                   setImageError(true)
                 }}
               />
-              
+
               {/* 로딩 스피너 */}
               {!imageLoaded && !imageError && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
@@ -242,9 +242,7 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
               )}
             </>
           ) : (
-            <div
-              className={`image-placeholder text-center text-gray-500 flex flex-col items-center justify-center`}
-            >
+            <div className={`image-placeholder text-center text-gray-500 flex flex-col items-center justify-center`}>
               <div className="text-2xl mb-1">📷</div>
               <div className="text-xs">이미지 영역</div>
               {/* Debug info for missing images */}

@@ -48,6 +48,34 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
     }
   }
 
+  // 이미지 URL 유효성 검증 함수
+  const isValidImageUrl = (url: string | null | undefined): boolean => {
+    if (!url) return false
+
+    const urlString = String(url).trim()
+    if (!urlString || urlString === "null" || urlString === "undefined") return false
+
+    // URL 형식 검증
+    try {
+      new URL(urlString.startsWith("http") ? urlString : `https://${urlString}`)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  // 이미지 URL 정규화 함수
+  const normalizeImageUrl = (url: string): string => {
+    const urlString = url.trim()
+    if (urlString.startsWith("http")) {
+      return urlString
+    }
+    return `https://${urlString}`
+  }
+
+  const hasValidImage = isValidImageUrl(news.image_url)
+  const normalizedImageUrl = hasValidImage ? normalizeImageUrl(String(news.image_url)) : ""
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
@@ -103,46 +131,24 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
           <ScrollArea className="h-full">
             <div className="space-y-6 pr-4">
               {/* Main Image Area */}
-              {news.image_url &&
-              String(news.image_url).trim().length > 0 &&
-              String(news.image_url).trim() !== "null" &&
-              String(news.image_url).trim() !== "undefined" ? (
+              {hasValidImage ? (
                 <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
-                  {Array.isArray(news.image_url) ? (
-                    // Multiple images - show first one as main image
-                    <img
-                      src={String(news.image_url[0]).trim() || "/placeholder.svg"}
-                      alt="뉴스 대표 이미지"
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
-                      loading="lazy"
-                      crossOrigin="anonymous"
-                      onError={(e) => {
-                        console.log(`메인 이미지 로드 실패: ${news.image_url[0]}`)
-                        const target = e.target as HTMLImageElement
-                        target.src = "/placeholder.svg?height=192&width=400&text=이미지 로드 실패"
-                      }}
-                      onLoad={(e) => {
-                        console.log(`메인 이미지 로드 성공: ${news.image_url[0]}`)
-                      }}
-                    />
-                  ) : (
-                    // Single image
-                    <img
-                      src={String(news.image_url).trim() || "/placeholder.svg"}
-                      alt="뉴스 대표 이미지"
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
-                      loading="lazy"
-                      crossOrigin="anonymous"
-                      onError={(e) => {
-                        console.log(`메인 이미지 로드 실패: ${news.image_url}`)
-                        const target = e.target as HTMLImageElement
-                        target.src = "/placeholder.svg?height=192&width=400&text=이미지 로드 실패"
-                      }}
-                      onLoad={(e) => {
-                        console.log(`메인 이미지 로드 성공: ${news.image_url}`)
-                      }}
-                    />
-                  )}
+                  <img
+                    src={normalizedImageUrl || "/placeholder.svg"}
+                    alt="뉴스 대표 이미지"
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                    loading="lazy"
+                    crossOrigin="anonymous"
+                    onError={(e) => {
+                      console.log(`메인 이미지 로드 실패: ${normalizedImageUrl}`)
+                      const target = e.target as HTMLImageElement
+                      target.src =
+                        "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDQwMCAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI0MDAiIGhlaWdodD0iMTkyIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNzUgODBIMTc1LjAwMVY4MC4wMDFIMTc1WiIgZmlsbD0iIzk0OTRBNCIvPgo8cGF0aCBkPSJNMjI1IDgwSDIyNS4wMDFWODAuMDAxSDIyNVoiIGZpbGw9IiM5NDk0QTQiLz4KPHBhdGggZD0iTTE3NSAxMjBIMTc1LjAwMVYxMjAuMDAxSDE3NVoiIGZpbGw9IiM5NDk0QTQiLz4KPHBhdGggZD0iTTIyNSAxMjBIMjI1LjAwMVYxMjAuMDAxSDIyNVoiIGZpbGw9IiM5NDk0QTQiLz4KPHJlY3QgeD0iMTYwIiB5PSI2NSIgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiByeD0iNCIgZmlsbD0iI0U1RTdFQiIvPgo8dGV4dCB4PSIyMDAiIHk9IjE1MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk0OTRBNCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIj7snbTrr7jsp4Ag66Gc65OcIOyLpO2MqDwvdGV4dD4KPC9zdmc+"
+                    }}
+                    onLoad={(e) => {
+                      console.log(`메인 이미지 로드 성공: ${normalizedImageUrl}`)
+                    }}
+                  />
                 </div>
               ) : (
                 // Enhanced image handling with better validation
@@ -158,8 +164,8 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                         />
                       </svg>
                     </div>
-                    <p className="text-sm font-medium">이미지 로드 중...</p>
-                    <p className="text-xs">이미지를 불러오고 있습니다</p>
+                    <p className="text-sm font-medium">이미지 없음</p>
+                    <p className="text-xs">대표 이미지가 없습니다</p>
 
                     {/* Enhanced debug info */}
                     <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded border max-w-md">
@@ -171,37 +177,7 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                       <br />
                       <strong>문자열 길이:</strong> {String(news.image_url || "").length}
                       <br />
-                      <strong>URL 유효성:</strong>{" "}
-                      {news.image_url &&
-                      String(news.image_url).trim().length > 0 &&
-                      (String(news.image_url).startsWith("http") || String(news.image_url).startsWith("/"))
-                        ? "✅ 유효한 URL 형식"
-                        : "❌ 유효하지 않은 URL"}
-                      {/* Force render the image if URL exists */}
-                      {news.image_url && String(news.image_url).trim().length > 0 && (
-                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                          <strong>🖼️ 강제 렌더링 테스트:</strong>
-                          <br />
-                          <img
-                            src={String(news.image_url).trim() || "/placeholder.svg"}
-                            alt="강제 테스트 이미지"
-                            className="w-full h-20 object-cover mt-1 border rounded"
-                            onLoad={(e) => {
-                              console.log("✅ 강제 렌더링 성공:", news.image_url)
-                              // Hide placeholder and show main image
-                              const mainImageContainer = e.target
-                                .closest(".space-y-6")
-                                ?.querySelector(".w-full.h-48.bg-gray-100.rounded-lg.overflow-hidden")
-                              if (mainImageContainer) {
-                                mainImageContainer.style.display = "block"
-                              }
-                            }}
-                            onError={(e) => {
-                              console.log("❌ 강제 렌더링 실패:", news.image_url)
-                            }}
-                          />
-                        </div>
-                      )}
+                      <strong>URL 유효성:</strong> {hasValidImage ? "✅ 유효한 URL 형식" : "❌ 유효하지 않은 URL"}
                     </div>
                   </div>
                 </div>
@@ -249,7 +225,7 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                     {Array.isArray(news.image_url)
                       ? news.image_url.map((url, index) => {
                           const imageUrl = String(url).trim()
-                          if (!imageUrl || imageUrl === "/placeholder.svg") return null
+                          if (!imageUrl) return null
 
                           return (
                             <div
@@ -265,7 +241,8 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                                 onError={(e) => {
                                   console.log(`이미지 로드 실패: ${imageUrl}`)
                                   const target = e.target as HTMLImageElement
-                                  target.src = "/placeholder.svg?height=200&width=300&text=이미지 로드 실패"
+                                  target.src =
+                                    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTQ5NEE0IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiPuydtOuvuOyngCDroZzrk5wg7Ik164qUPC90ZXh0Pgo8L3N2Zz4K"
                                 }}
                                 onLoad={(e) => {
                                   console.log(`이미지 로드 성공: ${imageUrl}`)
@@ -276,7 +253,7 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                         })
                       : (() => {
                           const imageUrl = String(news.image_url).trim()
-                          if (!imageUrl || imageUrl === "/placeholder.svg") return null
+                          if (!imageUrl) return null
 
                           return (
                             <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
@@ -289,7 +266,8 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                                 onError={(e) => {
                                   console.log(`이미지 로드 실패: ${imageUrl}`)
                                   const target = e.target as HTMLImageElement
-                                  target.src = "/placeholder.svg?height=200&width=300&text=이미지 로드 실패"
+                                  target.src =
+                                    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTQ5NEE0IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTIiPuydtOuvuOyngCDroZzrk5wg7Ik164qUPC90ZXh0Pgo8L3N2Zz4K"
                                 }}
                                 onLoad={(e) => {
                                   console.log(`이미지 로드 성공: ${imageUrl}`)
