@@ -5,10 +5,13 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, TrendingUp, Thermometer, DollarSign, Loader2 } from "lucide-react"
+import { Search, TrendingUp, Thermometer, DollarSign, Loader2, Newspaper, Building2 } from "lucide-react"
 import BusinessCard from "@/components/business-card"
+import NewsCard from "@/components/news-card"
 import type { BusinessCard as BusinessCardType, Category } from "@/types/business-card"
+import type { NewsArticle, NewsCategory } from "@/types/news"
 import {
   getBusinessCardsPaginated,
   getCategories,
@@ -16,9 +19,11 @@ import {
   getCachedData,
   setCachedData,
 } from "@/lib/optimized-api"
+import { sampleNewsArticles, sampleNewsCategories } from "@/data/sample-news"
 
 // Lazy load components for better performance
 const BusinessDetailModal = lazy(() => import("@/components/business-detail-modal"))
+const NewsDetailModal = lazy(() => import("@/components/news-detail-modal"))
 
 // Weather and exchange rate interfaces
 interface WeatherData {
@@ -92,18 +97,30 @@ function CardSkeleton() {
 }
 
 export default function InfoCardList() {
-  // State management
+  // Tab state
+  const [activeTab, setActiveTab] = useState<string>("news")
+
+  // Business cards state
   const [cards, setCards] = useState<BusinessCardType[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState<string>("")
   const [selectedCard, setSelectedCard] = useState<BusinessCardType | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false)
+
+  // News state
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([])
+  const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([])
+  const [selectedNewsCategory, setSelectedNewsCategory] = useState<string>("all")
+  const [newsSearchTerm, setNewsSearchTerm] = useState<string>("")
+  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
+  const [isNewsModalOpen, setIsNewsModalOpen] = useState(false)
 
   // Loading states
   const [isLoading, setIsLoading] = useState(true)
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true)
   const [isCardsLoading, setIsCardsLoading] = useState(true)
+  const [isNewsLoading, setIsNewsLoading] = useState(true)
 
   // Weather and exchange rate states
   const [weather, setWeather] = useState<WeatherData | null>(null)
@@ -247,7 +264,24 @@ export default function InfoCardList() {
       }
     } finally {
       setIsCardsLoading(false)
-      setIsLoading(false)
+    }
+  }
+
+  // Fetch news articles (using sample data for now)
+  const fetchNews = async () => {
+    try {
+      setIsNewsLoading(true)
+      // Simulate API call delay
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      setNewsArticles(sampleNewsArticles)
+      setNewsCategories(sampleNewsCategories)
+    } catch (error) {
+      console.error("Error fetching news:", error)
+      setNewsArticles([])
+      setNewsCategories([])
+    } finally {
+      setIsNewsLoading(false)
     }
   }
 
@@ -257,34 +291,45 @@ export default function InfoCardList() {
       // Load categories first (highest priority)
       await fetchCategories()
 
-      // Load business cards second (high priority)
-      await fetchCards(1, true)
+      // Load business cards and news
+      await Promise.all([fetchCards(1, true), fetchNews()])
 
       // Load weather and exchange rate in background (lower priority)
       setTimeout(() => {
         fetchWeather()
         fetchExchangeRate()
       }, 100)
+
+      setIsLoading(false)
     }
 
     loadInitialData()
   }, [])
 
-  // Handle category and search changes
+  // Handle category and search changes for business cards
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setCurrentPage(1) // 페이지를 1로 리셋
-      fetchCards(1, true)
-    }, 300) // Debounce search
+    if (activeTab === "business") {
+      const timeoutId = setTimeout(() => {
+        setCurrentPage(1)
+        fetchCards(1, true)
+      }, 300)
 
-    return () => clearTimeout(timeoutId)
-  }, [selectedCategory, searchTerm, categories]) // categories 의존성 추가
+      return () => clearTimeout(timeoutId)
+    }
+  }, [selectedCategory, searchTerm, categories, activeTab])
 
   // Handle card detail click
-  const handleDetailClick = (card: BusinessCardType) => {
+  const handleBusinessDetailClick = (card: BusinessCardType) => {
     setSelectedCard(card)
-    setIsModalOpen(true)
+    setIsBusinessModalOpen(true)
     incrementViewCount(card.id)
+  }
+
+  // Handle news detail click
+  const handleNewsDetailClick = (article: NewsArticle) => {
+    setSelectedArticle(article)
+    setIsNewsModalOpen(true)
+    // Increment news view count (would be implemented in real API)
   }
 
   // Handle load more
@@ -315,6 +360,38 @@ export default function InfoCardList() {
     })
   }, [cards])
 
+  // Memoized filtered and sorted news
+  const filteredNews = useMemo(() => {
+    let filtered = [...newsArticles]
+
+    // Filter by category
+    if (selectedNewsCategory !== "all") {
+      filtered = filtered.filter((article) => article.category === selectedNewsCategory)
+    }
+
+    // Filter by search term
+    if (newsSearchTerm) {
+      const searchLower = newsSearchTerm.toLowerCase()
+      filtered = filtered.filter(
+        (article) =>
+          article.title.toLowerCase().includes(searchLower) ||
+          article.summary.toLowerCase().includes(searchLower) ||
+          article.tags.some((tag) => tag.toLowerCase().includes(searchLower)),
+      )
+    }
+
+    // Sort by pinned, breaking, then by date
+    return filtered.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1
+      if (!a.isPinned && b.isPinned) return 1
+
+      if (a.isBreaking && !b.isBreaking) return -1
+      if (!a.isBreaking && b.isBreaking) return 1
+
+      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    })
+  }, [newsArticles, selectedNewsCategory, newsSearchTerm])
+
   // Format time for display
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString("ko-KR", {
@@ -333,7 +410,7 @@ export default function InfoCardList() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold mb-2">🔥 핫타이 HOT THAI</h1>
-              <p className="text-orange-100">태국에서 필요한 모든 한인 업체 정보를 한 곳에서 찾아보세요</p>
+              <p className="text-orange-100">태국 현지 뉴스와 한인 업체 정보를 한 곳에서 확인하세요</p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 text-sm">
@@ -378,129 +455,239 @@ export default function InfoCardList() {
         </div>
       )}
 
-      {/* Search and Filter Controls */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="업체명, 설명으로 검색..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      {/* Main Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="news" className="flex items-center gap-2">
+            <Newspaper className="w-4 h-4" />
+            현지 뉴스
+          </TabsTrigger>
+          <TabsTrigger value="business" className="flex items-center gap-2">
+            <Building2 className="w-4 h-4" />
+            교민 업체
+          </TabsTrigger>
+        </TabsList>
 
-        <Select
-          value={selectedCategory}
-          onValueChange={(value) => {
-            setSelectedCategory(value)
-            setCurrentPage(1) // 페이지 리셋
-          }}
-        >
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="카테고리 선택" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 카테고리</SelectItem>
-            {isCategoriesLoading ? (
-              <SelectItem value="loading" disabled>
-                로딩 중...
-              </SelectItem>
-            ) : (
-              categories.map((category) => (
-                <SelectItem key={category.id} value={category.name}>
-                  {category.name}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-      </div>
+        {/* News Tab Content */}
+        <TabsContent value="news" className="space-y-6">
+          {/* News Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="뉴스 제목, 내용으로 검색..."
+                value={newsSearchTerm}
+                onChange={(e) => setNewsSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-      {/* Results Summary */}
-      {!isLoading && (
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <span>
-            총 {total}개의 업체 정보
-            {searchTerm && ` (검색: "${searchTerm}")`}
-            {selectedCategory !== "all" && ` (카테고리: ${selectedCategory})`}
-          </span>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            <span>인기순 정렬</span>
-            {(searchTerm || selectedCategory !== "all") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSearchTerm("")
-                  setSelectedCategory("all")
-                }}
-                className="text-xs"
-              >
-                필터 초기화
-              </Button>
-            )}
+            <Select value={selectedNewsCategory} onValueChange={setSelectedNewsCategory}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="뉴스 카테고리" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 카테고리</SelectItem>
+                {newsCategories.map((category) => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-      )}
 
-      {/* Business Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {isCardsLoading && cards.length === 0 ? (
-          // Initial loading skeletons
-          Array.from({ length: 8 }).map((_, index) => <CardSkeleton key={index} />)
-        ) : sortedCards.length > 0 ? (
-          sortedCards.map((card, index) => (
-            <div key={card.id} className="h-full">
-              <BusinessCard card={card} onDetailClick={handleDetailClick} />
-              {/* Insert ads every 8 cards */}
-              {(index + 1) % 8 === 0 && (
-                <div className="col-span-full my-4">
-                  <Card className="p-4 bg-gray-50 border-dashed">
-                    <div className="text-center text-gray-500 text-sm">광고 영역</div>
-                  </Card>
-                </div>
+          {/* News Results Summary */}
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>
+              총 {filteredNews.length}개의 뉴스
+              {newsSearchTerm && ` (검색: "${newsSearchTerm}")`}
+              {selectedNewsCategory !== "all" && ` (카테고리: ${selectedNewsCategory})`}
+            </span>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              <span>최신순 정렬</span>
+              {(newsSearchTerm || selectedNewsCategory !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setNewsSearchTerm("")
+                    setSelectedNewsCategory("all")
+                  }}
+                  className="text-xs"
+                >
+                  필터 초기화
+                </Button>
               )}
             </div>
-          ))
-        ) : (
-          // No results
-          <div className="col-span-full text-center py-12">
-            <div className="text-gray-500 mb-4">
-              <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium">검색 결과가 없습니다</p>
-              <p className="text-sm">다른 키워드나 카테고리로 검색해보세요</p>
+          </div>
+
+          {/* News Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {isNewsLoading ? (
+              Array.from({ length: 8 }).map((_, index) => <CardSkeleton key={index} />)
+            ) : filteredNews.length > 0 ? (
+              filteredNews.map((article, index) => (
+                <div key={article.id} className="h-full">
+                  <NewsCard article={article} onDetailClick={handleNewsDetailClick} />
+                  {/* Insert ads every 8 articles */}
+                  {(index + 1) % 8 === 0 && (
+                    <div className="col-span-full my-4">
+                      <Card className="p-4 bg-gray-50 border-dashed">
+                        <div className="text-center text-gray-500 text-sm">광고 영역</div>
+                      </Card>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <div className="text-gray-500 mb-4">
+                  <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">검색 결과가 없습니다</p>
+                  <p className="text-sm">다른 키워드나 카테고리로 검색해보세요</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Business Tab Content */}
+        <TabsContent value="business" className="space-y-6">
+          {/* Business Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="업체명, 설명으로 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            <Select
+              value={selectedCategory}
+              onValueChange={(value) => {
+                setSelectedCategory(value)
+                setCurrentPage(1)
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="카테고리 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 카테고리</SelectItem>
+                {isCategoriesLoading ? (
+                  <SelectItem value="loading" disabled>
+                    로딩 중...
+                  </SelectItem>
+                ) : (
+                  categories.map((category) => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Business Results Summary */}
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>
+              총 {total}개의 업체 정보
+              {searchTerm && ` (검색: "${searchTerm}")`}
+              {selectedCategory !== "all" && ` (카테고리: ${selectedCategory})`}
+            </span>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              <span>인기순 정렬</span>
+              {(searchTerm || selectedCategory !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchTerm("")
+                    setSelectedCategory("all")
+                  }}
+                  className="text-xs"
+                >
+                  필터 초기화
+                </Button>
+              )}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Load More Button */}
-      {hasMore && !isCardsLoading && sortedCards.length > 0 && (
-        <div className="text-center">
-          <Button onClick={handleLoadMore} variant="outline" size="lg" className="min-w-[200px] bg-transparent">
-            더 보기 ({sortedCards.length}/{total})
-          </Button>
-        </div>
-      )}
+          {/* Business Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {isCardsLoading && cards.length === 0 ? (
+              Array.from({ length: 8 }).map((_, index) => <CardSkeleton key={index} />)
+            ) : sortedCards.length > 0 ? (
+              sortedCards.map((card, index) => (
+                <div key={card.id} className="h-full">
+                  <BusinessCard card={card} onDetailClick={handleBusinessDetailClick} />
+                  {/* Insert ads every 8 cards */}
+                  {(index + 1) % 8 === 0 && (
+                    <div className="col-span-full my-4">
+                      <Card className="p-4 bg-gray-50 border-dashed">
+                        <div className="text-center text-gray-500 text-sm">광고 영역</div>
+                      </Card>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <div className="text-gray-500 mb-4">
+                  <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">검색 결과가 없습니다</p>
+                  <p className="text-sm">다른 키워드나 카테고리로 검색해보세요</p>
+                </div>
+              </div>
+            )}
+          </div>
 
-      {/* Loading indicator for pagination */}
-      {isCardsLoading && cards.length > 0 && (
-        <div className="text-center py-4">
-          <Loader2 className="w-6 h-6 animate-spin mx-auto" />
-          <p className="text-sm text-gray-500 mt-2">로딩 중...</p>
-        </div>
-      )}
+          {/* Load More Button */}
+          {hasMore && !isCardsLoading && sortedCards.length > 0 && (
+            <div className="text-center">
+              <Button onClick={handleLoadMore} variant="outline" size="lg" className="min-w-[200px] bg-transparent">
+                더 보기 ({sortedCards.length}/{total})
+              </Button>
+            </div>
+          )}
+
+          {/* Loading indicator for pagination */}
+          {isCardsLoading && cards.length > 0 && (
+            <div className="text-center py-4">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+              <p className="text-sm text-gray-500 mt-2">로딩 중...</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Business Detail Modal */}
       <Suspense fallback={<div>Loading modal...</div>}>
         <BusinessDetailModal
           card={selectedCard}
-          isOpen={isModalOpen}
+          isOpen={isBusinessModalOpen}
           onClose={() => {
-            setIsModalOpen(false)
+            setIsBusinessModalOpen(false)
             setSelectedCard(null)
+          }}
+        />
+      </Suspense>
+
+      {/* News Detail Modal */}
+      <Suspense fallback={<div>Loading modal...</div>}>
+        <NewsDetailModal
+          article={selectedArticle}
+          isOpen={isNewsModalOpen}
+          onClose={() => {
+            setIsNewsModalOpen(false)
+            setSelectedArticle(null)
           }}
         />
       </Suspense>
