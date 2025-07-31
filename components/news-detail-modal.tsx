@@ -142,7 +142,7 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                   )}
                 </div>
               ) : (
-                // Fallback placeholder when no image
+                // Fallback placeholder when no image - with debug info
                 <div className="w-full h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
                   <div className="text-center text-gray-500">
                     <div className="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -157,9 +157,43 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                     </div>
                     <p className="text-sm font-medium">이미지 없음</p>
                     <p className="text-xs">대표 이미지가 없습니다</p>
+                    {/* Debug info for image_url */}
+                    <div className="mt-2 text-xs text-red-500 bg-red-50 p-2 rounded border">
+                      <strong>디버그:</strong> image_url = {JSON.stringify(news.image_url)}
+                      <br />
+                      <strong>타입:</strong> {typeof news.image_url}
+                      <br />
+                      <strong>길이:</strong> {Array.isArray(news.image_url) ? news.image_url.length : "N/A"}
+                    </div>
                   </div>
                 </div>
               )}
+
+              {/* Debug section - remove in production */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
+                <h4 className="font-semibold text-yellow-800 mb-2">🔍 이미지 데이터 디버그 정보:</h4>
+                <div className="space-y-1 text-yellow-700">
+                  <div>
+                    <strong>image_url 존재:</strong> {news.image_url ? "✅ 있음" : "❌ 없음"}
+                  </div>
+                  <div>
+                    <strong>image_url 타입:</strong> {typeof news.image_url}
+                  </div>
+                  <div>
+                    <strong>image_url 값:</strong> {JSON.stringify(news.image_url, null, 2)}
+                  </div>
+                  {Array.isArray(news.image_url) && (
+                    <div>
+                      <strong>배열 길이:</strong> {news.image_url.length}
+                    </div>
+                  )}
+                  {news.image_url && (
+                    <div>
+                      <strong>첫 번째 URL:</strong> {Array.isArray(news.image_url) ? news.image_url[0] : news.image_url}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Summary */}
               {news.summary && (
