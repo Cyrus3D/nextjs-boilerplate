@@ -182,28 +182,57 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
         </h3>
 
         {/* Image Area */}
-        <div className="h-[7.5rem] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
-          {news.image_url ? (
+        <div className="h-[7.5rem] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mb-2 overflow-hidden relative">
+          {/* Debug info - remove in production */}
+          {process.env.NODE_ENV === "development" && (
+            <div className="absolute top-1 left-1 bg-black bg-opacity-75 text-white text-xs px-1 rounded z-10">
+              {news.image_url ? "IMG" : "NO"}
+            </div>
+          )}
+
+          {news.image_url &&
+          String(news.image_url).trim() &&
+          String(news.image_url) !== "null" &&
+          String(news.image_url) !== "undefined" ? (
             <img
               src={String(news.image_url) || "/placeholder.svg"}
               alt={String(news.title || "뉴스 이미지")}
-              className="w-full h-full object-cover rounded-lg"
+              className="w-full h-full object-cover rounded-lg transition-transform hover:scale-105"
               crossOrigin="anonymous"
               loading="lazy"
+              onLoad={() => {
+                console.log("Image loaded successfully:", news.image_url)
+              }}
               onError={(e) => {
+                console.error("Image failed to load:", news.image_url)
                 const target = e.target as HTMLImageElement
                 target.style.display = "none"
-                const placeholder = target.nextElementSibling as HTMLElement
-                if (placeholder) placeholder.style.display = "block"
+                const placeholder = target.parentElement?.querySelector(".image-placeholder") as HTMLElement
+                if (placeholder) {
+                  placeholder.style.display = "flex"
+                }
               }}
             />
           ) : null}
+
           <div
-            className={`text-center text-gray-500 ${news.image_url ? "hidden" : "block"}`}
-            style={{ display: news.image_url ? "none" : "block" }}
+            className={`image-placeholder text-center text-gray-500 ${
+              news.image_url &&
+              String(news.image_url).trim() &&
+              String(news.image_url) !== "null" &&
+              String(news.image_url) !== "undefined"
+                ? "hidden"
+                : "flex flex-col items-center justify-center"
+            }`}
           >
             <div className="text-2xl mb-1">📷</div>
             <div className="text-xs">이미지 영역</div>
+            {/* Debug info for missing images */}
+            {process.env.NODE_ENV === "development" && (
+              <div className="text-xs mt-1 bg-red-100 px-2 py-1 rounded max-w-full overflow-hidden">
+                URL: {news.image_url ? String(news.image_url).substring(0, 30) + "..." : "None"}
+              </div>
+            )}
           </div>
         </div>
 
