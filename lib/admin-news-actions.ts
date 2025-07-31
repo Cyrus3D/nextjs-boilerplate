@@ -364,32 +364,65 @@ export async function checkNewsTablesExist(): Promise<boolean> {
   }
 }
 
-// Get news for admin
+// Get news for admin with manual joins to avoid relationship errors
 export async function getNewsForAdmin(): Promise<NewsArticle[]> {
   if (!supabase) {
     return []
   }
 
   try {
-    const { data, error } = await supabase
+    // First, get all news articles
+    const { data: newsData, error: newsError } = await supabase
       .from("news")
-      .select(`
-        *,
-        category:news_categories(id, name, color_class),
-        tags:news_article_tags(
-          news_tags(id, name)
-        )
-      `)
+      .select("*")
       .order("created_at", { ascending: false })
 
-    if (error) throw error
+    if (newsError) {
+      console.error("Error fetching news:", newsError)
+      return []
+    }
 
-    return Array.isArray(data)
-      ? data.map((item) => ({
-          ...item,
-          tags: Array.isArray(item.tags) ? item.tags.map((t: any) => t.news_tags).filter(Boolean) : [],
-        }))
-      : []
+    if (!Array.isArray(newsData) || newsData.length === 0) {
+      return []
+    }
+
+    // Get all categories
+    const { data: categoriesData } = await supabase.from("news_categories").select("*")
+
+    const categoriesMap = new Map()
+    if (Array.isArray(categoriesData)) {
+      categoriesData.forEach((cat) => {
+        categoriesMap.set(cat.id, cat)
+      })
+    }
+
+    // Get all tags relationships
+    const { data: tagRelationsData } = await supabase.from("news_tag_relations").select(`
+        news_id,
+        tag_id,
+        news_tags(id, name)
+      `)
+
+    const tagsMap = new Map()
+    if (Array.isArray(tagRelationsData)) {
+      tagRelationsData.forEach((relation) => {
+        if (!tagsMap.has(relation.news_id)) {
+          tagsMap.set(relation.news_id, [])
+        }
+        if (relation.news_tags) {
+          tagsMap.get(relation.news_id).push(relation.news_tags)
+        }
+      })
+    }
+
+    // Combine the data
+    const result = newsData.map((news) => ({
+      ...news,
+      category: news.category_id ? categoriesMap.get(news.category_id) || null : null,
+      tags: tagsMap.get(news.id) || [],
+    }))
+
+    return result
   } catch (error) {
     console.error("Error fetching news for admin:", error)
     return []
@@ -405,7 +438,10 @@ export async function getNewsCategories(): Promise<NewsCategory[]> {
   try {
     const { data, error } = await supabase.from("news_categories").select("*").order("name")
 
-    if (error) throw error
+    if (error) {
+      console.error("Error fetching news categories:", error)
+      return []
+    }
 
     return Array.isArray(data) ? data : []
   } catch (error) {
@@ -423,7 +459,10 @@ export async function getNewsTags(): Promise<NewsTag[]> {
   try {
     const { data, error } = await supabase.from("news_tags").select("*").order("name")
 
-    if (error) throw error
+    if (error) {
+      console.error("Error fetching news tags:", error)
+      return []
+    }
 
     return Array.isArray(data) ? data : []
   } catch (error) {
@@ -609,7 +648,7 @@ async function handleNewsTags(newsId: number, tagNames: string[]): Promise<void>
 
   try {
     // First, remove existing tag associations
-    await supabase.from("news_article_tags").delete().eq("news_id", newsId)
+    await supabase.from("news_tag_relations").delete().eq("news_id", newsId)
 
     // Create or get tags
     for (const tagName of tagNames) {
@@ -635,7 +674,7 @@ async function handleNewsTags(newsId: number, tagNames: string[]): Promise<void>
       }
 
       // Link tag to news
-      await supabase.from("news_article_tags").insert({
+      await supabase.from("news_tag_relations").insert({
         news_id: newsId,
         tag_id: tagId,
       })
