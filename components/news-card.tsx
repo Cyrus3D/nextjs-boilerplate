@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar, Clock, Eye, Globe } from "lucide-react"
-import { useState } from "react"
 import type { NewsItem } from "@/types/news"
 
 interface NewsCardProps {
@@ -13,9 +12,6 @@ interface NewsCardProps {
 }
 
 export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
-  const [imageLoaded, setImageLoaded] = useState(false)
-  const [imageError, setImageError] = useState(false)
-
   const getCategoryColor = (category: string) => {
     const colors = {
       정책: "bg-blue-100 text-blue-800",
@@ -45,31 +41,6 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
     } catch {
       return "날짜 정보 없음"
     }
-  }
-
-  // 이미지 URL 유효성 검증 함수
-  const isValidImageUrl = (url: string | null | undefined): boolean => {
-    if (!url) return false
-    
-    const urlString = String(url).trim()
-    if (!urlString || urlString === "null" || urlString === "undefined") return false
-    
-    // URL 형식 검증
-    try {
-      new URL(urlString.startsWith('http') ? urlString : `https://${urlString}`)
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  // 이미지 URL 정규화 함수
-  const normalizeImageUrl = (url: string): string => {
-    const urlString = url.trim()
-    if (urlString.startsWith('http')) {
-      return urlString
-    }
-    return `https://${urlString}`
   }
 
   const getSourceBadgeInfo = (sourceUrl: string, source: string) => {
@@ -181,10 +152,6 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
 
   const sourceBadgeInfo = getSourceBadgeInfo(String(news.source_url || ""), String(news.source || ""))
 
-  // 유효한 이미지 URL이 있는지 확인
-  const hasValidImage = isValidImageUrl(news.image_url)
-  const normalizedImageUrl = hasValidImage ? normalizeImageUrl(String(news.image_url)) : ""
-
   return (
     <Card className="h-full hover:shadow-lg transition-shadow duration-200 cursor-pointer group">
       <CardHeader className="pb-3" onClick={() => onDetailClick(news)}>
@@ -195,6 +162,14 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
 
             {/* Category Badge - Second */}
             <Badge className={`${getCategoryColor(String(news.category))} text-xs`}>{String(news.category)}</Badge>
+
+            {/* Featured Badge - Hidden */}
+            {/* {news.is_featured && (
+              <Badge className="bg-yellow-500 text-white text-xs">
+                <Star className="w-3 h-3 mr-1" />
+                추천
+              </Badge>
+            )} */}
           </div>
           <div className="flex items-center gap-1 text-xs text-gray-500">
             <Globe className="w-3 h-3" />
@@ -206,50 +181,59 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
           {String(news.title || "")}
         </h3>
 
-        {/* Image Area - 개선된 이미지 처리 */}
+        {/* Image Area */}
         <div className="h-[7.5rem] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mb-2 overflow-hidden relative">
-          {hasValidImage && !imageError ? (
-            <>
-              <img
-                src={normalizedImageUrl}
-                alt={String(news.title || "뉴스 이미지")}
-                className={`w-full h-full object-cover rounded-lg transition-all duration-300 ${
-                  imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-                }`}
-                loading="lazy"
-                onLoad={() => {
-                  console.log("✅ Image loaded successfully:", normalizedImageUrl)
-                  setImageLoaded(true)
-                }}
-                onError={(e) => {
-                  console.error("❌ Image failed to load:", normalizedImageUrl)
-                  setImageError(true)
-                }}
-              />
-              
-              {/* 로딩 스피너 */}
-              {!imageLoaded && !imageError && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                </div>
-              )}
-            </>
-          ) : (
-            /* 플레이스홀더 */
-            <div className="flex flex-col items-center justify-center text-gray-500">
-              <div className="text-2xl mb-1">📷</div>
-              <div className="text-xs">이미지 없음</div>
-              
-              {/* 개발 모드에서만 디버그 정보 표시 */}
-              {process.env.NODE_ENV === "development" && (
-                <div className="text-xs mt-2 bg-red-100 px-2 py-1 rounded max-w-full overflow-hidden text-center">
-                  <div>URL: {news.image_url ? String(news.image_url).substring(0, 40) + "..." : "None"}</div>
-                  <div>Valid: {hasValidImage ? "Yes" : "No"}</div>
-                  <div>Error: {imageError ? "Yes" : "No"}</div>
-                </div>
-              )}
+          {/* Debug info - remove in production */}
+          {process.env.NODE_ENV === "development" && (
+            <div className="absolute top-1 left-1 bg-black bg-opacity-75 text-white text-xs px-1 rounded z-10">
+              {news.image_url ? "IMG" : "NO"}
             </div>
           )}
+
+          {news.image_url &&
+          String(news.image_url).trim() &&
+          String(news.image_url) !== "null" &&
+          String(news.image_url) !== "undefined" ? (
+            <img
+              src={String(news.image_url) || "/placeholder.svg"}
+              alt={String(news.title || "뉴스 이미지")}
+              className="w-full h-full object-cover rounded-lg transition-transform hover:scale-105"
+              crossOrigin="anonymous"
+              loading="lazy"
+              onLoad={() => {
+                console.log("Image loaded successfully:", news.image_url)
+              }}
+              onError={(e) => {
+                console.error("Image failed to load:", news.image_url)
+                const target = e.target as HTMLImageElement
+                target.style.display = "none"
+                const placeholder = target.parentElement?.querySelector(".image-placeholder") as HTMLElement
+                if (placeholder) {
+                  placeholder.style.display = "flex"
+                }
+              }}
+            />
+          ) : null}
+
+          <div
+            className={`image-placeholder text-center text-gray-500 ${
+              news.image_url &&
+              String(news.image_url).trim() &&
+              String(news.image_url) !== "null" &&
+              String(news.image_url) !== "undefined"
+                ? "hidden"
+                : "flex flex-col items-center justify-center"
+            }`}
+          >
+            <div className="text-2xl mb-1">📷</div>
+            <div className="text-xs">이미지 영역</div>
+            {/* Debug info for missing images */}
+            {process.env.NODE_ENV === "development" && (
+              <div className="text-xs mt-1 bg-red-100 px-2 py-1 rounded max-w-full overflow-hidden">
+                URL: {news.image_url ? String(news.image_url).substring(0, 30) + "..." : "None"}
+              </div>
+            )}
+          </div>
         </div>
 
         <p className="text-gray-600 text-sm leading-relaxed h-[4.5rem] overflow-hidden line-clamp-3">
