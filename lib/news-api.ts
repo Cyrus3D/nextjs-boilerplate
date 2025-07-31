@@ -205,50 +205,35 @@ export async function getNewsArticleById(id: number): Promise<NewsArticle | null
       throw new Error("Supabase client not initialized")
     }
 
-    const { data, error } = await supabase
-      .from("news_articles")
-      .select(
-        `
-        *,
-        news_categories (
-          name,
-          color_class
-        ),
-        news_article_tags (
-          news_tags (
-            name
-          )
-        )
-      `,
-      )
-      .eq("id", id)
-      .eq("is_active", true)
-      .single()
+    const { data, error } = await supabase.rpc("get_news_article_by_id", {
+      article_id: id,
+    })
 
     if (error) {
       console.error("Error fetching news article:", error)
       return null
     }
 
-    if (!data) {
+    if (!data || data.length === 0) {
       return null
     }
 
+    const item = data[0]
     return {
-      id: data.id,
-      title: data.title,
-      summary: data.summary,
-      content: data.content,
-      category: data.news_categories?.name || "기타",
-      publishedAt: data.published_at,
-      source: data.source,
-      author: data.author,
-      imageUrl: data.image_url,
-      url: data.external_url,
-      tags: data.news_article_tags?.map((tag: any) => tag.news_tags.name) || [],
-      viewCount: data.view_count || 0,
-      isBreaking: data.is_breaking || false,
-      isPinned: data.is_pinned || false,
+      id: item.id,
+      title: item.title,
+      summary: item.summary,
+      content: item.content,
+      category: item.category_name || "기타",
+      publishedAt: item.published_at,
+      source: item.source,
+      author: item.author,
+      imageUrl: item.image_url,
+      url: item.external_url,
+      tags: item.tags || [],
+      viewCount: item.view_count || 0,
+      isBreaking: item.is_breaking || false,
+      isPinned: item.is_pinned || false,
     }
   } catch (error) {
     console.error("Error in getNewsArticleById:", error)
@@ -256,7 +241,7 @@ export async function getNewsArticleById(id: number): Promise<NewsArticle | null
   }
 }
 
-// 캐시 관련 함수들 (기존 optimized-api.ts에서 가져옴)
+// 캐시 관련 함수들
 const CACHE_DURATION = 5 * 60 * 1000 // 5분
 const cache = new Map<string, { data: any; timestamp: number }>()
 

@@ -1,147 +1,90 @@
--- 샘플 뉴스 기사 데이터 삽입
-WITH inserted_articles AS (
-    INSERT INTO news_articles (
-        title, summary, content, category_id, published_at, source, author, 
-        image_url, external_url, view_count, is_breaking, is_pinned
-    ) VALUES
-    (
-        '태국 정부, 2025년 관광객 4천만명 목표 발표',
-        '태국 관광청이 2025년 외국인 관광객 4천만명 유치를 목표로 하는 새로운 관광 정책을 발표했습니다. 한국인 관광객 유치를 위한 특별 프로모션도 포함되어 있습니다.',
-        '태국 관광청(TAT)은 오늘 기자회견을 통해 2025년 외국인 관광객 4천만명 유치를 목표로 하는 새로운 관광 정책을 발표했다. 이는 코로나19 이전인 2019년 수준을 넘어서는 야심찬 목표다.
-
-특히 한국인 관광객 유치를 위해 K-POP 콘서트, 한류 드라마 촬영지 투어, 한국 음식 체험 프로그램 등을 포함한 특별 프로모션을 준비 중이라고 밝혔다.
-
-TAT 대변인은 "한국은 태국 관광업계에서 매우 중요한 시장"이라며 "양국 간 문화 교류를 통해 더 많은 한국인 관광객들이 태국을 방문하기를 기대한다"고 말했다.',
-        (SELECT id FROM news_categories WHERE name = '경제'),
-        NOW() - INTERVAL '2 hours',
-        '태국 관광청',
-        '관광청 대변인',
-        '/placeholder.svg?height=400&width=600&text=태국관광청',
-        'https://example.com/news/tourism-2025',
-        1250,
-        true,
-        true
-    ),
-    (
-        '방콕 지하철 새 노선 개통, 교민 거주지역 접근성 향상',
-        '방콕 대중교통공사가 새로운 지하철 노선을 개통하여 한인타운과 주요 상업지구를 연결합니다. 교민들의 이동 편의성이 크게 개선될 것으로 예상됩니다.',
-        '방콕 대중교통공사(BMCL)가 오늘 새로운 지하철 노선인 옐로우 라인 연장구간을 정식 개통했다고 발표했다.
-
-새로 개통된 구간은 라마 9역에서 수완나품 공항까지 연결되며, 중간에 한인타운이 밀집한 아속역과 프롬퐁역을 경유한다.
-
-이로써 교민들이 많이 거주하는 지역에서 공항까지의 접근성이 크게 향상될 것으로 예상된다. 기존에는 택시나 버스를 이용해야 했던 구간을 지하철로 편리하게 이동할 수 있게 되었다.
-
-한인회 관계자는 "교민들의 오랜 숙원이었던 교통 편의성 개선이 이루어져 매우 기쁘다"며 "앞으로 더 많은 한인들이 대중교통을 이용할 것으로 예상된다"고 말했다.',
-        (SELECT id FROM news_categories WHERE name = '사회'),
-        NOW() - INTERVAL '6 hours',
-        '방콕 대중교통공사',
-        NULL,
-        '/placeholder.svg?height=400&width=600&text=방콕지하철',
-        'https://example.com/news/bangkok-subway',
-        890,
-        false,
-        true
-    ),
-    (
-        '태국 한인회, 설날 대축제 개최 예정',
-        '재태한인회가 2월 1일부터 3일까지 방콕 중앙공원에서 설날 대축제를 개최합니다. 전통 공연, 음식 부스, 문화 체험 등 다양한 프로그램이 준비되어 있습니다.',
-        '재태한인회가 다가오는 설날을 맞아 2월 1일부터 3일까지 3일간 방콕 중앙공원(룸피니 공원)에서 대규모 설날 축제를 개최한다고 발표했다.
-
-이번 축제에는 전통 사물놀이 공연, 한복 체험, 떡국 나눔, 윷놀이 대회, K-POP 댄스 경연 등 다양한 프로그램이 준비되어 있다.
-
-특히 올해는 태국 현지인들도 함께 참여할 수 있도록 태국어 안내 서비스와 태국 전통 음식 부스도 함께 운영할 예정이다.
-
-한인회 회장은 "코로나19로 인해 몇 년간 축소 운영되었던 설날 행사를 올해는 대규모로 개최하게 되어 기쁘다"며 "많은 교민들과 현지인들이 함께 참여하여 한국의 전통 문화를 나누는 뜻깊은 시간이 되기를 바란다"고 말했다.',
-        (SELECT id FROM news_categories WHERE name = '교민소식'),
-        NOW() - INTERVAL '1 day',
-        '재태한인회',
-        '한인회 사무국',
-        '/placeholder.svg?height=400&width=600&text=설날축제',
-        NULL,
-        2100,
-        false,
-        false
-    ),
-    (
-        '태국 바트화 강세, 환율 변동 주의보',
-        '최근 태국 바트화가 강세를 보이며 원-바트 환율이 급변하고 있습니다. 전문가들은 환전 시기를 신중히 결정할 것을 조언하고 있습니다.',
-        '최근 한 달간 태국 바트화가 지속적인 강세를 보이며 원-바트 환율이 급격히 변동하고 있어 주의가 필요하다.
-
-태국 중앙은행에 따르면, 바트화는 지난 달 대비 약 3% 상승했으며, 이는 태국 경제의 회복세와 관광업 부활에 따른 것으로 분석된다.
-
-환전소 관계자는 "최근 한국에서 태국으로 오는 관광객들이 늘어나면서 원화 수요가 증가하고 있다"며 "환율 변동이 큰 시기이므로 환전 시기를 신중히 결정하는 것이 좋다"고 조언했다.
-
-경제 전문가들은 "태국 정부의 관광 진흥 정책과 외국인 투자 유치 정책이 바트화 강세의 주요 원인"이라며 "당분간 이러한 추세가 지속될 것으로 예상된다"고 전망했다.',
-        (SELECT id FROM news_categories WHERE name = '경제'),
-        NOW() - INTERVAL '1 day 10 hours',
-        '태국 중앙은행',
-        '경제부 기자',
-        '/placeholder.svg?height=400&width=600&text=환율변동',
-        'https://example.com/news/exchange-rate',
-        1680,
-        false,
-        false
-    ),
-    (
-        '치앙마이 대기오염 심각, 마스크 착용 권고',
-        '치앙마이 지역의 미세먼지 농도가 위험 수준에 달했습니다. 보건당국은 외출 시 마스크 착용과 실외 활동 자제를 권고하고 있습니다.',
-        '치앙마이 지역의 미세먼지(PM2.5) 농도가 WHO 권고 기준의 3배를 넘어서며 심각한 수준에 달했다고 태국 보건부가 발표했다.
-
-현재 치앙마이 시내 미세먼지 농도는 ㎥당 150㎍을 기록하고 있으며, 이는 WHO 권고 기준인 50㎍의 3배에 달하는 수치다.
-
-보건당국은 시민들에게 외출 시 KF94 이상의 마스크 착용을 권고하고 있으며, 특히 어린이와 노약자, 호흡기 질환자들은 실외 활동을 자제할 것을 당부했다.
-
-치앙마이에 거주하는 한인들도 각별한 주의가 필요하다. 한인회에서는 교민들에게 공기청정기 사용과 실내 환기 시간 조절을 권고하고 있다.
-
-기상청은 "건기가 지속되고 있어 당분간 대기오염 상황이 개선되기 어려울 것"이라며 "비가 내릴 때까지 주의가 필요하다"고 말했다.',
-        (SELECT id FROM news_categories WHERE name = '사회'),
-        NOW() - INTERVAL '1 day 13 hours',
-        '태국 보건부',
-        '보건부 대변인',
-        '/placeholder.svg?height=400&width=600&text=대기오염',
-        NULL,
-        950,
-        true,
-        false
-    ),
-    (
-        '태국 총리, 한국과의 경제협력 확대 방안 논의',
-        '태국 총리가 한국 대사와 만나 양국 간 경제협력 확대 방안을 논의했습니다. 특히 디지털 경제와 그린 에너지 분야에서의 협력이 주요 의제였습니다.',
-        '태국 총리가 어제 총리실에서 주태 한국 대사와 만나 양국 간 경제협력 확대 방안을 논의했다고 총리실이 발표했다.
-
-이번 회담에서는 디지털 경제, 그린 에너지, 스마트 시티 구축 등 미래 성장 동력 분야에서의 협력 방안이 집중적으로 논의되었다.
-
-특히 한국의 IT 기술과 태국의 제조업 인프라를 결합한 디지털 전환 프로젝트와 태국의 신재생 에너지 개발에 한국 기업들의 참여 확대 방안이 주요 의제였다.
-
-총리는 "한국은 태국의 중요한 경제 파트너"라며 "양국 간 경제협력을 통해 상호 발전할 수 있는 방안을 지속적으로 모색해 나가겠다"고 말했다.
-
-한국 대사는 "한국 기업들의 태국 투자가 지속적으로 증가하고 있다"며 "앞으로도 양국 간 경제협력이 더욱 활발해질 것으로 기대한다"고 응답했다.',
-        (SELECT id FROM news_categories WHERE name = '정치'),
-        NOW() - INTERVAL '2 days',
-        '총리실',
-        '총리실 대변인',
-        '/placeholder.svg?height=400&width=600&text=한태경제협력',
-        'https://example.com/news/korea-thailand-cooperation',
-        1420,
-        false,
-        false
-    )
-    RETURNING id, title
+-- 샘플 뉴스 데이터 삽입
+WITH sample_news AS (
+  SELECT 
+    '태국 정부, 한국인 관광객 대상 비자 면제 기간 연장 검토' as title,
+    '태국 정부가 한국인 관광객을 대상으로 한 비자 면제 기간을 현재 30일에서 60일로 연장하는 방안을 검토 중이라고 발표했습니다.' as summary,
+    '태국 관광청은 오늘 기자회견을 통해 한국인 관광객 유치를 위한 새로운 정책을 발표했습니다. 주요 내용은 비자 면제 기간 연장과 함께 한국인 전용 관광 서비스 확대 등이 포함되어 있습니다.' as content,
+    1 as category_id,
+    NOW() - INTERVAL '2 hours' as published_at,
+    '태국 관광청' as source,
+    '김기자' as author,
+    true as is_breaking,
+    false as is_pinned
+  UNION ALL
+  SELECT 
+    '방콕 지하철 새 노선 개통, 한국인 거주 지역 접근성 크게 개선',
+    '방콕 대중교통공사(BMTA)가 새로운 지하철 노선을 개통하면서 한국인들이 많이 거주하는 수쿰빗 지역의 교통 접근성이 크게 개선될 것으로 예상됩니다.',
+    '새로 개통된 지하철 노선은 수쿰빗 소이 24부터 아속역까지 연결되며, 한국인들이 자주 이용하는 상업지구와 주거지역을 효율적으로 연결합니다.',
+    3,
+    NOW() - INTERVAL '4 hours',
+    'BTS 공사',
+    '이기자',
+    false,
+    true
+  UNION ALL
+  SELECT 
+    '태국 바트화 강세 지속, 한국 원화 대비 환율 변동 주목',
+    '최근 태국 바트화가 강세를 보이면서 한국 원화 대비 환율이 지속적으로 변동하고 있어 한국인 거주자들과 관광객들의 관심이 집중되고 있습니다.',
+    '태국 중앙은행에 따르면 바트화 강세는 태국 경제의 안정적 성장과 관광업 회복에 따른 것으로 분석됩니다.',
+    2,
+    NOW() - INTERVAL '6 hours',
+    '태국 중앙은행',
+    '박기자',
+    false,
+    false
+  UNION ALL
+  SELECT 
+    '치앙마이 한국 문화 축제 성황리 개최, 3만명 참석',
+    '치앙마이에서 열린 한국 문화 축제가 성황리에 마무리되었습니다. 이번 축제에는 현지인과 한국인 관광객 등 총 3만여 명이 참석했습니다.',
+    '축제에서는 K-pop 공연, 한국 전통 음식 체험, 한복 체험 등 다양한 프로그램이 진행되었으며, 한국과 태국의 문화 교류 증진에 크게 기여했다는 평가를 받고 있습니다.',
+    5,
+    NOW() - INTERVAL '8 hours',
+    '치앙마이 시청',
+    '최기자',
+    false,
+    false
+  UNION ALL
+  SELECT 
+    '태국 내 한국 기업 투자 급증, 올해 전년 대비 40% 증가',
+    '태국 투자청(BOI)에 따르면 올해 태국 내 한국 기업의 투자가 전년 대비 40% 증가한 것으로 나타났습니다.',
+    '특히 제조업과 서비스업 분야에서 한국 기업들의 투자가 활발하며, 이는 태국의 경제 성장과 한국 기업들의 동남아시아 진출 확대 전략이 맞아떨어진 결과로 분석됩니다.',
+    2,
+    NOW() - INTERVAL '12 hours',
+    '태국 투자청',
+    '정기자',
+    false,
+    false
+  UNION ALL
+  SELECT 
+    '파타야 한국인 관광객 대상 사기 사건 발생, 주의 당부',
+    '파타야 지역에서 한국인 관광객을 대상으로 한 사기 사건이 발생해 주의가 당부되고 있습니다.',
+    '태국 관광경찰에 따르면 가짜 보석 판매, 과도한 요금 청구 등의 수법으로 한국인 관광객들을 대상으로 한 사기 사건이 증가하고 있어 각별한 주의가 필요합니다.',
+    9,
+    NOW() - INTERVAL '1 day',
+    '태국 관광경찰',
+    '한기자',
+    false,
+    false
 )
-SELECT * FROM inserted_articles;
+INSERT INTO news_articles (title, summary, content, category_id, published_at, source, author, is_breaking, is_pinned)
+SELECT title, summary, content, category_id, published_at, source, author, is_breaking, is_pinned
+FROM sample_news;
 
--- 뉴스 기사와 태그 연결
+-- 뉴스 기사에 태그 연결
+WITH article_tags AS (
+  SELECT 
+    na.id as article_id,
+    nt.id as tag_id
+  FROM news_articles na
+  CROSS JOIN news_tags nt
+  WHERE 
+    (na.title LIKE '%비자%' AND nt.name IN ('비자', '한국인', '정책변경')) OR
+    (na.title LIKE '%지하철%' AND nt.name IN ('교통', '생활정보')) OR
+    (na.title LIKE '%환율%' AND nt.name IN ('환율', '경제정책')) OR
+    (na.title LIKE '%문화 축제%' AND nt.name IN ('문화행사', '축제', '한국인')) OR
+    (na.title LIKE '%투자%' AND nt.name IN ('투자', '경제정책')) OR
+    (na.title LIKE '%사기%' AND nt.name IN ('안전', '범죄', '한국인'))
+)
 INSERT INTO news_article_tags (article_id, tag_id)
-SELECT 
-    na.id,
-    nt.id
-FROM news_articles na
-CROSS JOIN news_tags nt
-WHERE 
-    (na.title LIKE '%관광%' AND nt.name IN ('관광', '정책', '한국인')) OR
-    (na.title LIKE '%지하철%' AND nt.name IN ('교통', '지하철', '방콕', '교민')) OR
-    (na.title LIKE '%설날%' AND nt.name IN ('설날', '축제', '한인회', '문화')) OR
-    (na.title LIKE '%바트%' AND nt.name IN ('환율', '바트', '환전')) OR
-    (na.title LIKE '%대기오염%' AND nt.name IN ('대기오염', '치앙마이', '건강', '미세먼지')) OR
-    (na.title LIKE '%총리%' AND nt.name IN ('정치', '외교', '경제협력'))
+SELECT DISTINCT article_id, tag_id FROM article_tags
 ON CONFLICT (article_id, tag_id) DO NOTHING;

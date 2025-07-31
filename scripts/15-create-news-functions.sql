@@ -50,8 +50,8 @@ BEGIN
             na.summary,
             na.content,
             na.category_id,
-            nc.name as category_name,
-            nc.color_class as category_color_class,
+            COALESCE(nc.name, '기타') as category_name,
+            COALESCE(nc.color_class, 'bg-gray-100 text-gray-800') as category_color_class,
             na.published_at,
             na.source,
             na.author,
@@ -61,7 +61,10 @@ BEGIN
             na.is_breaking,
             na.is_pinned,
             na.is_active,
-            ARRAY_AGG(DISTINCT nt.name ORDER BY nt.name) as tags
+            COALESCE(
+                ARRAY_AGG(DISTINCT nt.name ORDER BY nt.name) FILTER (WHERE nt.name IS NOT NULL), 
+                ARRAY[]::TEXT[]
+            ) as tags
         FROM news_articles na
         LEFT JOIN news_categories nc ON na.category_id = nc.id
         LEFT JOIN news_article_tags nat ON na.id = nat.article_id
@@ -142,8 +145,8 @@ BEGIN
         na.id,
         na.title,
         na.summary,
-        nc.name as category_name,
-        nc.color_class as category_color_class,
+        COALESCE(nc.name, '기타') as category_name,
+        COALESCE(nc.color_class, 'bg-gray-100 text-gray-800') as category_color_class,
         na.published_at,
         na.source,
         na.view_count,
@@ -177,8 +180,8 @@ BEGIN
         na.id,
         na.title,
         na.summary,
-        nc.name as category_name,
-        nc.color_class as category_color_class,
+        COALESCE(nc.name, '기타') as category_name,
+        COALESCE(nc.color_class, 'bg-gray-100 text-gray-800') as category_color_class,
         na.published_at,
         na.source,
         na.view_count,
@@ -192,5 +195,58 @@ BEGIN
         na.is_breaking DESC,
         na.published_at DESC
     LIMIT limit_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 뉴스 상세 조회 함수
+CREATE OR REPLACE FUNCTION get_news_article_by_id(article_id INTEGER)
+RETURNS TABLE (
+    id INTEGER,
+    title VARCHAR(500),
+    summary TEXT,
+    content TEXT,
+    category_id INTEGER,
+    category_name VARCHAR(50),
+    category_color_class VARCHAR(100),
+    published_at TIMESTAMP WITH TIME ZONE,
+    source VARCHAR(200),
+    author VARCHAR(200),
+    image_url TEXT,
+    external_url TEXT,
+    view_count INTEGER,
+    is_breaking BOOLEAN,
+    is_pinned BOOLEAN,
+    is_active BOOLEAN,
+    tags TEXT[]
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        na.id,
+        na.title,
+        na.summary,
+        na.content,
+        na.category_id,
+        COALESCE(nc.name, '기타') as category_name,
+        COALESCE(nc.color_class, 'bg-gray-100 text-gray-800') as category_color_class,
+        na.published_at,
+        na.source,
+        na.author,
+        na.image_url,
+        na.external_url,
+        na.view_count,
+        na.is_breaking,
+        na.is_pinned,
+        na.is_active,
+        COALESCE(
+            ARRAY_AGG(DISTINCT nt.name ORDER BY nt.name) FILTER (WHERE nt.name IS NOT NULL), 
+            ARRAY[]::TEXT[]
+        ) as tags
+    FROM news_articles na
+    LEFT JOIN news_categories nc ON na.category_id = nc.id
+    LEFT JOIN news_article_tags nat ON na.id = nat.article_id
+    LEFT JOIN news_tags nt ON nat.tag_id = nt.id
+    WHERE na.id = article_id AND na.is_active = true
+    GROUP BY na.id, nc.name, nc.color_class;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
