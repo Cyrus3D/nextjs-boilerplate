@@ -10,9 +10,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
       className,
     )}
     {...props}
-  >
-    {props.children}
-  </div>
+  />
 ))
 Card.displayName = "Card"
 
