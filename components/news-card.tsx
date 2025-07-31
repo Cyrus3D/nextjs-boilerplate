@@ -40,11 +40,13 @@ export default function NewsCard({ news }: NewsCardProps) {
   const [currentViewCount, setCurrentViewCount] = useState(Number(news.view_count) || 0)
   const [imageError, setImageError] = useState(false)
 
-  // 안전한 기본값 설정
+  // 안전한 기본값 설정 및 타입 변환
   const safeNews = {
     id: Number(news.id),
     title: String(news.title || "제목 없음"),
-    summary: String(news.summary || news.content?.substring(0, 150) + "..." || "요약 정보가 없습니다."),
+    summary: String(
+      news.summary || (news.content ? String(news.content).substring(0, 150) + "..." : "요약 정보가 없습니다."),
+    ),
     content: String(news.content || "내용 없음"),
     author: news.author ? String(news.author) : null,
     source_url: news.source_url ? String(news.source_url) : null,
@@ -65,7 +67,7 @@ export default function NewsCard({ news }: NewsCardProps) {
     // 조회수 증가
     try {
       await incrementNewsViewCount(safeNews.id)
-      setCurrentViewCount((prev) => prev + 1)
+      setCurrentViewCount((prev) => Number(prev) + 1)
     } catch (error) {
       console.error("Failed to increment view count:", error)
     }
@@ -73,7 +75,7 @@ export default function NewsCard({ news }: NewsCardProps) {
 
   const formatDate = (dateString: string) => {
     try {
-      const date = new Date(dateString)
+      const date = new Date(String(dateString))
       if (isNaN(date.getTime())) {
         return "날짜 정보 없음"
       }
@@ -90,10 +92,11 @@ export default function NewsCard({ news }: NewsCardProps) {
 
   const formatViewCount = (count: number) => {
     try {
-      if (count >= 1000) {
-        return `${(count / 1000).toFixed(1)}k`
+      const numCount = Number(count)
+      if (numCount >= 1000) {
+        return `${(numCount / 1000).toFixed(1)}k`
       }
-      return count.toLocaleString()
+      return numCount.toLocaleString()
     } catch (error) {
       return "0"
     }
@@ -108,8 +111,8 @@ export default function NewsCard({ news }: NewsCardProps) {
         {safeNews.image_url && !imageError && (
           <div className="relative h-48 overflow-hidden rounded-t-lg">
             <img
-              src={safeNews.image_url || "/placeholder.svg"}
-              alt={safeNews.title}
+              src={String(safeNews.image_url) || "/placeholder.svg"}
+              alt={String(safeNews.title)}
               className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
               onError={() => setImageError(true)}
               loading="lazy"
@@ -127,10 +130,10 @@ export default function NewsCard({ news }: NewsCardProps) {
 
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2 mb-2">
-            <CardTitle className="text-lg font-semibold line-clamp-2 flex-1">{safeNews.title}</CardTitle>
+            <CardTitle className="text-lg font-semibold line-clamp-2 flex-1">{String(safeNews.title)}</CardTitle>
             {safeNews.category && (
-              <Badge variant="secondary" className={safeNews.category.color_class || ""}>
-                {safeNews.category.name}
+              <Badge variant="secondary" className={String(safeNews.category.color_class || "")}>
+                {String(safeNews.category.name)}
               </Badge>
             )}
           </div>
@@ -138,20 +141,20 @@ export default function NewsCard({ news }: NewsCardProps) {
 
         <CardContent className="flex-1 flex flex-col">
           {/* 요약 */}
-          <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">{safeNews.summary}</p>
+          <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">{String(safeNews.summary)}</p>
 
           {/* 태그 */}
           {safeNews.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-3">
               <Tag className="h-3 w-3 text-muted-foreground" />
               {safeNews.tags.slice(0, 3).map((tag) => (
-                <Badge key={tag.id} variant="outline" className="text-xs">
-                  {tag.name}
+                <Badge key={Number(tag.id)} variant="outline" className="text-xs">
+                  {String(tag.name)}
                 </Badge>
               ))}
               {safeNews.tags.length > 3 && (
                 <Badge variant="outline" className="text-xs">
-                  +{safeNews.tags.length - 3}
+                  +{Number(safeNews.tags.length) - 3}
                 </Badge>
               )}
             </div>
@@ -171,7 +174,7 @@ export default function NewsCard({ news }: NewsCardProps) {
             </div>
             {safeNews.original_language && (
               <Badge variant="outline" className="text-xs">
-                {safeNews.original_language.toUpperCase()}
+                {String(safeNews.original_language).toUpperCase()}
               </Badge>
             )}
           </div>
@@ -180,7 +183,7 @@ export default function NewsCard({ news }: NewsCardProps) {
           {safeNews.author && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
               <User className="h-3 w-3" />
-              <span>{safeNews.author}</span>
+              <span>{String(safeNews.author)}</span>
             </div>
           )}
 
@@ -190,7 +193,7 @@ export default function NewsCard({ news }: NewsCardProps) {
               자세히 보기
             </Button>
             {safeNews.source_url && (
-              <Button variant="ghost" size="sm" onClick={() => window.open(safeNews.source_url!, "_blank")}>
+              <Button variant="ghost" size="sm" onClick={() => window.open(String(safeNews.source_url), "_blank")}>
                 <ExternalLink className="h-4 w-4" />
               </Button>
             )}

@@ -44,3 +44,21 @@ export interface NewsAnalysisResult {
   message: string
   data: NewsArticle | null
 }
+
+export interface ScrapedContent {
+  title: string
+  content: string
+  description: string
+  image: string
+  url: string
+}
+
+export interface AIAnalysisResult {
+  title: string
+  summary: string
+  content: string
+  category: string
+  tags: string[]
+  author?: string | null
+  language: string
+}

@@ -1,12 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
-import { analyzeNewsUrl } from "@/lib/admin-news-actions"
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+function getSupabaseClient() {
+  return createClient(supabaseUrl, supabaseServiceKey)
+}
 
 // 웹 스크래핑을 위한 간단한 HTML 파싱 함수
 async function scrapeWebContent(url: string) {
   try {
-    const response = await fetch(url, {
+    const response = await fetch(String(url), {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -29,15 +36,15 @@ async function scrapeWebContent(url: string) {
 
     // 제목 추출 시도
     const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i)
-    const title = titleMatch ? titleMatch[1].replace(/\s+/g, " ").trim() : ""
+    const title = titleMatch ? String(titleMatch[1]).replace(/\s+/g, " ").trim() : ""
 
     // 메타 설명 추출 시도
     const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["'][^>]*>/i)
-    const description = descMatch ? descMatch[1] : ""
+    const description = descMatch ? String(descMatch[1]) : ""
 
     // 이미지 추출 시도
     const imgMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']*)["'][^>]*>/i)
-    const image = imgMatch ? imgMatch[1] : ""
+    const image = imgMatch ? String(imgMatch[1]) : ""
 
     return {
       title: String(title),
@@ -58,9 +65,9 @@ async function analyzeNewsWithAI(scrapedData: any) {
     const prompt = `
 다음 웹페이지 내용을 분석하여 뉴스 기사로 정리해주세요:
 
-제목: ${scrapedData.title}
-설명: ${scrapedData.description}
-내용: ${scrapedData.content}
+제목: ${String(scrapedData.title)}
+설명: ${String(scrapedData.description)}
+내용: ${String(scrapedData.content)}
 
 다음 JSON 형식으로 응답해주세요:
 {
@@ -92,7 +99,7 @@ async function analyzeNewsWithAI(scrapedData: any) {
         summary: String(analysisResult.summary || scrapedData.description || "요약 없음"),
         content: String(analysisResult.content || scrapedData.content || "내용 없음"),
         category: String(analysisResult.category || "기타"),
-        tags: Array.isArray(analysisResult.tags) ? analysisResult.tags.map(String) : ["뉴스"],
+        tags: Array.isArray(analysisResult.tags) ? analysisResult.tags.map((tag: any) => String(tag)) : ["뉴스"],
         author: analysisResult.author ? String(analysisResult.author) : null,
         language: String(analysisResult.language || "ko"),
       }
@@ -138,7 +145,6 @@ async function findOrCreateCategory(supabase: any, categoryName: string) {
         {
           name: safeCategoryName,
           color_class: "bg-gray-100 text-gray-800",
-          is_active: true,
         },
       ])
       .select("id")
@@ -196,18 +202,101 @@ export async function POST(request: NextRequest) {
     const { url } = await request.json()
 
     if (!url) {
-      return NextResponse.json({ success: false, message: "URL이 필요합니다." }, { status: 400 })
+      return NextResponse.json({ success: false, message: "URL is required" }, { status: 400 })
     }
 
-    const result = await analyzeNewsUrl(url)
+    // URL 유효성 검사
+    try {
+      new URL(String(url))
+    } catch {
+      return NextResponse.json({ success: false, message: "Invalid URL format" }, { status: 400 })
+    }
 
-    return NextResponse.json(result)
+    console.log("Starting news analysis for URL:", String(url))
+
+    // 1. 웹 콘텐츠 스크래핑
+    const scrapedData = await scrapeWebContent(String(url))
+    console.log("Scraped data:", {
+      title: String(scrapedData.title).substring(0, 50) + "...",
+      contentLength: String(scrapedData.content).length,
+    })
+
+    // 2. AI 분석
+    const analysisResult = await analyzeNewsWithAI(scrapedData)
+    console.log("AI analysis result:", {
+      title: String(analysisResult.title).substring(0, 50) + "...",
+      category: String(analysisResult.category),
+      tagsCount: analysisResult.tags.length,
+    })
+
+    // 3. 데이터베이스에 저장
+    const supabase = getSupabaseClient()
+
+    // 카테고리 ID 찾기/생성
+    const categoryId = await findOrCreateCategory(supabase, analysisResult.category)
+
+    // 뉴스 저장
+    const newsInsertData = {
+      title: String(analysisResult.title),
+      summary: String(analysisResult.summary),
+      content: String(analysisResult.content),
+      category_id: categoryId ? Number(categoryId) : null,
+      author: analysisResult.author ? String(analysisResult.author) : null,
+      source_url: String(url),
+      image_url: scrapedData.image ? String(scrapedData.image) : null,
+      published_at: new Date().toISOString(),
+      view_count: 0,
+      is_featured: false,
+      is_active: true,
+      original_language: String(analysisResult.language),
+      is_translated: false,
+    }
+
+    const { data: newsData, error: newsError } = await supabase
+      .from("news_articles")
+      .insert([newsInsertData])
+      .select()
+      .single()
+
+    if (newsError) {
+      console.error("Error saving news:", newsError)
+      return NextResponse.json({ success: false, message: "Failed to save news to database" }, { status: 500 })
+    }
+
+    // 태그 처리
+    if (analysisResult.tags && analysisResult.tags.length > 0) {
+      const tagIds = await findOrCreateTags(supabase, analysisResult.tags)
+
+      // 뉴스-태그 관계 저장
+      if (tagIds.length > 0) {
+        const newsTagRelations = tagIds.map((tagId) => ({
+          article_id: Number(newsData.id),
+          tag_id: Number(tagId),
+        }))
+
+        await supabase.from("news_article_tags").insert(newsTagRelations)
+      }
+    }
+
+    console.log("News saved successfully:", Number(newsData.id))
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: Number(newsData.id),
+        title: String(newsData.title),
+        summary: String(newsData.summary),
+        category: String(analysisResult.category),
+        tags: analysisResult.tags.map((tag: any) => String(tag)),
+      },
+      message: "News analyzed and saved successfully",
+    })
   } catch (error) {
-    console.error("API Error:", error)
+    console.error("Error in scrape-news API:", error)
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : "서버 오류가 발생했습니다.",
+        message: error instanceof Error ? error.message : "Internal server error",
       },
       { status: 500 },
     )
