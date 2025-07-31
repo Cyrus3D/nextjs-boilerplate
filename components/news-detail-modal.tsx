@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Globe, ExternalLink, X } from "lucide-react"
 import { useState } from "react"
 import type { NewsItem } from "@/types/news"
-import { getSourceBadgeInfo } from "@/utils/source-badge-info"
+import * as React from "react"
 
 interface NewsDetailModalProps {
   news: NewsItem | null
@@ -19,6 +19,24 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
   const [imageError, setImageError] = useState(false)
   const [hasValidImage, setHasValidImage] = useState(false)
   const [normalizedImageUrl, setNormalizedImageUrl] = useState("")
+
+  // Initialize image state
+  React.useEffect(() => {
+    if (news) {
+      const imageUrl = news.image_url ? normalizeUrl(news.image_url) : ""
+      const validImageUrl = imageUrl && isValidUrl(imageUrl) ? imageUrl : ""
+
+      if (validImageUrl) {
+        setNormalizedImageUrl(validImageUrl)
+        setHasValidImage(true)
+      } else {
+        setHasValidImage(false)
+        setNormalizedImageUrl("")
+      }
+      setImageLoaded(false)
+      setImageError(false)
+    }
+  }, [news])
 
   if (!news) return null
 
@@ -54,6 +72,57 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
     }
   }
 
+  const getSourceBadgeInfo = (sourceUrl: string, source: string) => {
+    if (!sourceUrl && !source) return { name: "기타", color: "bg-gray-200 text-gray-800" }
+
+    const urlToBadgeMap: { [key: string]: { name: string; color: string } } = {
+      "thaipbs.or.th": { name: "타이피비에스", color: "bg-blue-500 text-white" },
+      "bangkokpost.com": { name: "방콕포스트", color: "bg-blue-600 text-white" },
+      "nationthailand.com": { name: "네이션", color: "bg-blue-400 text-white" },
+      "thairath.co.th": { name: "타이랏", color: "bg-red-500 text-white" },
+      "khaosod.co.th": { name: "카오솟", color: "bg-orange-500 text-white" },
+      "matichon.co.th": { name: "마티촌", color: "bg-green-600 text-white" },
+      "dailynews.co.th": { name: "데일리뉴스", color: "bg-purple-500 text-white" },
+      "newsk.net": { name: "뉴스케이", color: "bg-slate-600 text-white" },
+    }
+
+    let domain = ""
+    if (sourceUrl) {
+      try {
+        const url = new URL(sourceUrl.startsWith("http") ? sourceUrl : `https://${sourceUrl}`)
+        domain = url.hostname.replace("www.", "")
+      } catch {
+        const match = sourceUrl.match(/(?:https?:\/\/)?(?:www\.)?([^/\s]+)/i)
+        domain = match ? match[1] : ""
+      }
+    }
+
+    if (domain && urlToBadgeMap[domain]) {
+      return urlToBadgeMap[domain]
+    }
+
+    if (source) {
+      const koreanChars = source.match(/[가-힣]/g)
+      if (koreanChars && koreanChars.length > 0) {
+        return {
+          name: koreanChars.slice(0, 4).join(""),
+          color: "bg-gray-500 text-white",
+        }
+      }
+
+      const words = source.split(/\s+/)
+      return {
+        name: words
+          .map((word) => word.charAt(0).toUpperCase())
+          .join("")
+          .slice(0, 4),
+        color: "bg-gray-500 text-white",
+      }
+    }
+
+    return { name: "기타", color: "bg-gray-400 text-white" }
+  }
+
   const isValidUrl = (url: string): boolean => {
     try {
       new URL(url)
@@ -71,19 +140,10 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
     return url
   }
 
-  const imageUrl = news.image_url ? normalizeUrl(news.image_url) : ""
-  const validImageUrl = imageUrl && isValidUrl(imageUrl) ? imageUrl : ""
-
   const handleExternalLink = () => {
     if (news.source_url) {
       window.open(news.source_url, "_blank", "noopener,noreferrer")
     }
-  }
-
-  // Set state for image validity and normalization
-  if (imageUrl && isValidUrl(imageUrl)) {
-    setNormalizedImageUrl(imageUrl)
-    setHasValidImage(true)
   }
 
   return (
@@ -112,29 +172,27 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
           <DialogDescription className="sr-only">뉴스 기사 상세 내용을 표시하는 모달입니다.</DialogDescription>
         </DialogHeader>
 
-        {/* 이미지 영역 - 향상된 처리 */}
-        {hasValidImage && (
-          <div className="mb-6">
-            <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-              <img
-                src={normalizedImageUrl || "/placeholder.svg"}
-                alt={String(news.title || "뉴스 이미지")}
-                className={`w-full h-full object-cover transition-all duration-300 ${
-                  imageLoaded ? "opacity-100" : "opacity-0"
-                }`}
-                loading="lazy"
-                onLoad={() => setImageLoaded(true)}
-                onError={() => setImageError(true)}
-              />
+        {/* 메인 이미지 영역 */}
+        <div className="mb-6">
+          <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+            <img
+              src={hasValidImage && !imageError ? normalizedImageUrl : "/placeholder.svg?height=200&width=400"}
+              alt={String(news.title || "뉴스 이미지")}
+              className={`w-full h-full object-cover transition-all duration-300 ${
+                imageLoaded ? "opacity-100" : "opacity-0"
+              }`}
+              loading="lazy"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
+            />
 
-              {!imageLoaded && !imageError && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                </div>
-              )}
-            </div>
+            {!imageLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="space-y-6 p-6">
           {/* 요약 */}
