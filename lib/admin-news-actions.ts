@@ -14,30 +14,64 @@ function checkSupabase() {
   return supabase
 }
 
-// Helper function to extract JSON from AI response
+// Helper function to extract JSON from AI response with better error handling
 function extractJsonFromResponse(text: string): any {
+  if (!text || typeof text !== "string") {
+    throw new Error("AI 응답이 비어있거나 유효하지 않습니다.")
+  }
+
+  // Clean the text first
+  const cleanText = text.trim()
+
   try {
     // First try to parse as is
-    return JSON.parse(text)
+    return JSON.parse(cleanText)
   } catch {
     // Try to find JSON within the text
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    const jsonMatch = cleanText.match(/\{[\s\S]*\}/)
     if (jsonMatch) {
       try {
         return JSON.parse(jsonMatch[0])
       } catch {
         // If still fails, try to clean up common issues
-        const cleanedText = text
+        let cleanedText = jsonMatch[0]
           .replace(/```json\n?/g, "")
           .replace(/\n?```/g, "")
           .replace(/^[^{]*/, "")
           .replace(/[^}]*$/, "")
           .trim()
 
+        // Fix common JSON issues
+        cleanedText = cleanedText
+          .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
+          .replace(/([{,]\s*)(\w+):/g, '$1"$2":') // Add quotes to keys
+          .replace(/:\s*'([^']*)'/g, ': "$1"') // Replace single quotes with double quotes
+          .replace(/\n/g, "\\n") // Escape newlines in strings
+          .replace(/\t/g, "\\t") // Escape tabs in strings
+
         return JSON.parse(cleanedText)
       }
     }
-    throw new Error("JSON을 찾을 수 없습니다")
+
+    // If no JSON found, try to extract key information manually
+    const titleMatch = cleanText.match(/title["\s]*:?["\s]*([^"\n,}]+)/i)
+    const contentMatch = cleanText.match(/content["\s]*:?["\s]*([^"]+?)(?=\n|$|,|})/i)
+    const summaryMatch = cleanText.match(/summary["\s]*:?["\s]*([^"\n,}]+)/i)
+    const categoryMatch = cleanText.match(/category["\s]*:?["\s]*([^"\n,}]+)/i)
+
+    if (titleMatch && contentMatch) {
+      return {
+        title: titleMatch[1].trim(),
+        content: contentMatch[1].trim(),
+        summary: summaryMatch ? summaryMatch[1].trim() : "",
+        category: categoryMatch ? categoryMatch[1].trim() : "일반뉴스",
+        tags: [],
+        language: "ko",
+        author: null,
+      }
+    }
+
+    throw new Error("JSON 형식을 찾을 수 없습니다")
   }
 }
 
@@ -48,6 +82,8 @@ export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResul
   }
 
   try {
+    console.log(`Starting news analysis for URL: ${url}`)
+
     // 웹페이지 내용 가져오기
     const scrapeResponse = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/scrape-news`,
@@ -62,10 +98,25 @@ export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResul
 
     if (!scrapeResponse.ok) {
       const errorData = await scrapeResponse.json()
+      console.error("Scraping failed:", errorData)
       throw new Error(errorData.error || "웹페이지를 가져올 수 없습니다.")
     }
 
-    const { content, title: pageTitle } = await scrapeResponse.json()
+    const scrapedData = await scrapeResponse.json()
+    const { content, title: pageTitle, contentLength } = scrapedData
+
+    console.log(`Scraped content length: ${contentLength}, Title: ${pageTitle?.substring(0, 50)}...`)
+
+    if (!content || content.length < 100) {
+      throw new Error("웹페이지에서 충분한 내용을 추출할 수 없습니다. 다른 URL을 시도해보세요.")
+    }
+
+    // Truncate content if too long to avoid token limits
+    const maxContentLength = 8000
+    const truncatedContent =
+      content.length > maxContentLength ? content.substring(0, maxContentLength) + "..." : content
+
+    console.log("Sending to AI for analysis...")
 
     // AI로 뉴스 분석
     const { text: analysisResult } = await generateText({
@@ -73,14 +124,14 @@ export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResul
       prompt: `다음은 뉴스 웹페이지에서 추출한 내용입니다. 이를 분석하여 구조화된 뉴스 정보를 만들어 주세요.
 
 웹페이지 제목: ${pageTitle || ""}
-웹페이지 내용: ${content}
+웹페이지 내용: ${truncatedContent}
 
 다음 형식의 JSON으로만 응답해주세요. 다른 텍스트나 설명은 포함하지 마세요:
 
 {
   "title": "적절한 뉴스 제목 (한국어)",
-  "content": "뉴스 전체 내용 (한국어, 최소 300자)",
-  "summary": "뉴스 요약 (한국어, 100-150자)",
+  "content": "뉴스 전체 내용 (한국어, 최소 200자)",
+  "summary": "뉴스 요약 (한국어, 80-120자)",
   "category": "카테고리 (다음 중 선택: 일반뉴스, 비즈니스, 기술, 건강, 여행, 음식, 교육, 스포츠, 문화, 정치)",
   "tags": ["관련", "태그", "목록"],
   "language": "원본 언어 코드 (ko, en, th 중 하나)",
@@ -89,13 +140,29 @@ export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResul
 
 주의사항:
 - 제목과 내용은 한국어로 번역하여 제공
-- 내용은 충분히 상세하게 작성 (최소 300자)
+- 내용은 충분히 상세하게 작성 (최소 200자)
 - 태그는 3-5개 정도로 제한
-- 카테고리는 제공된 목록에서만 선택`,
+- 카테고리는 제공된 목록에서만 선택
+- JSON 형식을 정확히 지켜주세요`,
       temperature: 0.1,
+      maxTokens: 2000,
     })
 
-    console.log("AI Response:", analysisResult)
+    console.log("AI Response received, length:", analysisResult.length)
+    console.log("AI Response preview:", analysisResult.substring(0, 200) + "...")
+
+    if (!analysisResult || analysisResult.length < 50) {
+      throw new Error("AI 응답이 너무 짧습니다. 다시 시도해주세요.")
+    }
+
+    // Check if response contains error indicators
+    if (
+      analysisResult.toLowerCase().includes("error") ||
+      analysisResult.toLowerCase().includes("sorry") ||
+      analysisResult.toLowerCase().includes("cannot")
+    ) {
+      throw new Error("AI가 내용을 분석할 수 없습니다. URL의 내용을 확인해주세요.")
+    }
 
     const parsedData = extractJsonFromResponse(analysisResult)
 
@@ -105,16 +172,18 @@ export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResul
     }
 
     // 내용 길이 검증
-    if (parsedData.content.length < 100) {
+    if (parsedData.content.length < 50) {
       throw new Error("분석된 내용이 너무 짧습니다. 더 상세한 뉴스 내용이 필요합니다.")
     }
+
+    console.log("Analysis completed successfully")
 
     return {
       title: parsedData.title || "제목 없음",
       content: parsedData.content || "내용 없음",
       summary: parsedData.summary || parsedData.content.substring(0, 100) + "...",
       category: parsedData.category || "일반뉴스",
-      tags: Array.isArray(parsedData.tags) ? parsedData.tags : [],
+      tags: Array.isArray(parsedData.tags) ? parsedData.tags.slice(0, 5) : [],
       language: parsedData.language || "ko",
       author: parsedData.author || null,
     }
@@ -126,8 +195,11 @@ export async function analyzeNewsFromUrl(url: string): Promise<NewsAnalysisResul
       if (error.message.includes("fetch")) {
         throw new Error("웹페이지에 접근할 수 없습니다. URL을 확인해주세요.")
       }
-      if (error.message.includes("JSON")) {
+      if (error.message.includes("JSON") || error.message.includes("parse")) {
         throw new Error("AI 응답을 파싱할 수 없습니다. 다시 시도해주세요.")
+      }
+      if (error.message.includes("token")) {
+        throw new Error("내용이 너무 길어서 분석할 수 없습니다. 더 짧은 기사를 시도해보세요.")
       }
       throw error
     }
@@ -142,11 +214,17 @@ export async function translateNews(
   fromLang = "auto",
 ): Promise<{ translatedContent: string; detectedLanguage: string }> {
   try {
+    if (!content || content.length < 10) {
+      throw new Error("번역할 내용이 너무 짧습니다.")
+    }
+
+    console.log("Starting translation...")
+
     const { text: result } = await generateText({
       model: openai("gpt-4o"),
       prompt: `Translate the following text to Korean and detect the original language.
 
-Text: "${content}"
+Text: "${content.substring(0, 3000)}" ${content.length > 3000 ? "..." : ""}
 
 IMPORTANT: Respond ONLY with valid JSON in this exact format:
 {
@@ -157,9 +235,10 @@ IMPORTANT: Respond ONLY with valid JSON in this exact format:
 If the original text is already in Korean, return it as is and set detectedLanguage to "ko".
 Return ONLY the JSON object, nothing else.`,
       temperature: 0.1,
+      maxTokens: 2000,
     })
 
-    console.log("Translation Response:", result)
+    console.log("Translation response received")
 
     const parsedData = extractJsonFromResponse(result)
 
