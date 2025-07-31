@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar, Clock, Eye, Globe, Star } from "lucide-react"
+import { Calendar, Clock, Eye, Globe } from "lucide-react"
 import type { NewsItem } from "@/types/news"
 
 interface NewsCardProps {
@@ -43,18 +43,43 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
     }
   }
 
+  const getSourceAbbreviation = (source: string) => {
+    if (!source) return "기타"
+
+    // 한글 첫 글자들만 추출 (최대 4글자)
+    const koreanChars = source.match(/[가-힣]/g)
+    if (koreanChars && koreanChars.length > 0) {
+      return koreanChars.slice(0, 4).join("")
+    }
+
+    // 영문의 경우 첫 글자들만 (최대 4글자)
+    const words = source.split(/\s+/)
+    return words
+      .map((word) => word.charAt(0).toUpperCase())
+      .join("")
+      .slice(0, 4)
+  }
+
   return (
     <Card className="h-full hover:shadow-lg transition-shadow duration-200 cursor-pointer group">
       <CardHeader className="pb-3" onClick={() => onDetailClick(news)}>
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2">
+            {/* Source Badge - First */}
+            <Badge className="bg-gray-200 text-gray-800 text-xs">
+              {getSourceAbbreviation(String(news.source || ""))}
+            </Badge>
+
+            {/* Category Badge - Second */}
             <Badge className={`${getCategoryColor(String(news.category))} text-xs`}>{String(news.category)}</Badge>
-            {news.is_featured && (
+
+            {/* Featured Badge - Hidden */}
+            {/* {news.is_featured && (
               <Badge className="bg-yellow-500 text-white text-xs">
                 <Star className="w-3 h-3 mr-1" />
                 추천
               </Badge>
-            )}
+            )} */}
           </div>
           <div className="flex items-center gap-1 text-xs text-gray-500">
             <Globe className="w-3 h-3" />
