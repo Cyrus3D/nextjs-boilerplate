@@ -1,6 +1,6 @@
 "use client"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -93,6 +93,9 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <DialogTitle className="text-2xl font-bold">{String(card.title || "업체명 없음")}</DialogTitle>
+                <DialogDescription className="sr-only">
+                  업체 상세 정보를 확인할 수 있습니다. 연락처, 위치, 운영시간 및 기타 정보가 포함되어 있습니다.
+                </DialogDescription>
                 {card.isPremium && (
                   <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
                     <Star className="w-3 h-3 mr-1" />

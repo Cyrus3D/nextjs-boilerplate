@@ -1,6 +1,6 @@
 "use client"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -85,6 +85,9 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
               <DialogTitle className="text-xl font-bold leading-tight mb-3">
                 {String(news.title || "제목 없음")}
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                뉴스 상세 정보를 확인할 수 있습니다. 제목, 내용, 이미지 및 관련 정보가 포함되어 있습니다.
+              </DialogDescription>
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                 <div className="flex items-center gap-1">
