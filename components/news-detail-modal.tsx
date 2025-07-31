@@ -50,8 +50,8 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
-        <DialogHeader className="p-6 pb-4">
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-4 flex-shrink-0">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <DialogTitle className="text-xl font-bold leading-tight mb-3">
@@ -88,7 +88,7 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
                 variant="outline"
                 size="sm"
                 onClick={handleSourceClick}
-                className="flex items-center gap-2 bg-transparent"
+                className="flex items-center gap-2 bg-transparent flex-shrink-0"
               >
                 <ExternalLink className="w-4 h-4" />
                 원문 보기
@@ -97,94 +97,96 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
           </div>
         </DialogHeader>
 
-        <Separator />
+        <Separator className="flex-shrink-0" />
 
-        <ScrollArea className="flex-1 p-6">
-          <div className="space-y-6">
-            {/* Summary */}
-            {news.summary && (
-              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
-                <h3 className="font-semibold text-blue-900 mb-2">요약</h3>
-                <p className="text-blue-800 leading-relaxed">{String(news.summary)}</p>
-              </div>
-            )}
-
-            {/* Content */}
-            {news.content && (
-              <div className="prose max-w-none">
-                <div
-                  className="text-gray-700 leading-relaxed whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{
-                    __html: String(news.content).replace(/\n/g, "<br />"),
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Korean Translation */}
-            {news.content_ko && news.content_ko !== news.content && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h3 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
-                  <Globe className="w-4 h-4" />
-                  한국어 번역
-                </h3>
-                <div
-                  className="text-green-800 leading-relaxed whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{
-                    __html: String(news.content_ko).replace(/\n/g, "<br />"),
-                  }}
-                />
-              </div>
-            )}
-
-            {/* AI Analysis */}
-            {news.ai_analysis && (
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <h3 className="font-semibold text-purple-900 mb-3">AI 분석</h3>
-                <div
-                  className="text-purple-800 leading-relaxed whitespace-pre-wrap"
-                  dangerouslySetInnerHTML={{
-                    __html: String(news.ai_analysis).replace(/\n/g, "<br />"),
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Tags */}
-            {Array.isArray(news.tags) && news.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                <Tag className="w-4 h-4 text-gray-500" />
-                {news.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {String(tag)}
-                  </Badge>
-                ))}
-              </div>
-            )}
-
-            {/* Metadata */}
-            <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <strong>카테고리:</strong> {String(news.category || "일반")}
+        <div className="flex-1 min-h-0 p-6">
+          <ScrollArea className="h-full">
+            <div className="space-y-6 pr-4">
+              {/* Summary */}
+              {news.summary && (
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                  <h3 className="font-semibold text-blue-900 mb-2">요약</h3>
+                  <p className="text-blue-800 leading-relaxed">{String(news.summary)}</p>
                 </div>
-                <div>
-                  <strong>언어:</strong> {String(news.language || "알 수 없음")}
+              )}
+
+              {/* Content */}
+              {news.content && (
+                <div className="prose max-w-none">
+                  <div
+                    className="text-gray-700 leading-relaxed whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{
+                      __html: String(news.content).replace(/\n/g, "<br />"),
+                    }}
+                  />
                 </div>
-                {news.author && (
+              )}
+
+              {/* Korean Translation */}
+              {news.content_ko && news.content_ko !== news.content && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    한국어 번역
+                  </h3>
+                  <div
+                    className="text-green-800 leading-relaxed whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{
+                      __html: String(news.content_ko).replace(/\n/g, "<br />"),
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* AI Analysis */}
+              {news.ai_analysis && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-purple-900 mb-3">AI 분석</h3>
+                  <div
+                    className="text-purple-800 leading-relaxed whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{
+                      __html: String(news.ai_analysis).replace(/\n/g, "<br />"),
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Tags */}
+              {Array.isArray(news.tags) && news.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <Tag className="w-4 h-4 text-gray-500" />
+                  {news.tags.map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="text-xs">
+                      {String(tag)}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {/* Metadata */}
+              <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
-                    <strong>작성자:</strong> {String(news.author)}
+                    <strong>카테고리:</strong> {String(news.category || "일반")}
                   </div>
-                )}
-                {news.location && (
                   <div>
-                    <strong>지역:</strong> {String(news.location)}
+                    <strong>언어:</strong> {String(news.language || "알 수 없음")}
                   </div>
-                )}
+                  {news.author && (
+                    <div>
+                      <strong>작성자:</strong> {String(news.author)}
+                    </div>
+                  )}
+                  {news.location && (
+                    <div>
+                      <strong>지역:</strong> {String(news.location)}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </ScrollArea>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   )
