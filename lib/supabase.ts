@@ -7,9 +7,6 @@ export function isSupabaseConfigured(): boolean {
   return !!(supabaseUrl && supabaseAnonKey)
 }
 
-// Named export for createClient
-export { createClient }
-
 export const supabase = isSupabaseConfigured() ? createClient(supabaseUrl!, supabaseAnonKey!) : null
 
 // Named export for compatibility
@@ -19,6 +16,9 @@ export function createSupabaseClient() {
   }
   return createClient(supabaseUrl!, supabaseAnonKey!)
 }
+
+// Export createClient for direct use
+export { createClient }
 
 // Default export
 export default supabase

@@ -6,37 +6,32 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { toast } from "@/hooks/use-toast"
-import { Loader2, Plus, Edit, Trash2, Star, Sparkles, Globe, Languages } from "lucide-react"
-import { ImageUpload } from "@/components/image-upload"
+import {
+  Trash2,
+  Edit,
+  Plus,
+  Search,
+  Star,
+  StarOff,
+  RefreshCw,
+  CheckCircle,
+  AlertCircle,
+  Globe,
+  Languages,
+  Link,
+  FileText,
+  BarChart3,
+} from "lucide-react"
 
-// Business Card Actions
+// Import actions
 import {
   createBusinessCard,
   updateBusinessCard,
@@ -46,80 +41,100 @@ import {
   getCategories,
   getTags,
   parseBusinessCardData,
+  updatePremiumStatus,
+  updateExposureCount,
+  updateExposureWeight,
   checkAIStatus,
   type BusinessCardData,
   type AIStatusResult,
 } from "@/lib/admin-actions"
 
-// News Actions
 import {
   createNews,
   updateNews,
   deleteNews,
-  deleteMultipleNews,
   getNewsForAdmin,
+  getNewsCategories,
+  getNewsTags,
   analyzeNewsFromUrl,
-  type NewsAnalysisResult,
+  translateNews,
+  type NewsFormData,
 } from "@/lib/admin-news-actions"
 
-import type { NewsItem, NewsFormData } from "@/types/news"
+import type { NewsArticle, NewsCategory, NewsTag } from "@/types/news"
+
+interface AdminInterfaceProps {
+  onLogout: () => void
+}
+
+interface BusinessCard {
+  id: number
+  title: string
+  description: string
+  category_id: number
+  categories?: { id: number; name: string; color_class: string }
+  location?: string
+  phone?: string
+  kakao_id?: string
+  line_id?: string
+  website?: string
+  hours?: string
+  price?: string
+  promotion?: string
+  image_url?: string
+  facebook_url?: string
+  instagram_url?: string
+  tiktok_url?: string
+  threads_url?: string
+  youtube_url?: string
+  is_promoted: boolean
+  is_active: boolean
+  is_premium: boolean
+  premium_expires_at?: string
+  exposure_count: number
+  last_exposed_at?: string
+  exposure_weight: number
+  view_count: number
+  created_at: string
+  updated_at: string
+}
 
 interface Category {
   id: number
   name: string
-  color_class: string
+  color_class?: string
 }
 
-interface Tag {
+interface BusinessCardTag {
   id: number
   name: string
 }
 
-interface BusinessCard extends BusinessCardData {
-  id: number
-  created_at: string
-  updated_at: string
-  categories?: Category
-}
-
-export function AdminInterface() {
-  // Business Cards State
+export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
+  // State management
+  const [activeTab, setActiveTab] = useState("cards")
   const [businessCards, setBusinessCards] = useState<BusinessCard[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [tags, setTags] = useState<Tag[]>([])
+  const [tags, setTags] = useState<BusinessCardTag[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedCards, setSelectedCards] = useState<number[]>([])
-  const [cardFilter, setCardFilter] = useState("all")
-  const [cardCategoryFilter, setCategoryFilter] = useState("all")
-  const [cardSearchTerm, setCardSearchTerm] = useState("")
-  const [isCardLoading, setIsCardLoading] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [categoryFilter, setCategoryFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
   const [aiStatus, setAiStatus] = useState<AIStatusResult | null>(null)
 
-  // News State
-  const [news, setNews] = useState<NewsItem[]>([])
-  const [selectedNews, setSelectedNews] = useState<number[]>([])
-  const [newsFilter, setNewsFilter] = useState("all")
-  const [newsCategoryFilter, setNewsCategoryFilter] = useState("all")
-  const [newsSearchTerm, setNewsSearchTerm] = useState("")
-  const [isNewsLoading, setIsNewsLoading] = useState(false)
+  // News state
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([])
+  const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([])
+  const [newsTags, setNewsTags] = useState<NewsTag[]>([])
 
-  // Form States
-  const [isCardFormOpen, setIsCardFormOpen] = useState(false)
-  const [isNewsFormOpen, setIsNewsFormOpen] = useState(false)
+  // Form states
+  const [isEditMode, setIsEditMode] = useState(false)
   const [editingCard, setEditingCard] = useState<BusinessCard | null>(null)
-  const [editingNews, setEditingNews] = useState<NewsItem | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  // AI Analysis States
-  const [aiText, setAiText] = useState("")
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [newsUrl, setNewsUrl] = useState("")
-  const [isAnalyzingNews, setIsAnalyzingNews] = useState(false)
-
-  // Form Data
-  const [cardFormData, setCardFormData] = useState<BusinessCardData>({
+  const [formData, setFormData] = useState<BusinessCardData>({
     title: "",
     description: "",
-    category_id: 1,
+    category_id: 0,
     location: "",
     phone: "",
     kakao_id: "",
@@ -137,70 +152,119 @@ export function AdminInterface() {
     is_promoted: false,
     is_active: true,
     is_premium: false,
-    premium_expires_at: null,
-    exposure_count: 0,
-    last_exposed_at: null,
-    exposure_weight: 1.0,
-    view_count: 0,
   })
 
+  // News form states
+  const [isEditNewsMode, setIsEditNewsMode] = useState(false)
+  const [editingNews, setEditingNews] = useState<NewsArticle | null>(null)
   const [newsFormData, setNewsFormData] = useState<NewsFormData>({
     title: "",
     content: "",
     summary: "",
+    category_id: undefined,
+    author: "",
     source_url: "",
     image_url: "",
-    category: "general",
-    tags: [],
     is_featured: false,
     is_active: true,
+    original_language: "ko",
+    is_translated: false,
+    tag_names: [],
   })
+
+  // AI Parsing
+  const [aiText, setAiText] = useState("")
+  const [isParsing, setIsParsing] = useState(false)
+
+  // News URL Analysis
+  const [newsUrl, setNewsUrl] = useState("")
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isTranslating, setIsTranslating] = useState(false)
 
   // Load data on component mount
   useEffect(() => {
-    loadBusinessCards()
-    loadCategories()
-    loadTags()
-    loadNews()
-    checkAIStatusAsync()
+    loadAllData()
   }, [])
 
-  // Business Card Functions
-  const loadBusinessCards = async () => {
-    setIsCardLoading(true)
+  const loadAllData = async () => {
+    setLoading(true)
     try {
-      const data = await getBusinessCardsForAdmin()
-      setBusinessCards(data)
+      await Promise.all([
+        loadBusinessCards(),
+        loadCategories(),
+        loadTags(),
+        loadNews(),
+        loadNewsCategories(),
+        loadNewsTags(),
+        checkAI(),
+      ])
     } catch (error) {
+      console.error("데이터 로딩 오류:", error)
       toast({
         title: "오류",
-        description: "카드 목록을 불러오는데 실패했습니다.",
+        description: "데이터 로딩 중 오류가 발생했습니다.",
         variant: "destructive",
       })
     } finally {
-      setIsCardLoading(false)
+      setLoading(false)
+    }
+  }
+
+  const loadBusinessCards = async () => {
+    try {
+      const cards = await getBusinessCardsForAdmin()
+      setBusinessCards(cards)
+    } catch (error) {
+      console.error("카드 로딩 오류:", error)
     }
   }
 
   const loadCategories = async () => {
     try {
-      const data = await getCategories()
-      setCategories(data)
+      const cats = await getCategories()
+      setCategories(cats)
     } catch (error) {
-      console.error("카테고리 로드 오류:", error)
+      console.error("카테고리 로딩 오류:", error)
     }
   }
 
   const loadTags = async () => {
     try {
-      const data = await getTags()
-      setTags(data)
+      const tagsData = await getTags()
+      setTags(tagsData)
     } catch (error) {
-      console.error("태그 로드 오류:", error)
+      console.error("태그 로딩 오류:", error)
     }
   }
 
-  const checkAIStatusAsync = async () => {
+  const loadNews = async () => {
+    try {
+      const news = await getNewsForAdmin()
+      setNewsArticles(news)
+    } catch (error) {
+      console.error("뉴스 로딩 오류:", error)
+    }
+  }
+
+  const loadNewsCategories = async () => {
+    try {
+      const cats = await getNewsCategories()
+      setNewsCategories(cats)
+    } catch (error) {
+      console.error("뉴스 카테고리 로딩 오류:", error)
+    }
+  }
+
+  const loadNewsTags = async () => {
+    try {
+      const tagsData = await getNewsTags()
+      setNewsTags(tagsData)
+    } catch (error) {
+      console.error("뉴스 태그 로딩 오류:", error)
+    }
+  }
+
+  const checkAI = async () => {
     try {
       const status = await checkAIStatus()
       setAiStatus(status)
@@ -209,25 +273,8 @@ export function AdminInterface() {
     }
   }
 
-  // News Functions
-  const loadNews = async () => {
-    setIsNewsLoading(true)
-    try {
-      const data = await getNewsForAdmin()
-      setNews(data)
-    } catch (error) {
-      toast({
-        title: "오류",
-        description: "뉴스 목록을 불러오는데 실패했습니다.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsNewsLoading(false)
-    }
-  }
-
-  // AI Analysis Functions
-  const handleAIAnalysis = async () => {
+  // AI Text Parsing
+  const handleAIParse = async () => {
     if (!aiText.trim()) {
       toast({
         title: "오류",
@@ -237,30 +284,31 @@ export function AdminInterface() {
       return
     }
 
-    setIsAnalyzing(true)
+    setIsParsing(true)
     try {
       const parsedData = await parseBusinessCardData(aiText)
-      setCardFormData((prev) => ({
-        ...prev,
+      setFormData({
+        ...formData,
         ...parsedData,
-        category_id: parsedData.category_id || prev.category_id,
-      }))
+      })
       setAiText("")
       toast({
         title: "성공",
-        description: "AI 분석이 완료되었습니다. 폼이 자동으로 채워졌습니다.",
+        description: "AI 분석이 완료되었습니다. 결과를 확인하고 저장해주세요.",
       })
     } catch (error) {
+      console.error("AI 분석 오류:", error)
       toast({
         title: "AI 분석 실패",
         description: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.",
         variant: "destructive",
       })
     } finally {
-      setIsAnalyzing(false)
+      setIsParsing(false)
     }
   }
 
+  // News URL Analysis
   const handleNewsAnalysis = async () => {
     if (!newsUrl.trim()) {
       toast({
@@ -271,104 +319,148 @@ export function AdminInterface() {
       return
     }
 
-    setIsAnalyzingNews(true)
+    setIsAnalyzing(true)
     try {
-      const analysisResult: NewsAnalysisResult = await analyzeNewsFromUrl(newsUrl)
-      setNewsFormData((prev) => ({
-        ...prev,
+      const analysisResult = await analyzeNewsFromUrl(newsUrl)
+
+      // Find category ID
+      let categoryId = undefined
+      const category = newsCategories.find((cat) => cat.name === analysisResult.category)
+      if (category) {
+        categoryId = category.id
+      }
+
+      setNewsFormData({
+        ...newsFormData,
         title: analysisResult.title,
         content: analysisResult.content,
         summary: analysisResult.summary,
+        category_id: categoryId,
+        author: analysisResult.author || "",
         source_url: newsUrl,
-        category: analysisResult.category,
-        tags: analysisResult.tags,
-      }))
+        original_language: analysisResult.language,
+        is_translated: analysisResult.language !== "ko",
+        tag_names: analysisResult.tags,
+      })
+
       setNewsUrl("")
       toast({
         title: "성공",
-        description: `뉴스 분석이 완료되었습니다. ${analysisResult.isTranslated ? "번역된 " : ""}내용이 폼에 채워졌습니다.`,
+        description: "뉴스 분석이 완료되었습니다. 결과를 확인하고 저장해주세요.",
       })
     } catch (error) {
+      console.error("뉴스 분석 오류:", error)
       toast({
         title: "뉴스 분석 실패",
         description: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.",
         variant: "destructive",
       })
     } finally {
-      setIsAnalyzingNews(false)
+      setIsAnalyzing(false)
     }
   }
 
-  // Form Handlers
-  const handleCardSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    try {
-      if (editingCard) {
-        await updateBusinessCard(editingCard.id, cardFormData)
-        toast({
-          title: "성공",
-          description: "카드가 성공적으로 업데이트되었습니다.",
-        })
-      } else {
-        await createBusinessCard(cardFormData)
-        toast({
-          title: "성공",
-          description: "카드가 성공적으로 생성되었습니다.",
-        })
-      }
-
-      resetCardForm()
-      loadBusinessCards()
-    } catch (error) {
+  // News Translation
+  const handleNewsTranslation = async () => {
+    if (!newsFormData.content.trim()) {
       toast({
         title: "오류",
+        description: "번역할 내용이 없습니다.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsTranslating(true)
+    try {
+      const { translatedContent, detectedLanguage } = await translateNews(
+        newsFormData.content,
+        newsFormData.original_language,
+      )
+
+      setNewsFormData({
+        ...newsFormData,
+        content: translatedContent,
+        original_language: detectedLanguage,
+        is_translated: detectedLanguage !== "ko",
+      })
+
+      toast({
+        title: "성공",
+        description: "번역이 완료되었습니다.",
+      })
+    } catch (error) {
+      console.error("번역 오류:", error)
+      toast({
+        title: "번역 실패",
         description: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.",
         variant: "destructive",
       })
     } finally {
-      setIsSubmitting(false)
+      setIsTranslating(false)
+    }
+  }
+
+  // Form handlers
+  const handleInputChange = (field: keyof BusinessCardData, value: any) => {
+    setFormData({ ...formData, [field]: value })
+  }
+
+  const handleNewsInputChange = (field: keyof NewsFormData, value: any) => {
+    setNewsFormData({ ...newsFormData, [field]: value })
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      if (isEditMode && editingCard) {
+        await updateBusinessCard(editingCard.id, formData)
+        toast({ title: "성공", description: "카드가 업데이트되었습니다." })
+      } else {
+        await createBusinessCard(formData)
+        toast({ title: "성공", description: "카드가 생성되었습니다." })
+      }
+      resetForm()
+      await loadBusinessCards()
+    } catch (error) {
+      console.error("카드 저장 오류:", error)
+      toast({
+        title: "오류",
+        description: error instanceof Error ? error.message : "카드 저장 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
     }
   }
 
   const handleNewsSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
-
     try {
-      if (editingNews) {
+      if (isEditNewsMode && editingNews) {
         await updateNews(editingNews.id, newsFormData)
-        toast({
-          title: "성공",
-          description: "뉴스가 성공적으로 업데이트되었습니다.",
-        })
+        toast({ title: "성공", description: "뉴스가 업데이트되었습니다." })
       } else {
         await createNews(newsFormData)
-        toast({
-          title: "성공",
-          description: "뉴스가 성공적으로 생성되었습니다.",
-        })
+        toast({ title: "성공", description: "뉴스가 생성되었습니다." })
       }
-
       resetNewsForm()
-      loadNews()
+      await loadNews()
     } catch (error) {
+      console.error("뉴스 저장 오류:", error)
       toast({
         title: "오류",
-        description: error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.",
+        description: error instanceof Error ? error.message : "뉴스 저장 중 오류가 발생했습니다.",
         variant: "destructive",
       })
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
-  const resetCardForm = () => {
-    setCardFormData({
+  const resetForm = () => {
+    setIsEditMode(false)
+    setEditingCard(null)
+    setFormData({
       title: "",
       description: "",
-      category_id: 1,
+      category_id: 0,
       location: "",
       phone: "",
       kakao_id: "",
@@ -386,1007 +478,1015 @@ export function AdminInterface() {
       is_promoted: false,
       is_active: true,
       is_premium: false,
-      premium_expires_at: null,
-      exposure_count: 0,
-      last_exposed_at: null,
-      exposure_weight: 1.0,
-      view_count: 0,
     })
-    setEditingCard(null)
-    setIsCardFormOpen(false)
   }
 
   const resetNewsForm = () => {
+    setIsEditNewsMode(false)
+    setEditingNews(null)
     setNewsFormData({
       title: "",
       content: "",
       summary: "",
+      category_id: undefined,
+      author: "",
       source_url: "",
       image_url: "",
-      category: "general",
-      tags: [],
       is_featured: false,
       is_active: true,
+      original_language: "ko",
+      is_translated: false,
+      tag_names: [],
     })
-    setEditingNews(null)
-    setIsNewsFormOpen(false)
   }
 
-  // Delete Handlers
-  const handleDeleteCard = async (id: number) => {
-    try {
-      await deleteBusinessCard(id)
-      toast({
-        title: "성공",
-        description: "카드가 삭제되었습니다.",
-      })
-      loadBusinessCards()
-    } catch (error) {
-      toast({
-        title: "오류",
-        description: "카드 삭제에 실패했습니다.",
-        variant: "destructive",
-      })
+  const handleEdit = (card: BusinessCard) => {
+    setIsEditMode(true)
+    setEditingCard(card)
+    setFormData({
+      title: card.title,
+      description: card.description,
+      category_id: card.category_id,
+      location: card.location || "",
+      phone: card.phone || "",
+      kakao_id: card.kakao_id || "",
+      line_id: card.line_id || "",
+      website: card.website || "",
+      hours: card.hours || "",
+      price: card.price || "",
+      promotion: card.promotion || "",
+      image_url: card.image_url || "",
+      facebook_url: card.facebook_url || "",
+      instagram_url: card.instagram_url || "",
+      tiktok_url: card.tiktok_url || "",
+      threads_url: card.threads_url || "",
+      youtube_url: card.youtube_url || "",
+      is_promoted: card.is_promoted,
+      is_active: card.is_active,
+      is_premium: card.is_premium,
+      premium_expires_at: card.premium_expires_at || undefined,
+      exposure_count: card.exposure_count,
+      exposure_weight: card.exposure_weight,
+    })
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const handleNewsEdit = (news: NewsArticle) => {
+    setIsEditNewsMode(true)
+    setEditingNews(news)
+    setNewsFormData({
+      title: news.title,
+      content: news.content,
+      summary: news.summary || "",
+      category_id: news.category_id,
+      author: news.author || "",
+      source_url: news.source_url || "",
+      image_url: news.image_url || "",
+      is_featured: news.is_featured,
+      is_active: news.is_active,
+      published_at: news.published_at,
+      original_language: news.original_language,
+      is_translated: news.is_translated,
+      tag_names: news.tags?.map((tag) => tag.name) || [],
+    })
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  const handleDelete = async (id: number) => {
+    if (confirm("정말로 이 카드를 삭제하시겠습니까?")) {
+      try {
+        await deleteBusinessCard(id)
+        toast({ title: "성공", description: "카드가 삭제되었습니다." })
+        await loadBusinessCards()
+      } catch (error) {
+        toast({
+          title: "오류",
+          description: "카드 삭제 중 오류가 발생했습니다.",
+          variant: "destructive",
+        })
+      }
     }
   }
 
-  const handleDeleteNews = async (id: number) => {
-    try {
-      await deleteNews(id)
-      toast({
-        title: "성공",
-        description: "뉴스가 삭제되었습니다.",
-      })
-      loadNews()
-    } catch (error) {
-      toast({
-        title: "오류",
-        description: "뉴스 삭제에 실패했습니다.",
-        variant: "destructive",
-      })
+  const handleNewsDelete = async (id: number) => {
+    if (confirm("정말로 이 뉴스를 삭제하시겠습니까?")) {
+      try {
+        await deleteNews(id)
+        toast({ title: "성공", description: "뉴스가 삭제되었습니다." })
+        await loadNews()
+      } catch (error) {
+        toast({
+          title: "오류",
+          description: "뉴스 삭제 중 오류가 발생했습니다.",
+          variant: "destructive",
+        })
+      }
     }
   }
 
-  const handleDeleteSelectedCards = async () => {
-    if (selectedCards.length === 0) return
-
-    try {
-      await deleteMultipleBusinessCards(selectedCards)
+  const handleBulkDelete = async () => {
+    if (selectedCards.length === 0) {
       toast({
-        title: "성공",
-        description: `${selectedCards.length}개의 카드가 삭제되었습니다.`,
+        title: "알림",
+        description: "삭제할 카드를 선택해주세요.",
+        variant: "destructive",
       })
+      return
+    }
+
+    if (confirm(`선택된 ${selectedCards.length}개의 카드를 삭제하시겠습니까?`)) {
+      try {
+        await deleteMultipleBusinessCards(selectedCards)
+        toast({ title: "성공", description: `${selectedCards.length}개의 카드가 삭제되었습니다.` })
+        setSelectedCards([])
+        await loadBusinessCards()
+      } catch (error) {
+        toast({
+          title: "오류",
+          description: "카드 삭제 중 오류가 발생했습니다.",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  const toggleCardSelection = (cardId: number) => {
+    setSelectedCards((prev) => (prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]))
+  }
+
+  const toggleAllCards = () => {
+    if (selectedCards.length === filteredCards.length) {
       setSelectedCards([])
-      loadBusinessCards()
-    } catch (error) {
-      toast({
-        title: "오류",
-        description: "선택된 카드 삭제에 실패했습니다.",
-        variant: "destructive",
-      })
+    } else {
+      setSelectedCards(filteredCards.map((card) => card.id))
     }
   }
 
-  const handleDeleteSelectedNews = async () => {
-    if (selectedNews.length === 0) return
-
+  const togglePremium = async (cardId: number, isPremium: boolean) => {
     try {
-      await deleteMultipleNews(selectedNews)
+      const expiresAt = isPremium ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : undefined
+      await updatePremiumStatus(cardId, isPremium, expiresAt)
       toast({
         title: "성공",
-        description: `${selectedNews.length}개의 뉴스가 삭제되었습니다.`,
+        description: `카드가 ${isPremium ? "프리미엄으로 설정" : "일반으로 변경"}되었습니다.`,
       })
-      setSelectedNews([])
-      loadNews()
+      await loadBusinessCards()
     } catch (error) {
       toast({
         title: "오류",
-        description: "선택된 뉴스 삭제에 실패했습니다.",
+        description: "프리미엄 상태 변경 중 오류가 발생했습니다.",
         variant: "destructive",
       })
     }
   }
 
-  // Filter Functions
-  const filteredBusinessCards = businessCards.filter((card) => {
-    const matchesFilter =
-      cardFilter === "all" ||
-      (cardFilter === "active" && card.is_active) ||
-      (cardFilter === "inactive" && !card.is_active) ||
-      (cardFilter === "premium" && card.is_premium) ||
-      (cardFilter === "promoted" && card.is_promoted)
+  const updateExposure = async (cardId: number, count: number) => {
+    try {
+      await updateExposureCount(cardId, count)
+      toast({ title: "성공", description: "노출 카운트가 업데이트되었습니다." })
+      await loadBusinessCards()
+    } catch (error) {
+      toast({
+        title: "오류",
+        description: "노출 카운트 업데이트 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
 
-    const matchesCategory = cardCategoryFilter === "all" || card.category_id.toString() === cardCategoryFilter
+  const updateWeight = async (cardId: number, weight: number) => {
+    try {
+      await updateExposureWeight(cardId, weight)
+      toast({ title: "성공", description: "노출 가중치가 업데이트되었습니다." })
+      await loadBusinessCards()
+    } catch (error) {
+      toast({
+        title: "오류",
+        description: "노출 가중치 업데이트 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
 
+  // Filter cards
+  const filteredCards = businessCards.filter((card) => {
     const matchesSearch =
-      cardSearchTerm === "" ||
-      card.title.toLowerCase().includes(cardSearchTerm.toLowerCase()) ||
-      card.description.toLowerCase().includes(cardSearchTerm.toLowerCase())
+      card.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      card.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      card.categories?.name.toLowerCase().includes(searchTerm.toLowerCase())
 
-    return matchesFilter && matchesCategory && matchesSearch
+    const matchesCategory = categoryFilter === "all" || card.category_id.toString() === categoryFilter
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && card.is_active) ||
+      (statusFilter === "inactive" && !card.is_active) ||
+      (statusFilter === "premium" && card.is_premium) ||
+      (statusFilter === "promoted" && card.is_promoted)
+
+    return matchesSearch && matchesCategory && matchesStatus
   })
 
-  const filteredNews = news.filter((item) => {
-    const matchesFilter =
-      newsFilter === "all" ||
-      (newsFilter === "active" && item.is_active) ||
-      (newsFilter === "inactive" && !item.is_active) ||
-      (newsFilter === "featured" && item.is_featured)
-
-    const matchesCategory = newsCategoryFilter === "all" || item.category === newsCategoryFilter
-
+  // Filter news
+  const filteredNews = newsArticles.filter((news) => {
     const matchesSearch =
-      newsSearchTerm === "" ||
-      item.title.toLowerCase().includes(newsSearchTerm.toLowerCase()) ||
-      item.content.toLowerCase().includes(newsSearchTerm.toLowerCase())
+      news.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      news.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      news.category?.name.toLowerCase().includes(searchTerm.toLowerCase())
 
-    return matchesFilter && matchesCategory && matchesSearch
+    return matchesSearch
   })
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center space-x-2">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          <span>데이터를 불러오는 중...</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">관리자 대시보드</h1>
-        <p className="text-muted-foreground">비즈니스 카드와 뉴스를 관리하세요</p>
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">관리자 대시보드</h1>
+          <p className="text-muted-foreground">비즈니스 카드와 뉴스를 관리합니다</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          {aiStatus && (
+            <Badge variant={aiStatus.isActive ? "default" : "destructive"}>
+              AI {aiStatus.isActive ? "활성" : "비활성"}
+            </Badge>
+          )}
+          <Button variant="outline" onClick={loadAllData}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            새로고침
+          </Button>
+          <Button variant="destructive" onClick={onLogout}>
+            로그아웃
+          </Button>
+        </div>
       </div>
 
-      {/* AI Status */}
-      {aiStatus && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
-              AI 상태
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <Badge variant={aiStatus.isActive ? "default" : "destructive"}>
-                {aiStatus.isActive ? "활성" : "비활성"}
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                마지막 확인: {new Date(aiStatus.lastChecked).toLocaleString()}
-              </span>
-              {aiStatus.error && <span className="text-sm text-destructive">{aiStatus.error}</span>}
-            </div>
-          </CardContent>
-        </Card>
+      {/* AI Status Alert */}
+      {aiStatus && !aiStatus.isActive && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            AI 기능이 비활성화되어 있습니다: {aiStatus.error || "API 키를 확인해주세요."}
+          </AlertDescription>
+        </Alert>
       )}
 
-      <Tabs defaultValue="business-cards" className="space-y-6">
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="business-cards">비즈니스 카드</TabsTrigger>
+          <TabsTrigger value="cards">비즈니스 카드 관리</TabsTrigger>
           <TabsTrigger value="news">뉴스 관리</TabsTrigger>
         </TabsList>
 
         {/* Business Cards Tab */}
-        <TabsContent value="business-cards" className="space-y-6">
-          {/* Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              <Input
-                placeholder="카드 검색..."
-                value={cardSearchTerm}
-                onChange={(e) => setCardSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-              <Select value={cardFilter} onValueChange={setCardFilter}>
-                <SelectTrigger className="max-w-[180px]">
-                  <SelectValue placeholder="필터 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">모든 카드</SelectItem>
-                  <SelectItem value="active">활성 카드</SelectItem>
-                  <SelectItem value="inactive">비활성 카드</SelectItem>
-                  <SelectItem value="premium">프리미엄 카드</SelectItem>
-                  <SelectItem value="promoted">프로모션 카드</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={cardCategoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="max-w-[180px]">
-                  <SelectValue placeholder="카테고리 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">모든 카테고리</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2">
-              {selectedCards.length > 0 && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      선택 삭제 ({selectedCards.length})
+        <TabsContent value="cards" className="space-y-6">
+          {/* Card Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                {isEditMode ? "카드 수정" : "새 카드 생성"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* AI Parsing Section */}
+              {aiStatus?.isActive && (
+                <div className="mb-6 p-4 border rounded-lg">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <RefreshCw className="h-5 w-5" />
+                    AI 텍스트 분석
+                  </h3>
+                  <div className="space-y-3">
+                    <Textarea
+                      placeholder="분석할 텍스트를 입력하세요 (카드 정보, 광고 텍스트 등)"
+                      value={aiText}
+                      onChange={(e) => setAiText(e.target.value)}
+                      rows={4}
+                    />
+                    <Button onClick={handleAIParse} disabled={isParsing || !aiText.trim()}>
+                      {isParsing ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          분석 중...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          AI 분석 실행
+                        </>
+                      )}
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>선택된 카드 삭제</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        선택된 {selectedCards.length}개의 카드를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>취소</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteSelectedCards}>삭제</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                  </div>
+                </div>
               )}
-              <Dialog open={isCardFormOpen} onOpenChange={setIsCardFormOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    onClick={() => {
-                      resetCardForm()
-                      setIsCardFormOpen(true)
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />새 카드
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>{editingCard ? "카드 수정" : "새 카드 생성"}</DialogTitle>
-                    <DialogDescription>비즈니스 카드 정보를 입력하세요.</DialogDescription>
-                  </DialogHeader>
 
-                  {/* AI Analysis Section */}
-                  {aiStatus?.isActive && (
-                    <Card className="mb-4">
-                      <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Sparkles className="h-5 w-5" />
-                          AI 분석
-                        </CardTitle>
-                        <CardDescription>텍스트를 입력하면 AI가 자동으로 카드 정보를 추출합니다.</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <Textarea
-                          placeholder="분석할 텍스트를 입력하세요..."
-                          value={aiText}
-                          onChange={(e) => setAiText(e.target.value)}
-                          rows={4}
-                        />
-                        <Button onClick={handleAIAnalysis} disabled={isAnalyzing || !aiText.trim()} className="w-full">
-                          {isAnalyzing ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              분석 중...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="h-4 w-4 mr-2" />
-                              AI 분석 시작
-                            </>
-                          )}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  )}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">제목 *</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => handleInputChange("title", e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">카테고리 *</Label>
+                    <Select
+                      value={formData.category_id?.toString() || ""}
+                      onValueChange={(value) => handleInputChange("category_id", Number.parseInt(value))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="카테고리 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
 
-                  <form onSubmit={handleCardSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="title">제목 *</Label>
-                        <Input
-                          id="title"
-                          value={cardFormData.title}
-                          onChange={(e) => setCardFormData((prev) => ({ ...prev, title: e.target.value }))}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="category">카테고리 *</Label>
-                        <Select
-                          value={cardFormData.category_id.toString()}
-                          onValueChange={(value) =>
-                            setCardFormData((prev) => ({ ...prev, category_id: Number.parseInt(value) }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="카테고리 선택" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.map((category) => (
-                              <SelectItem key={category.id} value={category.id.toString()}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">설명 *</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    rows={3}
+                    required
+                  />
+                </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="location">위치</Label>
+                    <Input
+                      id="location"
+                      value={formData.location || ""}
+                      onChange={(e) => handleInputChange("location", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">전화번호</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone || ""}
+                      onChange={(e) => handleInputChange("phone", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="kakao_id">카카오톡 ID</Label>
+                    <Input
+                      id="kakao_id"
+                      value={formData.kakao_id || ""}
+                      onChange={(e) => handleInputChange("kakao_id", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="line_id">라인 ID</Label>
+                    <Input
+                      id="line_id"
+                      value={formData.line_id || ""}
+                      onChange={(e) => handleInputChange("line_id", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="website">웹사이트</Label>
+                    <Input
+                      id="website"
+                      value={formData.website || ""}
+                      onChange={(e) => handleInputChange("website", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hours">운영시간</Label>
+                    <Input
+                      id="hours"
+                      value={formData.hours || ""}
+                      onChange={(e) => handleInputChange("hours", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="price">가격</Label>
+                    <Input
+                      id="price"
+                      value={formData.price || ""}
+                      onChange={(e) => handleInputChange("price", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="promotion">프로모션</Label>
+                    <Input
+                      id="promotion"
+                      value={formData.promotion || ""}
+                      onChange={(e) => handleInputChange("promotion", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="image_url">이미지 URL</Label>
+                  <Input
+                    id="image_url"
+                    value={formData.image_url || ""}
+                    onChange={(e) => handleInputChange("image_url", e.target.value)}
+                  />
+                </div>
+
+                {/* Social Media Fields */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">소셜 미디어</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="description">설명 *</Label>
-                      <Textarea
-                        id="description"
-                        value={cardFormData.description}
-                        onChange={(e) => setCardFormData((prev) => ({ ...prev, description: e.target.value }))}
-                        rows={4}
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="location">위치</Label>
-                        <Input
-                          id="location"
-                          value={cardFormData.location || ""}
-                          onChange={(e) => setCardFormData((prev) => ({ ...prev, location: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">전화번호</Label>
-                        <Input
-                          id="phone"
-                          value={cardFormData.phone || ""}
-                          onChange={(e) => setCardFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="kakao_id">카카오톡 ID</Label>
-                        <Input
-                          id="kakao_id"
-                          value={cardFormData.kakao_id || ""}
-                          onChange={(e) => setCardFormData((prev) => ({ ...prev, kakao_id: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="line_id">라인 ID</Label>
-                        <Input
-                          id="line_id"
-                          value={cardFormData.line_id || ""}
-                          onChange={(e) => setCardFormData((prev) => ({ ...prev, line_id: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="website">웹사이트</Label>
+                      <Label htmlFor="facebook_url">페이스북 URL</Label>
                       <Input
-                        id="website"
-                        type="url"
-                        value={cardFormData.website || ""}
-                        onChange={(e) => setCardFormData((prev) => ({ ...prev, website: e.target.value }))}
+                        id="facebook_url"
+                        value={formData.facebook_url || ""}
+                        onChange={(e) => handleInputChange("facebook_url", e.target.value)}
                       />
                     </div>
-
-                    {/* Social Media Fields */}
-                    <div className="space-y-4">
-                      <Label className="text-base font-semibold">소셜 미디어</Label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="facebook_url">페이스북 URL</Label>
-                          <Input
-                            id="facebook_url"
-                            type="url"
-                            value={cardFormData.facebook_url || ""}
-                            onChange={(e) => setCardFormData((prev) => ({ ...prev, facebook_url: e.target.value }))}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="instagram_url">인스타그램 URL</Label>
-                          <Input
-                            id="instagram_url"
-                            type="url"
-                            value={cardFormData.instagram_url || ""}
-                            onChange={(e) => setCardFormData((prev) => ({ ...prev, instagram_url: e.target.value }))}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="tiktok_url">틱톡 URL</Label>
-                          <Input
-                            id="tiktok_url"
-                            type="url"
-                            value={cardFormData.tiktok_url || ""}
-                            onChange={(e) => setCardFormData((prev) => ({ ...prev, tiktok_url: e.target.value }))}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="youtube_url">유튜브 URL</Label>
-                          <Input
-                            id="youtube_url"
-                            type="url"
-                            value={cardFormData.youtube_url || ""}
-                            onChange={(e) => setCardFormData((prev) => ({ ...prev, youtube_url: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="hours">운영시간</Label>
-                        <Input
-                          id="hours"
-                          value={cardFormData.hours || ""}
-                          onChange={(e) => setCardFormData((prev) => ({ ...prev, hours: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="price">가격 정보</Label>
-                        <Input
-                          id="price"
-                          value={cardFormData.price || ""}
-                          onChange={(e) => setCardFormData((prev) => ({ ...prev, price: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="promotion">프로모션</Label>
-                      <Textarea
-                        id="promotion"
-                        value={cardFormData.promotion || ""}
-                        onChange={(e) => setCardFormData((prev) => ({ ...prev, promotion: e.target.value }))}
-                        rows={2}
+                      <Label htmlFor="instagram_url">인스타그램 URL</Label>
+                      <Input
+                        id="instagram_url"
+                        value={formData.instagram_url || ""}
+                        onChange={(e) => handleInputChange("instagram_url", e.target.value)}
                       />
                     </div>
-
-                    {/* Image Upload */}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>이미지</Label>
-                      <ImageUpload
-                        value={cardFormData.image_url || ""}
-                        onChange={(url) => setCardFormData((prev) => ({ ...prev, image_url: url }))}
+                      <Label htmlFor="tiktok_url">틱톡 URL</Label>
+                      <Input
+                        id="tiktok_url"
+                        value={formData.tiktok_url || ""}
+                        onChange={(e) => handleInputChange("tiktok_url", e.target.value)}
                       />
                     </div>
-
-                    {/* Settings */}
-                    <div className="space-y-4">
-                      <Label className="text-base font-semibold">설정</Label>
-                      <div className="flex flex-wrap gap-6">
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="is_active"
-                            checked={cardFormData.is_active}
-                            onCheckedChange={(checked) => setCardFormData((prev) => ({ ...prev, is_active: checked }))}
-                          />
-                          <Label htmlFor="is_active">활성</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="is_promoted"
-                            checked={cardFormData.is_promoted}
-                            onCheckedChange={(checked) =>
-                              setCardFormData((prev) => ({ ...prev, is_promoted: checked }))
-                            }
-                          />
-                          <Label htmlFor="is_promoted">프로모션</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="is_premium"
-                            checked={cardFormData.is_premium}
-                            onCheckedChange={(checked) => setCardFormData((prev) => ({ ...prev, is_premium: checked }))}
-                          />
-                          <Label htmlFor="is_premium">프리미엄</Label>
-                        </div>
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="threads_url">쓰레드 URL</Label>
+                      <Input
+                        id="threads_url"
+                        value={formData.threads_url || ""}
+                        onChange={(e) => handleInputChange("threads_url", e.target.value)}
+                      />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="youtube_url">유튜브 URL</Label>
+                    <Input
+                      id="youtube_url"
+                      value={formData.youtube_url || ""}
+                      onChange={(e) => handleInputChange("youtube_url", e.target.value)}
+                    />
+                  </div>
+                </div>
 
-                    <DialogFooter>
-                      <Button type="button" variant="outline" onClick={resetCardForm}>
-                        취소
-                      </Button>
-                      <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            저장 중...
-                          </>
-                        ) : editingCard ? (
-                          "업데이트"
-                        ) : (
-                          "생성"
-                        )}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is_active"
+                      checked={formData.is_active}
+                      onCheckedChange={(checked) => handleInputChange("is_active", checked)}
+                    />
+                    <Label htmlFor="is_active">활성화</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is_promoted"
+                      checked={formData.is_promoted}
+                      onCheckedChange={(checked) => handleInputChange("is_promoted", checked)}
+                    />
+                    <Label htmlFor="is_promoted">홍보</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is_premium"
+                      checked={formData.is_premium}
+                      onCheckedChange={(checked) => handleInputChange("is_premium", checked)}
+                    />
+                    <Label htmlFor="is_premium">프리미엄</Label>
+                  </div>
+                </div>
+
+                <div className="flex space-x-2">
+                  <Button type="submit">{isEditMode ? "업데이트" : "생성"}</Button>
+                  {isEditMode && (
+                    <Button type="button" variant="outline" onClick={resetForm}>
+                      취소
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="검색..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
             </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="카테고리 필터" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">모든 카테고리</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id.toString()}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="상태 필터" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">모든 상태</SelectItem>
+                <SelectItem value="active">활성</SelectItem>
+                <SelectItem value="inactive">비활성</SelectItem>
+                <SelectItem value="premium">프리미엄</SelectItem>
+                <SelectItem value="promoted">홍보</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Business Cards List */}
+          {/* Bulk Actions */}
+          {selectedCards.length > 0 && (
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+              <span>{selectedCards.length}개 카드 선택됨</span>
+              <Button variant="destructive" onClick={handleBulkDelete}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                선택 삭제
+              </Button>
+            </div>
+          )}
+
+          {/* Cards List */}
           <div className="space-y-4">
-            {isCardLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            ) : filteredBusinessCards.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <p className="text-muted-foreground">카드가 없습니다.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredBusinessCards.map((card) => (
-                <Card key={card.id}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4 flex-1">
-                        <Checkbox
-                          checked={selectedCards.includes(card.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedCards((prev) => [...prev, card.id])
-                            } else {
-                              setSelectedCards((prev) => prev.filter((id) => id !== card.id))
-                            }
-                          }}
-                        />
-                        {card.image_url && (
-                          <img
-                            src={card.image_url || "/placeholder.svg"}
-                            alt={card.title}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                        )}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold">{card.title}</h3>
-                            {card.categories && (
-                              <Badge variant="secondary" className={card.categories.color_class}>
-                                {card.categories.name}
-                              </Badge>
-                            )}
-                            {card.is_premium && <Badge variant="default">프리미엄</Badge>}
-                            {card.is_promoted && <Badge variant="outline">프로모션</Badge>}
-                            {!card.is_active && <Badge variant="destructive">비활성</Badge>}
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{card.description}</p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span>조회: {card.view_count || 0}</span>
-                            <span>노출: {card.exposure_count || 0}</span>
-                            <span>생성: {new Date(card.created_at).toLocaleDateString()}</span>
-                          </div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">카드 목록 ({filteredCards.length}개)</h2>
+              <Button variant="outline" size="sm" onClick={toggleAllCards}>
+                {selectedCards.length === filteredCards.length ? "전체 해제" : "전체 선택"}
+              </Button>
+            </div>
+
+            {filteredCards.map((card) => (
+              <Card key={card.id} className="relative">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-3">
+                      <Checkbox
+                        checked={selectedCards.includes(card.id)}
+                        onCheckedChange={() => toggleCardSelection(card.id)}
+                      />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold">{card.title}</h3>
+                          {card.categories && (
+                            <Badge variant="secondary" className={card.categories.color_class}>
+                              {card.categories.name}
+                            </Badge>
+                          )}
+                          {card.is_premium && <Badge variant="default">프리미엄</Badge>}
+                          {card.is_promoted && <Badge variant="outline">홍보</Badge>}
+                          {!card.is_active && <Badge variant="destructive">비활성</Badge>}
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{card.description}</p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>노출: {card.exposure_count}</span>
+                          <span>조회: {card.view_count}</span>
+                          <span>가중치: {card.exposure_weight}</span>
+                          {card.location && <span>📍 {card.location}</span>}
+                          {card.phone && <span>📞 {card.phone}</span>}
+                        </div>
+                        {/* Social Media Icons */}
+                        <div className="flex items-center gap-2">
+                          {card.facebook_url && (
+                            <Badge variant="outline" className="text-xs">
+                              Facebook
+                            </Badge>
+                          )}
+                          {card.instagram_url && (
+                            <Badge variant="outline" className="text-xs">
+                              Instagram
+                            </Badge>
+                          )}
+                          {card.tiktok_url && (
+                            <Badge variant="outline" className="text-xs">
+                              TikTok
+                            </Badge>
+                          )}
+                          {card.threads_url && (
+                            <Badge variant="outline" className="text-xs">
+                              Threads
+                            </Badge>
+                          )}
+                          {card.youtube_url && (
+                            <Badge variant="outline" className="text-xs">
+                              YouTube
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingCard(card)
-                            setCardFormData({
-                              title: card.title,
-                              description: card.description,
-                              category_id: card.category_id,
-                              location: card.location || "",
-                              phone: card.phone || "",
-                              kakao_id: card.kakao_id || "",
-                              line_id: card.line_id || "",
-                              website: card.website || "",
-                              hours: card.hours || "",
-                              price: card.price || "",
-                              promotion: card.promotion || "",
-                              image_url: card.image_url || "",
-                              facebook_url: card.facebook_url || "",
-                              instagram_url: card.instagram_url || "",
-                              tiktok_url: card.tiktok_url || "",
-                              threads_url: card.threads_url || "",
-                              youtube_url: card.youtube_url || "",
-                              is_promoted: card.is_promoted || false,
-                              is_active: card.is_active !== false,
-                              is_premium: card.is_premium || false,
-                              premium_expires_at: card.premium_expires_at || null,
-                              exposure_count: card.exposure_count || 0,
-                              last_exposed_at: card.last_exposed_at || null,
-                              exposure_weight: card.exposure_weight || 1.0,
-                              view_count: card.view_count || 0,
-                            })
-                            setIsCardFormOpen(true)
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>카드 삭제</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                "{card.title}" 카드를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>취소</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteCard(card.id)}>삭제</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => togglePremium(card.id, !card.is_premium)}
+                        title={card.is_premium ? "프리미엄 해제" : "프리미엄 설정"}
+                      >
+                        {card.is_premium ? (
+                          <Star className="h-4 w-4 text-yellow-500" />
+                        ) : (
+                          <StarOff className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="icon" title="노출 관리">
+                            <BarChart3 className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>노출 관리 - {card.title}</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>노출 카운트</Label>
+                              <div className="flex items-center space-x-2">
+                                <Input
+                                  type="number"
+                                  defaultValue={card.exposure_count}
+                                  onBlur={(e) => updateExposure(card.id, Number.parseInt(e.target.value) || 0)}
+                                />
+                                <Button variant="outline" size="sm" onClick={() => updateExposure(card.id, 0)}>
+                                  초기화
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>노출 가중치</Label>
+                              <Input
+                                type="number"
+                                step="0.1"
+                                defaultValue={card.exposure_weight}
+                                onBlur={(e) => updateWeight(card.id, Number.parseFloat(e.target.value) || 1.0)}
+                              />
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(card)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(card.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+
+            {filteredCards.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">검색 조건에 맞는 카드가 없습니다.</div>
             )}
           </div>
         </TabsContent>
 
         {/* News Tab */}
         <TabsContent value="news" className="space-y-6">
-          {/* Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              <Input
-                placeholder="뉴스 검색..."
-                value={newsSearchTerm}
-                onChange={(e) => setNewsSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
-              <Select value={newsFilter} onValueChange={setNewsFilter}>
-                <SelectTrigger className="max-w-[180px]">
-                  <SelectValue placeholder="필터 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">모든 뉴스</SelectItem>
-                  <SelectItem value="active">활성 뉴스</SelectItem>
-                  <SelectItem value="inactive">비활성 뉴스</SelectItem>
-                  <SelectItem value="featured">추천 뉴스</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={newsCategoryFilter} onValueChange={setNewsCategoryFilter}>
-                <SelectTrigger className="max-w-[180px]">
-                  <SelectValue placeholder="카테고리 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">모든 카테고리</SelectItem>
-                  {NEWS_CATEGORIES.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2">
-              {selectedNews.length > 0 && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      선택 삭제 ({selectedNews.length})
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>선택된 뉴스 삭제</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        선택된 {selectedNews.length}개의 뉴스를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>취소</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteSelectedNews}>삭제</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              <Dialog open={isNewsFormOpen} onOpenChange={setIsNewsFormOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    onClick={() => {
-                      resetNewsForm()
-                      setIsNewsFormOpen(true)
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />새 뉴스
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>{editingNews ? "뉴스 수정" : "새 뉴스 생성"}</DialogTitle>
-                    <DialogDescription>뉴스 정보를 입력하세요.</DialogDescription>
-                  </DialogHeader>
-
-                  {/* AI News Analysis Section */}
-                  {aiStatus?.isActive && (
-                    <Card className="mb-4">
-                      <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Globe className="h-5 w-5" />
-                          AI 뉴스 분석
-                        </CardTitle>
-                        <CardDescription>뉴스 URL을 입력하면 AI가 자동으로 내용을 분석하고 번역합니다.</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="뉴스 URL을 입력하세요..."
-                            value={newsUrl}
-                            onChange={(e) => setNewsUrl(e.target.value)}
-                            className="flex-1"
-                          />
-                          <Button onClick={handleNewsAnalysis} disabled={isAnalyzingNews || !newsUrl.trim()}>
-                            {isAnalyzingNews ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                분석 중...
-                              </>
-                            ) : (
-                              <>
-                                <Languages className="h-4 w-4 mr-2" />
-                                분석
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  <form onSubmit={handleNewsSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="news-title">제목 *</Label>
+          {/* News Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                {isEditNewsMode ? "뉴스 수정" : "새 뉴스 생성"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* AI News Analysis Section */}
+              {aiStatus?.isActive && (
+                <div className="mb-6 p-4 border rounded-lg">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    AI 뉴스 분석
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
                       <Input
-                        id="news-title"
-                        value={newsFormData.title}
-                        onChange={(e) => setNewsFormData((prev) => ({ ...prev, title: e.target.value }))}
-                        required
+                        placeholder="뉴스 URL을 입력하세요"
+                        value={newsUrl}
+                        onChange={(e) => setNewsUrl(e.target.value)}
                       />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="news-content">내용 *</Label>
-                      <Textarea
-                        id="news-content"
-                        value={newsFormData.content}
-                        onChange={(e) => setNewsFormData((prev) => ({ ...prev, content: e.target.value }))}
-                        rows={8}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="news-summary">요약</Label>
-                      <Textarea
-                        id="news-summary"
-                        value={newsFormData.summary}
-                        onChange={(e) => setNewsFormData((prev) => ({ ...prev, summary: e.target.value }))}
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="news-category">카테고리</Label>
-                        <Select
-                          value={newsFormData.category}
-                          onValueChange={(value) => setNewsFormData((prev) => ({ ...prev, category: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="카테고리 선택" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {NEWS_CATEGORIES.map((category) => (
-                              <SelectItem key={category} value={category}>
-                                {category}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="news-source-url">출처 URL</Label>
-                        <Input
-                          id="news-source-url"
-                          type="url"
-                          value={newsFormData.source_url}
-                          onChange={(e) => setNewsFormData((prev) => ({ ...prev, source_url: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="news-tags">태그 (쉼표로 구분)</Label>
-                      <Input
-                        id="news-tags"
-                        value={newsFormData.tags.join(", ")}
-                        onChange={(e) =>
-                          setNewsFormData((prev) => ({
-                            ...prev,
-                            tags: e.target.value
-                              .split(",")
-                              .map((tag) => tag.trim())
-                              .filter(Boolean),
-                          }))
-                        }
-                        placeholder="태그1, 태그2, 태그3"
-                      />
-                    </div>
-
-                    {/* Image Upload */}
-                    <div className="space-y-2">
-                      <Label>이미지</Label>
-                      <ImageUpload
-                        value={newsFormData.image_url || ""}
-                        onChange={(url) => setNewsFormData((prev) => ({ ...prev, image_url: url }))}
-                      />
-                    </div>
-
-                    {/* Settings */}
-                    <div className="space-y-4">
-                      <Label className="text-base font-semibold">설정</Label>
-                      <div className="flex flex-wrap gap-6">
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="news-is-active"
-                            checked={newsFormData.is_active}
-                            onCheckedChange={(checked) => setNewsFormData((prev) => ({ ...prev, is_active: checked }))}
-                          />
-                          <Label htmlFor="news-is-active">활성</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="news-is-featured"
-                            checked={newsFormData.is_featured}
-                            onCheckedChange={(checked) =>
-                              setNewsFormData((prev) => ({ ...prev, is_featured: checked }))
-                            }
-                          />
-                          <Label htmlFor="news-is-featured">추천</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <DialogFooter>
-                      <Button type="button" variant="outline" onClick={resetNewsForm}>
-                        취소
-                      </Button>
-                      <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? (
+                      <Button onClick={handleNewsAnalysis} disabled={isAnalyzing || !newsUrl.trim()}>
+                        {isAnalyzing ? (
                           <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            저장 중...
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            분석 중...
                           </>
-                        ) : editingNews ? (
-                          "업데이트"
                         ) : (
-                          "생성"
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            URL 분석
+                          </>
                         )}
                       </Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
+                    </div>
+                    {newsFormData.content && (
+                      <Button variant="outline" onClick={handleNewsTranslation} disabled={isTranslating}>
+                        {isTranslating ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            번역 중...
+                          </>
+                        ) : (
+                          <>
+                            <Languages className="h-4 w-4 mr-2" />
+                            한국어로 번역
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleNewsSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="news_title">제목 *</Label>
+                    <Input
+                      id="news_title"
+                      value={newsFormData.title}
+                      onChange={(e) => handleNewsInputChange("title", e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="news_category">카테고리</Label>
+                    <Select
+                      value={newsFormData.category_id?.toString() || ""}
+                      onValueChange={(value) => handleNewsInputChange("category_id", Number.parseInt(value))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="카테고리 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {newsCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="news_content">내용 *</Label>
+                  <Textarea
+                    id="news_content"
+                    value={newsFormData.content}
+                    onChange={(e) => handleNewsInputChange("content", e.target.value)}
+                    rows={6}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="news_summary">요약</Label>
+                  <Textarea
+                    id="news_summary"
+                    value={newsFormData.summary || ""}
+                    onChange={(e) => handleNewsInputChange("summary", e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="news_author">작성자</Label>
+                    <Input
+                      id="news_author"
+                      value={newsFormData.author || ""}
+                      onChange={(e) => handleNewsInputChange("author", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="news_source_url">소스 URL</Label>
+                    <Input
+                      id="news_source_url"
+                      value={newsFormData.source_url || ""}
+                      onChange={(e) => handleNewsInputChange("source_url", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="news_image_url">이미지 URL</Label>
+                    <Input
+                      id="news_image_url"
+                      value={newsFormData.image_url || ""}
+                      onChange={(e) => handleNewsInputChange("image_url", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="original_language">원본 언어</Label>
+                    <Select
+                      value={newsFormData.original_language || "ko"}
+                      onValueChange={(value) => handleNewsInputChange("original_language", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ko">한국어</SelectItem>
+                        <SelectItem value="en">영어</SelectItem>
+                        <SelectItem value="th">태국어</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="news_tags">태그 (쉼표로 구분)</Label>
+                  <Input
+                    id="news_tags"
+                    value={newsFormData.tag_names?.join(", ") || ""}
+                    onChange={(e) =>
+                      handleNewsInputChange(
+                        "tag_names",
+                        e.target.value
+                          .split(",")
+                          .map((tag) => tag.trim())
+                          .filter(Boolean),
+                      )
+                    }
+                    placeholder="예: 비즈니스, 기술, 뉴스"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="news_is_active"
+                      checked={newsFormData.is_active}
+                      onCheckedChange={(checked) => handleNewsInputChange("is_active", checked)}
+                    />
+                    <Label htmlFor="news_is_active">활성화</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="news_is_featured"
+                      checked={newsFormData.is_featured}
+                      onCheckedChange={(checked) => handleNewsInputChange("is_featured", checked)}
+                    />
+                    <Label htmlFor="news_is_featured">추천 뉴스</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="news_is_translated"
+                      checked={newsFormData.is_translated}
+                      onCheckedChange={(checked) => handleNewsInputChange("is_translated", checked)}
+                    />
+                    <Label htmlFor="news_is_translated">번역된 뉴스</Label>
+                  </div>
+                </div>
+
+                <div className="flex space-x-2">
+                  <Button type="submit">{isEditNewsMode ? "업데이트" : "생성"}</Button>
+                  {isEditNewsMode && (
+                    <Button type="button" variant="outline" onClick={resetNewsForm}>
+                      취소
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* News Search */}
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="뉴스 검색..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
             </div>
           </div>
 
           {/* News List */}
           <div className="space-y-4">
-            {isNewsLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-            ) : filteredNews.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <p className="text-muted-foreground">뉴스가 없습니다.</p>
+            <h2 className="text-xl font-semibold">뉴스 목록 ({filteredNews.length}개)</h2>
+
+            {filteredNews.map((news) => (
+              <Card key={news.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold">{news.title}</h3>
+                        {news.category && (
+                          <Badge variant="secondary" className={news.category.color_class}>
+                            {news.category.name}
+                          </Badge>
+                        )}
+                        {news.is_featured && <Badge variant="default">추천</Badge>}
+                        {news.is_translated && <Badge variant="outline">번역됨</Badge>}
+                        {!news.is_active && <Badge variant="destructive">비활성</Badge>}
+                        <Badge variant="outline" className="text-xs">
+                          {news.original_language.toUpperCase()}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {news.summary || news.content.substring(0, 100) + "..."}
+                      </p>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span>조회: {news.view_count}</span>
+                        {news.author && <span>작성자: {news.author}</span>}
+                        <span>{new Date(news.published_at).toLocaleDateString()}</span>
+                        {news.source_url && (
+                          <a
+                            href={news.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 hover:text-primary"
+                          >
+                            <Link className="h-3 w-3" />
+                            소스
+                          </a>
+                        )}
+                      </div>
+                      {news.tags && news.tags.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {news.tags.map((tag) => (
+                            <Badge key={tag.id} variant="outline" className="text-xs">
+                              #{tag.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleNewsEdit(news)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleNewsDelete(news.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            ) : (
-              filteredNews.map((item) => (
-                <Card key={item.id}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4 flex-1">
-                        <Checkbox
-                          checked={selectedNews.includes(item.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedNews((prev) => [...prev, item.id])
-                            } else {
-                              setSelectedNews((prev) => prev.filter((id) => id !== item.id))
-                            }
-                          }}
-                        />
-                        {item.image_url && (
-                          <img
-                            src={item.image_url || "/placeholder.svg"}
-                            alt={item.title}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                        )}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold">{item.title}</h3>
-                            <Badge variant="secondary">{item.category}</Badge>
-                            {item.is_featured && (
-                              <Badge variant="default">
-                                <Star className="h-3 w-3 mr-1" />
-                                추천
-                              </Badge>
-                            )}
-                            {item.is_translated && (
-                              <Badge variant="outline">
-                                <Languages className="h-3 w-3 mr-1" />
-                                번역
-                              </Badge>
-                            )}
-                            {!item.is_active && <Badge variant="destructive">비활성</Badge>}
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                            {item.summary || item.content.substring(0, 100) + "..."}
-                          </p>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-2">
-                            <span>조회: {item.view_count || 0}</span>
-                            <span>언어: {item.original_language}</span>
-                            <span>생성: {new Date(item.created_at).toLocaleDateString()}</span>
-                          </div>
-                          {item.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {item.tags.map((tag, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingNews(item)
-                            setNewsFormData({
-                              title: item.title,
-                              content: item.content,
-                              summary: item.summary || "",
-                              source_url: item.source_url || "",
-                              image_url: item.image_url || "",
-                              category: item.category,
-                              tags: item.tags,
-                              is_featured: item.is_featured,
-                              is_active: item.is_active,
-                            })
-                            setIsNewsFormOpen(true)
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>뉴스 삭제</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                "{item.title}" 뉴스를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>취소</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteNews(item.id)}>삭제</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+            ))}
+
+            {filteredNews.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">검색 조건에 맞는 뉴스가 없습니다.</div>
             )}
           </div>
         </TabsContent>
