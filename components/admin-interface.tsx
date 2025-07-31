@@ -318,7 +318,7 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
     }
   }
 
-  // News URL Analysis - Enhanced with automatic Korean translation
+  // News URL Analysis - Enhanced with automatic Korean translation and category selection
   const handleNewsAnalysis = async () => {
     if (!newsUrl.trim()) {
       toast({
@@ -348,16 +348,57 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
       const analysisResult = await analyzeNewsFromUrl(newsUrl)
       console.log("Analysis result received:", analysisResult)
 
-      // Find category ID
+      // Find category ID based on AI-detected category
       let categoryId = undefined
       if (analysisResult.category && newsCategories.length > 0) {
-        const category = newsCategories.find(
-          (cat) =>
-            cat.name.toLowerCase().includes(analysisResult.category.toLowerCase()) ||
-            analysisResult.category.toLowerCase().includes(cat.name.toLowerCase()),
-        )
-        if (category) {
-          categoryId = category.id
+        // Enhanced category matching
+        const categoryMappings = {
+          정치: ["정치", "politics", "political"],
+          경제: ["경제", "economy", "economic", "business", "비즈니스"],
+          사회: ["사회", "society", "social"],
+          국제: ["국제", "international", "world", "global"],
+          문화: ["문화", "culture", "cultural"],
+          스포츠: ["스포츠", "sports", "sport"],
+          기술: ["기술", "technology", "tech", "IT"],
+          건강: ["건강", "health", "medical", "의료"],
+          교육: ["교육", "education", "educational"],
+          환경: ["환경", "environment", "environmental"],
+          여행: ["여행", "travel", "tourism"],
+          음식: ["음식", "food", "restaurant", "맛집"],
+          엔터테인먼트: ["엔터테인먼트", "entertainment", "연예"],
+          기타: ["기타", "other", "misc"],
+        }
+
+        // Find matching category
+        const detectedCategory = analysisResult.category.toLowerCase()
+        for (const [koreanName, keywords] of Object.entries(categoryMappings)) {
+          if (
+            keywords.some(
+              (keyword) =>
+                detectedCategory.includes(keyword.toLowerCase()) || keyword.toLowerCase().includes(detectedCategory),
+            )
+          ) {
+            const category = newsCategories.find(
+              (cat) =>
+                cat.name.toLowerCase().includes(koreanName.toLowerCase()) ||
+                koreanName.toLowerCase().includes(cat.name.toLowerCase()),
+            )
+            if (category) {
+              categoryId = category.id
+              break
+            }
+          }
+        }
+
+        // If no exact match, try partial matching
+        if (!categoryId) {
+          const category = newsCategories.find(
+            (cat) =>
+              cat.name.toLowerCase().includes(detectedCategory) || detectedCategory.includes(cat.name.toLowerCase()),
+          )
+          if (category) {
+            categoryId = category.id
+          }
         }
       }
 
@@ -381,7 +422,7 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
 
       toast({
         title: "성공",
-        description: `뉴스 분석이 완료되었습니다. ${analysisResult.language !== "ko" ? "모든 내용이 한국어로 번역되었습니다." : ""} 결과를 확인하고 저장해주세요.`,
+        description: `뉴스 분석이 완료되었습니다. ${analysisResult.language !== "ko" ? "모든 내용이 한국어로 번역되었습니다." : ""} ${categoryId ? "카테고리가 자동 선택되었습니다." : ""} 결과를 확인하고 저장해주세요.`,
       })
     } catch (error) {
       console.error("뉴스 분석 오류:", error)
@@ -1267,10 +1308,13 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
                         <Info className="h-4 w-4" />
                         <AlertDescription>
                           유효한 뉴스 URL을 입력하면 AI가 해당 웹페이지의 내용을 분석하여 자동으로 제목, 내용, 요약,
-                          카테고리, 태그를 추출합니다. 외국어 콘텐츠는 자동으로 한국어로 번역됩니다.
+                          작성자, 카테고리, 태그를 추출합니다. 외국어 콘텐츠는 자동으로 한국어로 번역되며, 카테고리는
+                          내용을 분석하여 자동 선택됩니다.
                           <br />
                           <strong>지원 사이트:</strong> sanook.com, bangkokpost.com, thairath.co.th, matichon.co.th,
                           한국 외교부 등
+                          <br />
+                          <strong>자동 기능:</strong> 한국어 번역, 카테고리 자동 선택, 원본 언어 감지
                         </AlertDescription>
                       </Alert>
                       <div className="space-y-3">
@@ -1397,7 +1441,7 @@ export default function AdminInterface({ onLogout }: AdminInterfaceProps) {
                         <Label htmlFor="original_language">원본 언어</Label>
                         <Select
                           value={newsFormData.original_language || "ko"}
-                          onValueChange={(value) => handleNewsInputChange("original_language", value)}
+                          onChange={(value) => handleNewsInputChange("original_language", value)}
                         >
                           <SelectTrigger>
                             <SelectValue />
