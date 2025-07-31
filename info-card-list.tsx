@@ -19,7 +19,13 @@ import {
   getCachedData,
   setCachedData,
 } from "@/lib/optimized-api"
-import { sampleNewsArticles, sampleNewsCategories } from "@/data/sample-news"
+import {
+  getNewsArticlesPaginated,
+  getNewsCategories,
+  incrementNewsViewCount,
+  getCachedNewsData,
+  setCachedNewsData,
+} from "@/lib/news-api"
 
 // Lazy load components for better performance
 const BusinessDetailModal = lazy(() => import("@/components/business-detail-modal"))
@@ -121,6 +127,7 @@ export default function InfoCardList() {
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true)
   const [isCardsLoading, setIsCardsLoading] = useState(true)
   const [isNewsLoading, setIsNewsLoading] = useState(true)
+  const [isNewsCategoriesLoading, setIsNewsCategoriesLoading] = useState(true)
 
   // Weather and exchange rate states
   const [weather, setWeather] = useState<WeatherData | null>(null)
@@ -132,6 +139,11 @@ export default function InfoCardList() {
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [total, setTotal] = useState(0)
+
+  // News pagination state
+  const [newsCurrentPage, setNewsCurrentPage] = useState(1)
+  const [newsHasMore, setNewsHasMore] = useState(true)
+  const [newsTotal, setNewsTotal] = useState(0)
 
   // Fetch weather data
   const fetchWeather = async () => {
@@ -232,6 +244,35 @@ export default function InfoCardList() {
     }
   }
 
+  // Fetch news categories
+  const fetchNewsCategories = async () => {
+    try {
+      setIsNewsCategoriesLoading(true)
+
+      // Check cache first
+      const cached = getCachedNewsData<NewsCategory[]>("categories")
+      if (cached) {
+        setNewsCategories(cached)
+        setIsNewsCategoriesLoading(false)
+        return
+      }
+
+      const fetchedCategories = await getNewsCategories()
+      setNewsCategories(fetchedCategories)
+      setCachedNewsData("categories", fetchedCategories)
+    } catch (error) {
+      console.error("Error fetching news categories:", error)
+      // Set fallback categories
+      setNewsCategories([
+        { id: 1, name: "정치", color_class: "bg-red-100 text-red-800" },
+        { id: 2, name: "경제", color_class: "bg-blue-100 text-blue-800" },
+        { id: 3, name: "사회", color_class: "bg-green-100 text-green-800" },
+      ])
+    } finally {
+      setIsNewsCategoriesLoading(false)
+    }
+  }
+
   // Fetch business cards
   const fetchCards = async (page = 1, reset = false) => {
     try {
@@ -267,19 +308,32 @@ export default function InfoCardList() {
     }
   }
 
-  // Fetch news articles (using sample data for now)
-  const fetchNews = async () => {
+  // Fetch news articles
+  const fetchNews = async (page = 1, reset = false) => {
     try {
-      setIsNewsLoading(true)
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      if (reset) {
+        setIsNewsLoading(true)
+      }
 
-      setNewsArticles(sampleNewsArticles)
-      setNewsCategories(sampleNewsCategories)
+      const categoryFilter = selectedNewsCategory !== "all" ? selectedNewsCategory : undefined
+      const searchFilter = newsSearchTerm || undefined
+
+      const result = await getNewsArticlesPaginated(page, 20, categoryFilter, searchFilter)
+
+      if (reset) {
+        setNewsArticles(result.articles)
+      } else {
+        setNewsArticles((prev) => [...prev, ...result.articles])
+      }
+
+      setNewsHasMore(result.hasMore)
+      setNewsTotal(result.total)
+      setNewsCurrentPage(page)
     } catch (error) {
       console.error("Error fetching news:", error)
-      setNewsArticles([])
-      setNewsCategories([])
+      if (reset) {
+        setNewsArticles([])
+      }
     } finally {
       setIsNewsLoading(false)
     }
@@ -289,10 +343,10 @@ export default function InfoCardList() {
   useEffect(() => {
     const loadInitialData = async () => {
       // Load categories first (highest priority)
-      await fetchCategories()
+      await Promise.all([fetchCategories(), fetchNewsCategories()])
 
       // Load business cards and news
-      await Promise.all([fetchCards(1, true), fetchNews()])
+      await Promise.all([fetchCards(1, true), fetchNews(1, true)])
 
       // Load weather and exchange rate in background (lower priority)
       setTimeout(() => {
@@ -318,6 +372,18 @@ export default function InfoCardList() {
     }
   }, [selectedCategory, searchTerm, categories, activeTab])
 
+  // Handle category and search changes for news
+  useEffect(() => {
+    if (activeTab === "news") {
+      const timeoutId = setTimeout(() => {
+        setNewsCurrentPage(1)
+        fetchNews(1, true)
+      }, 300)
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [selectedNewsCategory, newsSearchTerm, newsCategories, activeTab])
+
   // Handle card detail click
   const handleBusinessDetailClick = (card: BusinessCardType) => {
     setSelectedCard(card)
@@ -329,13 +395,20 @@ export default function InfoCardList() {
   const handleNewsDetailClick = (article: NewsArticle) => {
     setSelectedArticle(article)
     setIsNewsModalOpen(true)
-    // Increment news view count (would be implemented in real API)
+    incrementNewsViewCount(article.id)
   }
 
-  // Handle load more
+  // Handle load more for business cards
   const handleLoadMore = () => {
     if (hasMore && !isCardsLoading) {
       fetchCards(currentPage + 1, false)
+    }
+  }
+
+  // Handle load more for news
+  const handleNewsLoadMore = () => {
+    if (newsHasMore && !isNewsLoading) {
+      fetchNews(newsCurrentPage + 1, false)
     }
   }
 
@@ -360,37 +433,21 @@ export default function InfoCardList() {
     })
   }, [cards])
 
-  // Memoized filtered and sorted news
-  const filteredNews = useMemo(() => {
-    let filtered = [...newsArticles]
-
-    // Filter by category
-    if (selectedNewsCategory !== "all") {
-      filtered = filtered.filter((article) => article.category === selectedNewsCategory)
-    }
-
-    // Filter by search term
-    if (newsSearchTerm) {
-      const searchLower = newsSearchTerm.toLowerCase()
-      filtered = filtered.filter(
-        (article) =>
-          article.title.toLowerCase().includes(searchLower) ||
-          article.summary.toLowerCase().includes(searchLower) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(searchLower)),
-      )
-    }
-
-    // Sort by pinned, breaking, then by date
-    return filtered.sort((a, b) => {
+  // Memoized sorted news (already filtered by API)
+  const sortedNews = useMemo(() => {
+    return [...newsArticles].sort((a, b) => {
+      // Pinned first
       if (a.isPinned && !b.isPinned) return -1
       if (!a.isPinned && b.isPinned) return 1
 
+      // Breaking news second
       if (a.isBreaking && !b.isBreaking) return -1
       if (!a.isBreaking && b.isBreaking) return 1
 
+      // Then by published date
       return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     })
-  }, [newsArticles, selectedNewsCategory, newsSearchTerm])
+  }, [newsArticles])
 
   // Format time for display
   const formatTime = (timestamp: number) => {
@@ -488,11 +545,17 @@ export default function InfoCardList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">전체 카테고리</SelectItem>
-                {newsCategories.map((category) => (
-                  <SelectItem key={category.id} value={category.name}>
-                    {category.name}
+                {isNewsCategoriesLoading ? (
+                  <SelectItem value="loading" disabled>
+                    로딩 중...
                   </SelectItem>
-                ))}
+                ) : (
+                  newsCategories.map((category) => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -500,7 +563,7 @@ export default function InfoCardList() {
           {/* News Results Summary */}
           <div className="flex items-center justify-between text-sm text-gray-600">
             <span>
-              총 {filteredNews.length}개의 뉴스
+              총 {newsTotal}개의 뉴스
               {newsSearchTerm && ` (검색: "${newsSearchTerm}")`}
               {selectedNewsCategory !== "all" && ` (카테고리: ${selectedNewsCategory})`}
             </span>
@@ -525,10 +588,10 @@ export default function InfoCardList() {
 
           {/* News Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {isNewsLoading ? (
+            {isNewsLoading && newsArticles.length === 0 ? (
               Array.from({ length: 8 }).map((_, index) => <CardSkeleton key={index} />)
-            ) : filteredNews.length > 0 ? (
-              filteredNews.map((article, index) => (
+            ) : sortedNews.length > 0 ? (
+              sortedNews.map((article, index) => (
                 <div key={article.id} className="h-full">
                   <NewsCard article={article} onDetailClick={handleNewsDetailClick} />
                   {/* Insert ads every 8 articles */}
@@ -551,6 +614,23 @@ export default function InfoCardList() {
               </div>
             )}
           </div>
+
+          {/* Load More Button for News */}
+          {newsHasMore && !isNewsLoading && sortedNews.length > 0 && (
+            <div className="text-center">
+              <Button onClick={handleNewsLoadMore} variant="outline" size="lg" className="min-w-[200px] bg-transparent">
+                더 보기 ({sortedNews.length}/{newsTotal})
+              </Button>
+            </div>
+          )}
+
+          {/* Loading indicator for news pagination */}
+          {isNewsLoading && newsArticles.length > 0 && (
+            <div className="text-center py-4">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+              <p className="text-sm text-gray-500 mt-2">로딩 중...</p>
+            </div>
+          )}
         </TabsContent>
 
         {/* Business Tab Content */}
