@@ -66,6 +66,14 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
           {String(news.title || "")}
         </h3>
 
+        {/* Image Placeholder */}
+        <div className="h-[7.5rem] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mb-2">
+          <div className="text-center text-gray-500">
+            <div className="text-2xl mb-1">📷</div>
+            <div className="text-xs">이미지 영역</div>
+          </div>
+        </div>
+
         <p className="text-gray-600 text-sm leading-relaxed h-[4.5rem] overflow-hidden line-clamp-3">
           {String(news.summary || "")}
         </p>
