@@ -19,7 +19,12 @@ import {
   getCachedData,
   setCachedData,
 } from "@/lib/optimized-api"
-import { sampleNews } from "@/data/sample-news"
+import {
+  getNewsPaginated,
+  getNewsCategories,
+  checkNewsTablesExist,
+  incrementNewsViewCount,
+} from "@/lib/admin-news-actions"
 
 // Lazy load components for better performance
 const BusinessDetailModal = lazy(() => import("@/components/business-detail-modal"))
@@ -110,14 +115,18 @@ export default function InfoCardList() {
 
   // News state - Initialize as empty array
   const [news, setNews] = useState<NewsItem[]>([])
+  const [newsCategories, setNewsCategories] = useState<any[]>([])
   const [newsSearchTerm, setNewsSearchTerm] = useState<string>("")
+  const [newsCategory, setNewsCategory] = useState<string>("all")
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null)
   const [isNewsModalOpen, setIsNewsModalOpen] = useState(false)
+  const [newsTablesExist, setNewsTablesExist] = useState(true)
 
   // Loading states
   const [isLoading, setIsLoading] = useState(true)
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true)
   const [isCardsLoading, setIsCardsLoading] = useState(true)
+  const [isNewsLoading, setIsNewsLoading] = useState(true)
 
   // Weather and exchange rate states
   const [weather, setWeather] = useState<WeatherData | null>(null)
@@ -129,6 +138,11 @@ export default function InfoCardList() {
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [total, setTotal] = useState(0)
+
+  // News pagination state
+  const [newsCurrentPage, setNewsCurrentPage] = useState(1)
+  const [newsHasMore, setNewsHasMore] = useState(true)
+  const [newsTotal, setNewsTotal] = useState(0)
 
   // Fetch weather data
   const fetchWeather = async () => {
@@ -272,15 +286,96 @@ export default function InfoCardList() {
     }
   }
 
-  // Initialize news data
-  const initializeNews = () => {
+  // Fetch news from database
+  const fetchNews = async (page = 1, reset = false) => {
     try {
-      // Ensure sampleNews is an array
-      const newsData = Array.isArray(sampleNews) ? sampleNews : []
-      setNews(newsData)
+      if (reset) {
+        setIsNewsLoading(true)
+      }
+
+      // Check if news tables exist first
+      const tablesExist = await checkNewsTablesExist()
+      setNewsTablesExist(tablesExist)
+
+      if (!tablesExist) {
+        setNews([])
+        setNewsTotal(0)
+        setNewsHasMore(false)
+        return
+      }
+
+      // Prepare filters
+      const filters: any = {}
+      if (newsCategory !== "all") {
+        filters.category = newsCategory
+      }
+      if (newsSearchTerm) {
+        filters.search = newsSearchTerm
+      }
+
+      const result = await getNewsPaginated(page, 12, filters)
+
+      // Transform database news to match NewsItem interface
+      const transformedNews: NewsItem[] = result.news.map((dbNews: any) => ({
+        id: dbNews.id,
+        title: dbNews.title || "",
+        summary: dbNews.summary || "",
+        content: dbNews.content || "",
+        content_ko: dbNews.content_ko || dbNews.content,
+        source: dbNews.author || "알 수 없음",
+        source_url: dbNews.source_url || "",
+        author: dbNews.author || "",
+        published_at: dbNews.published_at || dbNews.created_at,
+        created_at: dbNews.created_at,
+        updated_at: dbNews.updated_at,
+        category: dbNews.category?.name || "일반",
+        tags: dbNews.tags?.map((tag: any) => tag.name) || [],
+        language: dbNews.original_language || "ko",
+        location: "태국",
+        ai_analysis: dbNews.ai_analysis || "",
+        reading_time: Math.ceil((dbNews.content?.length || 0) / 200), // Estimate reading time
+        view_count: dbNews.view_count || 0,
+        is_featured: dbNews.is_featured || false,
+        is_active: dbNews.is_active !== false,
+      }))
+
+      if (reset) {
+        setNews(transformedNews)
+      } else {
+        setNews((prev) => {
+          const prevNews = Array.isArray(prev) ? prev : []
+          return [...prevNews, ...transformedNews]
+        })
+      }
+
+      setNewsHasMore(Boolean(result.hasMore))
+      setNewsTotal(Number(result.total) || 0)
+      setNewsCurrentPage(Number(page))
     } catch (error) {
-      console.error("Error initializing news:", error)
-      setNews([])
+      console.error("Error fetching news:", error)
+      setNewsTablesExist(false)
+      if (reset) {
+        setNews([])
+      }
+    } finally {
+      setIsNewsLoading(false)
+    }
+  }
+
+  // Fetch news categories
+  const fetchNewsCategories = async () => {
+    try {
+      const tablesExist = await checkNewsTablesExist()
+      if (!tablesExist) {
+        setNewsCategories([])
+        return
+      }
+
+      const categories = await getNewsCategories()
+      setNewsCategories(Array.isArray(categories) ? categories : [])
+    } catch (error) {
+      console.error("Error fetching news categories:", error)
+      setNewsCategories([])
     }
   }
 
@@ -293,8 +388,8 @@ export default function InfoCardList() {
       // Load business cards second (high priority)
       await fetchCards(1, true)
 
-      // Initialize news data
-      initializeNews()
+      // Load news data from database
+      await Promise.all([fetchNews(1, true), fetchNewsCategories()])
 
       // Load weather and exchange rate in background (lower priority)
       setTimeout(() => {
@@ -306,7 +401,7 @@ export default function InfoCardList() {
     loadInitialData()
   }, [])
 
-  // Handle category and search changes
+  // Handle category and search changes for business cards
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setCurrentPage(1) // 페이지를 1로 리셋
@@ -315,6 +410,16 @@ export default function InfoCardList() {
 
     return () => clearTimeout(timeoutId)
   }, [selectedCategory, searchTerm, categories]) // categories 의존성 추가
+
+  // Handle news search and category changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setNewsCurrentPage(1) // 페이지를 1로 리셋
+      fetchNews(1, true)
+    }, 300) // Debounce search
+
+    return () => clearTimeout(timeoutId)
+  }, [newsSearchTerm, newsCategory])
 
   // Handle card detail click
   const handleBusinessDetailClick = (card: BusinessCardType) => {
@@ -327,13 +432,23 @@ export default function InfoCardList() {
   const handleNewsDetailClick = (newsItem: NewsItem) => {
     setSelectedNews(newsItem)
     setIsNewsModalOpen(true)
-    // Increment news view count (if needed)
+    // Increment news view count
+    if (newsItem.id) {
+      incrementNewsViewCount(newsItem.id)
+    }
   }
 
-  // Handle load more
+  // Handle load more for business cards
   const handleLoadMore = () => {
     if (hasMore && !isCardsLoading) {
       fetchCards(currentPage + 1, false)
+    }
+  }
+
+  // Handle load more for news
+  const handleNewsLoadMore = () => {
+    if (newsHasMore && !isNewsLoading) {
+      fetchNews(newsCurrentPage + 1, false)
     }
   }
 
@@ -359,23 +474,18 @@ export default function InfoCardList() {
     })
   }, [cards])
 
-  // Filtered news based on search
-  const filteredNews = useMemo(() => {
+  // Sorted news (already filtered by database query)
+  const sortedNews = useMemo(() => {
     const newsArray = Array.isArray(news) ? news : []
-    if (!newsSearchTerm) return newsArray
+    return [...newsArray].sort((a, b) => {
+      // Featured news first
+      if (a.is_featured && !b.is_featured) return -1
+      if (!a.is_featured && b.is_featured) return 1
 
-    return newsArray.filter(
-      (item) =>
-        String(item.title || "")
-          .toLowerCase()
-          .includes(newsSearchTerm.toLowerCase()) ||
-        String(item.summary || "")
-          .toLowerCase()
-          .includes(newsSearchTerm.toLowerCase()) ||
-        (Array.isArray(item.tags) &&
-          item.tags.some((tag) => String(tag).toLowerCase().includes(newsSearchTerm.toLowerCase()))),
-    )
-  }, [news, newsSearchTerm])
+      // Then by published date
+      return new Date(b.published_at || 0).getTime() - new Date(a.published_at || 0).getTime()
+    })
+  }, [news])
 
   // Format time for display
   const formatTime = (timestamp: number) => {
@@ -449,7 +559,7 @@ export default function InfoCardList() {
           </TabsTrigger>
           <TabsTrigger value="news" className="flex items-center gap-2">
             <Newspaper className="w-4 h-4" />
-            현지 뉴스
+            현지 뉴스 {!newsTablesExist && "(DB 없음)"}
           </TabsTrigger>
         </TabsList>
 
@@ -574,63 +684,131 @@ export default function InfoCardList() {
 
         {/* News Tab Content */}
         <TabsContent value="news" className="space-y-6">
-          {/* News Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="뉴스 제목, 내용으로 검색..."
-              value={newsSearchTerm}
-              onChange={(e) => setNewsSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+          {newsTablesExist ? (
+            <>
+              {/* News Search and Filter */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="뉴스 제목, 내용으로 검색..."
+                    value={newsSearchTerm}
+                    onChange={(e) => setNewsSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
 
-          {/* News Results Summary */}
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>
-              총 {Array.isArray(filteredNews) ? filteredNews.length : 0}개의 뉴스
-              {newsSearchTerm && ` (검색: "${newsSearchTerm}")`}
-            </span>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              <span>최신순 정렬</span>
-              {newsSearchTerm && (
-                <Button variant="ghost" size="sm" onClick={() => setNewsSearchTerm("")} className="text-xs">
-                  검색 초기화
-                </Button>
-              )}
-            </div>
-          </div>
+                <Select value={newsCategory} onValueChange={setNewsCategory}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="카테고리 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">전체 카테고리</SelectItem>
+                    {Array.isArray(newsCategories) &&
+                      newsCategories.map((category) => (
+                        <SelectItem key={category.id} value={category.name}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* News Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.isArray(filteredNews) && filteredNews.length > 0 ? (
-              filteredNews.map((newsItem, index) => (
-                <div key={newsItem.id} className="h-full">
-                  <NewsCard news={newsItem} onDetailClick={handleNewsDetailClick} />
-                  {/* Insert ads every 6 news items */}
-                  {(index + 1) % 6 === 0 && (
-                    <div className="col-span-full my-4">
-                      <Card className="p-4 bg-gray-50 border-dashed">
-                        <div className="text-center text-gray-500 text-sm">광고 영역</div>
-                      </Card>
-                    </div>
+              {/* News Results Summary */}
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span>
+                  총 {newsTotal}개의 뉴스
+                  {newsSearchTerm && ` (검색: "${newsSearchTerm}")`}
+                  {newsCategory !== "all" && ` (카테고리: ${newsCategory})`}
+                </span>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>최신순 정렬</span>
+                  {(newsSearchTerm || newsCategory !== "all") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setNewsSearchTerm("")
+                        setNewsCategory("all")
+                      }}
+                      className="text-xs"
+                    >
+                      필터 초기화
+                    </Button>
                   )}
                 </div>
-              ))
-            ) : (
-              // No news results
-              <div className="col-span-full text-center py-12">
-                <div className="text-gray-500 mb-4">
-                  <Newspaper className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">{newsSearchTerm ? "검색 결과가 없습니다" : "뉴스가 없습니다"}</p>
-                  <p className="text-sm">
-                    {newsSearchTerm ? "다른 키워드로 검색해보세요" : "곧 새로운 뉴스가 업데이트됩니다"}
-                  </p>
-                </div>
               </div>
-            )}
-          </div>
+
+              {/* News Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {isNewsLoading && (!Array.isArray(sortedNews) || sortedNews.length === 0) ? (
+                  // Initial loading skeletons
+                  Array.from({ length: 6 }).map((_, index) => <CardSkeleton key={index} />)
+                ) : Array.isArray(sortedNews) && sortedNews.length > 0 ? (
+                  sortedNews.map((newsItem, index) => (
+                    <div key={newsItem.id} className="h-full">
+                      <NewsCard news={newsItem} onDetailClick={handleNewsDetailClick} />
+                      {/* Insert ads every 6 news items */}
+                      {(index + 1) % 6 === 0 && (
+                        <div className="col-span-full my-4">
+                          <Card className="p-4 bg-gray-50 border-dashed">
+                            <div className="text-center text-gray-500 text-sm">광고 영역</div>
+                          </Card>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  // No news results
+                  <div className="col-span-full text-center py-12">
+                    <div className="text-gray-500 mb-4">
+                      <Newspaper className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg font-medium">
+                        {newsSearchTerm || newsCategory !== "all" ? "검색 결과가 없습니다" : "뉴스가 없습니다"}
+                      </p>
+                      <p className="text-sm">
+                        {newsSearchTerm || newsCategory !== "all"
+                          ? "다른 키워드나 카테고리로 검색해보세요"
+                          : "관리자 페이지에서 뉴스를 추가해주세요"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Load More Button for News */}
+              {newsHasMore && !isNewsLoading && Array.isArray(sortedNews) && sortedNews.length > 0 && (
+                <div className="text-center">
+                  <Button
+                    onClick={handleNewsLoadMore}
+                    variant="outline"
+                    size="lg"
+                    className="min-w-[200px] bg-transparent"
+                  >
+                    더 보기 ({sortedNews.length}/{newsTotal})
+                  </Button>
+                </div>
+              )}
+
+              {/* Loading indicator for news pagination */}
+              {isNewsLoading && Array.isArray(news) && news.length > 0 && (
+                <div className="text-center py-4">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+                  <p className="text-sm text-gray-500 mt-2">뉴스 로딩 중...</p>
+                </div>
+              )}
+            </>
+          ) : (
+            // News tables don't exist
+            <div className="text-center py-12">
+              <div className="text-gray-500 mb-4">
+                <Newspaper className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">뉴스 데이터베이스가 설정되지 않았습니다</p>
+                <p className="text-sm">관리자에게 문의하여 뉴스 테이블을 생성해주세요</p>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 

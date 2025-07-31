@@ -22,6 +22,10 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
       의료: "bg-red-100 text-red-800",
       생활: "bg-orange-100 text-orange-800",
       일반: "bg-gray-100 text-gray-800",
+      정치: "bg-red-100 text-red-800",
+      스포츠: "bg-orange-100 text-orange-800",
+      기술: "bg-indigo-100 text-indigo-800",
+      국제: "bg-yellow-100 text-yellow-800",
     }
     return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"
   }
@@ -40,6 +44,7 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
   }
 
   const truncateText = (text: string, maxLength: number) => {
+    if (!text) return ""
     if (text.length <= maxLength) return text
     return text.substring(0, maxLength) + "..."
   }
@@ -59,7 +64,7 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
           </div>
           <div className="flex items-center gap-1 text-xs text-gray-500">
             <Globe className="w-3 h-3" />
-            <span>{String(news.language).toUpperCase()}</span>
+            <span>{String(news.language || "ko").toUpperCase()}</span>
           </div>
         </div>
 
