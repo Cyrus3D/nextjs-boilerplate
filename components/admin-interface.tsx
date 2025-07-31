@@ -156,6 +156,10 @@ export default function AdminInterface() {
   const [analysisText, setAnalysisText] = useState("")
   const [analysisUrl, setAnalysisUrl] = useState("")
 
+  // 번역 관련 상태 추가
+  const [translationEnabled, setTranslationEnabled] = useState(true)
+  const [detectedLanguage, setDetectedLanguage] = useState<string>("")
+
   useEffect(() => {
     loadData()
     checkAIStatusOnLoad()
@@ -276,7 +280,6 @@ export default function AdminInterface() {
     }
   }
 
-  // 뉴스 URL AI 분석
   const handleAnalyzeUrl = async () => {
     if (!analysisUrl.trim()) {
       toast({
@@ -298,14 +301,22 @@ export default function AdminInterface() {
 
     setAnalyzingText(true)
     try {
-      const parsedData = await parseNewsData(analysisUrl)
+      const parsedData = await parseNewsData(analysisUrl, translationEnabled)
       setNewNews((prev) => ({
         ...prev,
         ...parsedData,
       }))
+
+      if (parsedData.original_language) {
+        setDetectedLanguage(parsedData.original_language)
+      }
+
+      const languageNames = { ko: "한국어", en: "영어", th: "태국어" }
+      const langName = languageNames[parsedData.original_language as keyof typeof languageNames] || "알 수 없음"
+
       toast({
         title: "분석 완료",
-        description: "URL 분석이 완료되었습니다. 결과를 확인하고 수정해주세요.",
+        description: `URL 분석이 완료되었습니다. 감지된 언어: ${langName}${parsedData.is_translated ? " (한국어로 번역됨)" : ""}`,
       })
     } catch (error) {
       toast({
@@ -947,6 +958,22 @@ export default function AdminInterface() {
                                 비활성화
                               </Badge>
                             )}
+                            {newsItem.is_translated && (
+                              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                <Globe className="h-3 w-3 mr-1" />
+                                번역됨
+                              </Badge>
+                            )}
+                            {newsItem.original_language && newsItem.original_language !== "ko" && (
+                              <Badge variant="outline" className="text-xs">
+                                원본:{" "}
+                                {newsItem.original_language === "en"
+                                  ? "영어"
+                                  : newsItem.original_language === "th"
+                                    ? "태국어"
+                                    : newsItem.original_language}
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-sm text-gray-600 mb-2">{newsItem.summary}</p>
 
@@ -1200,6 +1227,39 @@ export default function AdminInterface() {
                 />
               </div>
 
+              {/* 번역 옵션 추가 */}
+              <div className="flex items-center space-x-2 p-4 bg-blue-50 rounded-lg">
+                <Switch
+                  id="translation-enabled"
+                  checked={translationEnabled}
+                  onCheckedChange={setTranslationEnabled}
+                  disabled={!aiStatus?.isActive}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="translation-enabled" className="font-medium">
+                    자동 번역 활성화
+                  </Label>
+                  <p className="text-sm text-gray-600">태국어나 영어 뉴스를 자동으로 한국어로 번역합니다.</p>
+                </div>
+              </div>
+
+              {detectedLanguage && (
+                <Alert>
+                  <Globe className="h-4 w-4" />
+                  <AlertDescription>
+                    감지된 언어:{" "}
+                    {detectedLanguage === "ko"
+                      ? "한국어"
+                      : detectedLanguage === "en"
+                        ? "영어"
+                        : detectedLanguage === "th"
+                          ? "태국어"
+                          : "알 수 없음"}
+                    {newNews.is_translated && " (한국어로 번역됨)"}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Button
                 onClick={handleAnalyzeUrl}
                 disabled={!analysisUrl.trim() || analyzingText || !aiStatus?.isActive}
@@ -1208,7 +1268,7 @@ export default function AdminInterface() {
                 {analyzingText ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    분석 중...
+                    {translationEnabled ? "분석 및 번역 중..." : "분석 중..."}
                   </>
                 ) : (
                   <>
