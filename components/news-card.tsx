@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Eye, ExternalLink, Calendar, User } from "lucide-react"
+import { Eye, ExternalLink, Calendar, User, Tag } from "lucide-react"
 import { NewsDetailModal } from "./news-detail-modal"
 import { incrementNewsViewCount } from "@/lib/admin-news-actions"
 
@@ -12,36 +12,59 @@ interface NewsCardProps {
   news: {
     id: number
     title: string
-    summary: string
+    summary?: string
     content: string
     author?: string | null
     source_url?: string | null
     image_url?: string | null
     published_at: string
-    view_count: number
-    is_featured: boolean
+    view_count?: number
+    is_featured?: boolean
+    is_active?: boolean
+    original_language?: string
+    is_translated?: boolean
     category?: {
       id: number
       name: string
-      color_class: string
+      color_class?: string
     } | null
-    tags: Array<{
+    tags?: Array<{
       id: number
       name: string
     }>
   }
 }
 
-export function NewsCard({ news }: NewsCardProps) {
+export default function NewsCard({ news }: NewsCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [currentViewCount, setCurrentViewCount] = useState(news.view_count || 0)
+  const [currentViewCount, setCurrentViewCount] = useState(Number(news.view_count) || 0)
+  const [imageError, setImageError] = useState(false)
+
+  // 안전한 기본값 설정
+  const safeNews = {
+    id: Number(news.id),
+    title: String(news.title || "제목 없음"),
+    summary: String(news.summary || news.content?.substring(0, 150) + "..." || "요약 정보가 없습니다."),
+    content: String(news.content || "내용 없음"),
+    author: news.author ? String(news.author) : null,
+    source_url: news.source_url ? String(news.source_url) : null,
+    image_url: news.image_url ? String(news.image_url) : null,
+    published_at: String(news.published_at || new Date().toISOString()),
+    view_count: Number(news.view_count) || 0,
+    is_featured: Boolean(news.is_featured),
+    is_active: Boolean(news.is_active),
+    is_translated: Boolean(news.is_translated),
+    original_language: String(news.original_language || "ko"),
+    category: news.category || null,
+    tags: Array.isArray(news.tags) ? news.tags : [],
+  }
 
   const handleReadMore = async () => {
     setIsModalOpen(true)
 
     // 조회수 증가
     try {
-      await incrementNewsViewCount(news.id)
+      await incrementNewsViewCount(safeNews.id)
       setCurrentViewCount((prev) => prev + 1)
     } catch (error) {
       console.error("Failed to increment view count:", error)
@@ -50,113 +73,133 @@ export function NewsCard({ news }: NewsCardProps) {
 
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString("ko-KR", {
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) {
+        return "날짜 정보 없음"
+      }
+      return date.toLocaleDateString("ko-KR", {
         year: "numeric",
-        month: "long",
+        month: "short",
         day: "numeric",
       })
     } catch (error) {
-      return "날짜 없음"
+      console.error("Date formatting error:", error)
+      return "날짜 정보 없음"
     }
   }
 
   const formatViewCount = (count: number) => {
-    if (count >= 1000) {
-      return `${(count / 1000).toFixed(1)}k`
+    try {
+      if (count >= 1000) {
+        return `${(count / 1000).toFixed(1)}k`
+      }
+      return count.toLocaleString()
+    } catch (error) {
+      return "0"
     }
-    return count.toString()
   }
 
   return (
     <>
       <Card
-        className={`h-full transition-all duration-200 hover:shadow-lg ${news.is_featured ? "ring-2 ring-blue-500" : ""}`}
+        className={`h-full flex flex-col hover:shadow-lg transition-shadow duration-200 ${safeNews.is_featured ? "ring-2 ring-blue-500" : ""}`}
       >
-        {news.image_url && (
-          <div className="aspect-video overflow-hidden rounded-t-lg">
+        {/* 이미지 섹션 */}
+        {safeNews.image_url && !imageError && (
+          <div className="relative h-48 overflow-hidden rounded-t-lg">
             <img
-              src={news.image_url || "/placeholder.svg"}
-              alt={news.title}
+              src={safeNews.image_url || "/placeholder.svg"}
+              alt={safeNews.title}
               className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                target.style.display = "none"
-              }}
+              onError={() => setImageError(true)}
+              loading="lazy"
             />
+            {safeNews.is_featured && (
+              <Badge className="absolute top-2 left-2 bg-blue-500 hover:bg-blue-600">추천</Badge>
+            )}
+            {safeNews.is_translated && (
+              <Badge variant="outline" className="absolute top-2 right-2 bg-white/90">
+                번역됨
+              </Badge>
+            )}
           </div>
         )}
 
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2 mb-2">
-            {news.category && (
-              <Badge variant="secondary" className={news.category.color_class}>
-                {news.category.name}
-              </Badge>
-            )}
-            {news.is_featured && (
-              <Badge variant="default" className="bg-blue-500 text-white">
-                추천
+            <CardTitle className="text-lg font-semibold line-clamp-2 flex-1">{safeNews.title}</CardTitle>
+            {safeNews.category && (
+              <Badge variant="secondary" className={safeNews.category.color_class || ""}>
+                {safeNews.category.name}
               </Badge>
             )}
           </div>
-
-          <CardTitle className="text-lg leading-tight line-clamp-2">{news.title}</CardTitle>
         </CardHeader>
 
-        <CardContent className="pt-0">
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{news.summary}</p>
+        <CardContent className="flex-1 flex flex-col">
+          {/* 요약 */}
+          <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">{safeNews.summary}</p>
 
-          {news.tags && news.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-4">
-              {news.tags.slice(0, 3).map((tag) => (
+          {/* 태그 */}
+          {safeNews.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-3">
+              <Tag className="h-3 w-3 text-muted-foreground" />
+              {safeNews.tags.slice(0, 3).map((tag) => (
                 <Badge key={tag.id} variant="outline" className="text-xs">
                   {tag.name}
                 </Badge>
               ))}
-              {news.tags.length > 3 && (
+              {safeNews.tags.length > 3 && (
                 <Badge variant="outline" className="text-xs">
-                  +{news.tags.length - 3}
+                  +{safeNews.tags.length - 3}
                 </Badge>
               )}
             </div>
           )}
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
-            <div className="flex items-center gap-4">
+          {/* 메타 정보 */}
+          <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
+            <div className="flex items-center gap-3">
               <div className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                <span>{formatDate(news.published_at)}</span>
+                <Eye className="h-3 w-3" />
+                <span>{formatViewCount(currentViewCount)}</span>
               </div>
-
-              {news.author && (
-                <div className="flex items-center gap-1">
-                  <User className="w-3 h-3" />
-                  <span>{news.author}</span>
-                </div>
-              )}
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                <span>{formatDate(safeNews.published_at)}</span>
+              </div>
             </div>
-
-            <div className="flex items-center gap-1">
-              <Eye className="w-3 h-3" />
-              <span>{formatViewCount(currentViewCount)}</span>
-            </div>
+            {safeNews.original_language && (
+              <Badge variant="outline" className="text-xs">
+                {safeNews.original_language.toUpperCase()}
+              </Badge>
+            )}
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="default" size="sm" onClick={handleReadMore} className="flex-1">
+          {/* 작성자 */}
+          {safeNews.author && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
+              <User className="h-3 w-3" />
+              <span>{safeNews.author}</span>
+            </div>
+          )}
+
+          {/* 액션 버튼 */}
+          <div className="flex gap-2 mt-auto">
+            <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={handleReadMore}>
               자세히 보기
             </Button>
-
-            {news.source_url && (
-              <Button variant="outline" size="sm" onClick={() => window.open(news.source_url!, "_blank")}>
-                <ExternalLink className="w-4 h-4" />
+            {safeNews.source_url && (
+              <Button variant="ghost" size="sm" onClick={() => window.open(safeNews.source_url!, "_blank")}>
+                <ExternalLink className="h-4 w-4" />
               </Button>
             )}
           </div>
         </CardContent>
       </Card>
 
-      <NewsDetailModal news={news} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* 상세 모달 */}
+      <NewsDetailModal news={safeNews} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </>
   )
 }

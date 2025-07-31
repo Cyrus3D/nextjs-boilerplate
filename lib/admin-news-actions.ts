@@ -1,405 +1,254 @@
 "use server"
 
-import { createClient } from "@/lib/supabase"
-import { revalidatePath } from "next/cache"
+import { supabase } from "./supabase"
+import { generateText } from "ai"
+import { openai } from "@ai-sdk/openai"
 
-// 뉴스 테이블 존재 확인 함수
-export async function checkNewsTablesExist(): Promise<boolean> {
+export async function getNewsArticles() {
   try {
-    const supabase = createClient()
-
-    // news 테이블 존재 확인
-    const { error } = await supabase.from("news").select("id").limit(1)
-
-    if (error) {
-      if (error.message.includes("does not exist") || error.code === "42P01") {
-        console.log("News tables do not exist:", error.message)
-        return false
-      }
-      console.error("Error checking news tables:", error)
-      return false
-    }
-
-    return true
-  } catch (error) {
-    console.error("Error checking news tables:", error)
-    return false
-  }
-}
-
-// 뉴스 목록 가져오기
-export async function getNews(limit = 10, offset = 0) {
-  try {
-    const tablesExist = await checkNewsTablesExist()
-    if (!tablesExist) {
-      return { data: [], error: null, count: 0 }
-    }
-
-    const supabase = createClient()
-
-    const { data, error, count } = await supabase
-      .from("news")
-      .select(
-        `
-        id,
-        title,
-        summary,
-        content,
-        author,
-        source_url,
-        image_url,
-        published_at,
-        view_count,
-        is_featured,
-        is_active,
-        original_language,
-        is_translated,
-        created_at,
-        updated_at,
-        category_id,
-        category:news_categories(
-          id,
-          name,
-          color_class
+    const { data, error } = await supabase
+      .from("news_articles")
+      .select(`
+        *,
+        category:news_categories(id, name, color_class),
+        tags:news_article_tags(
+          tag:news_tags(id, name)
         )
-      `,
-        { count: "exact" },
-      )
+      `)
       .eq("is_active", true)
       .order("published_at", { ascending: false })
-      .range(offset, offset + limit - 1)
 
     if (error) {
       console.error("Error fetching news:", error)
-      return { data: [], error: error.message, count: 0 }
+      return []
     }
 
-    // 태그 정보 별도 조회
-    const newsIds = (data || []).map((item) => item.id)
-    let tagsData: any[] = []
+    return (
+      data?.map((article) => ({
+        ...article,
+        tags: article.tags?.map((t: any) => t.tag) || [],
+      })) || []
+    )
+  } catch (error) {
+    console.error("Error in getNewsArticles:", error)
+    return []
+  }
+}
 
-    if (newsIds.length > 0) {
-      const { data: tagRelations } = await supabase
-        .from("news_tag_relations")
-        .select(`
-          news_id,
-          tag:news_tags(
-            id,
-            name
-          )
-        `)
-        .in("news_id", newsIds)
-
-      tagsData = tagRelations || []
-    }
-
-    // 뉴스별 태그 그룹화
-    const tagsMap = new Map<number, any[]>()
-    tagsData.forEach((relation) => {
-      if (!tagsMap.has(relation.news_id)) {
-        tagsMap.set(relation.news_id, [])
-      }
-      if (relation.tag) {
-        tagsMap.get(relation.news_id)?.push(relation.tag)
-      }
+export async function incrementNewsViewCount(newsId: number) {
+  try {
+    const { error } = await supabase.rpc("increment_news_view_count", {
+      news_id: newsId,
     })
 
-    // 안전한 기본값 설정
-    const safeData = (data || []).map((item) => ({
-      id: item.id,
-      title: item.title || "제목 없음",
-      summary: item.summary || (item.content ? item.content.substring(0, 150) + "..." : "요약 없음"),
-      content: item.content || "내용 없음",
-      author: item.author || null,
-      source_url: item.source_url || null,
-      image_url: item.image_url || null,
-      published_at: item.published_at || new Date().toISOString(),
-      view_count: Number(item.view_count) || 0,
-      is_featured: Boolean(item.is_featured),
-      is_active: Boolean(item.is_active),
-      original_language: item.original_language || "ko",
-      is_translated: Boolean(item.is_translated),
-      created_at: item.created_at || new Date().toISOString(),
-      updated_at: item.updated_at || new Date().toISOString(),
-      category: item.category || null,
-      tags: tagsMap.get(item.id) || [],
-    }))
-
-    return { data: safeData, error: null, count: count || 0 }
-  } catch (error) {
-    console.error("Error in getNews:", error)
-    return { data: [], error: "Failed to fetch news", count: 0 }
-  }
-}
-
-// 뉴스 카테고리 가져오기
-export async function getNewsCategories() {
-  try {
-    const tablesExist = await checkNewsTablesExist()
-    if (!tablesExist) {
-      return { data: [], error: null }
-    }
-
-    const supabase = createClient()
-
-    const { data, error } = await supabase
-      .from("news_categories")
-      .select("id, name, color_class, is_active, created_at, updated_at")
-      .eq("is_active", true)
-      .order("name")
-
     if (error) {
-      console.error("Error fetching news categories:", error)
-      return { data: [], error: error.message }
+      console.error("Error incrementing view count:", error)
     }
-
-    return { data: data || [], error: null }
-  } catch (error) {
-    console.error("Error in getNewsCategories:", error)
-    return { data: [], error: "Failed to fetch categories" }
-  }
-}
-
-// 뉴스 태그 가져오기
-export async function getNewsTags() {
-  try {
-    const tablesExist = await checkNewsTablesExist()
-    if (!tablesExist) {
-      return { data: [], error: null }
-    }
-
-    const supabase = createClient()
-
-    const { data, error } = await supabase.from("news_tags").select("id, name, created_at, updated_at").order("name")
-
-    if (error) {
-      console.error("Error fetching news tags:", error)
-      return { data: [], error: error.message }
-    }
-
-    return { data: data || [], error: null }
-  } catch (error) {
-    console.error("Error in getNewsTags:", error)
-    return { data: [], error: "Failed to fetch tags" }
-  }
-}
-
-// 뉴스 생성
-export async function createNews(newsData: {
-  title: string
-  content: string
-  summary?: string
-  category_id?: number
-  author?: string
-  source_url?: string
-  image_url?: string
-  is_featured?: boolean
-  original_language?: string
-  is_translated?: boolean
-}) {
-  try {
-    const tablesExist = await checkNewsTablesExist()
-    if (!tablesExist) {
-      return { data: null, error: "News tables do not exist" }
-    }
-
-    const supabase = createClient()
-
-    const insertData = {
-      title: String(newsData.title),
-      content: String(newsData.content),
-      summary: newsData.summary ? String(newsData.summary) : null,
-      category_id: newsData.category_id ? Number(newsData.category_id) : null,
-      author: newsData.author ? String(newsData.author) : null,
-      source_url: newsData.source_url ? String(newsData.source_url) : null,
-      image_url: newsData.image_url ? String(newsData.image_url) : null,
-      is_featured: Boolean(newsData.is_featured),
-      original_language: newsData.original_language ? String(newsData.original_language) : "ko",
-      is_translated: Boolean(newsData.is_translated),
-      view_count: 0,
-      published_at: new Date().toISOString(),
-      is_active: true,
-    }
-
-    const { data, error } = await supabase.from("news").insert([insertData]).select().single()
-
-    if (error) {
-      console.error("Error creating news:", error)
-      return { data: null, error: error.message }
-    }
-
-    revalidatePath("/dashboard-mgmt-2024")
-    return { data, error: null }
-  } catch (error) {
-    console.error("Error in createNews:", error)
-    return { data: null, error: "Failed to create news" }
-  }
-}
-
-// 뉴스 업데이트
-export async function updateNews(
-  id: number,
-  newsData: Partial<{
-    title: string
-    content: string
-    summary: string
-    category_id: number
-    author: string
-    source_url: string
-    image_url: string
-    is_featured: boolean
-    is_active: boolean
-    original_language: string
-    is_translated: boolean
-  }>,
-) {
-  try {
-    const tablesExist = await checkNewsTablesExist()
-    if (!tablesExist) {
-      return { data: null, error: "News tables do not exist" }
-    }
-
-    const supabase = createClient()
-
-    const updateData: any = {
-      updated_at: new Date().toISOString(),
-    }
-
-    // 안전한 타입 변환
-    if (newsData.title !== undefined) updateData.title = String(newsData.title)
-    if (newsData.content !== undefined) updateData.content = String(newsData.content)
-    if (newsData.summary !== undefined) updateData.summary = newsData.summary ? String(newsData.summary) : null
-    if (newsData.category_id !== undefined)
-      updateData.category_id = newsData.category_id ? Number(newsData.category_id) : null
-    if (newsData.author !== undefined) updateData.author = newsData.author ? String(newsData.author) : null
-    if (newsData.source_url !== undefined)
-      updateData.source_url = newsData.source_url ? String(newsData.source_url) : null
-    if (newsData.image_url !== undefined) updateData.image_url = newsData.image_url ? String(newsData.image_url) : null
-    if (newsData.is_featured !== undefined) updateData.is_featured = Boolean(newsData.is_featured)
-    if (newsData.is_active !== undefined) updateData.is_active = Boolean(newsData.is_active)
-    if (newsData.original_language !== undefined) updateData.original_language = String(newsData.original_language)
-    if (newsData.is_translated !== undefined) updateData.is_translated = Boolean(newsData.is_translated)
-
-    const { data, error } = await supabase.from("news").update(updateData).eq("id", Number(id)).select().single()
-
-    if (error) {
-      console.error("Error updating news:", error)
-      return { data: null, error: error.message }
-    }
-
-    revalidatePath("/dashboard-mgmt-2024")
-    return { data, error: null }
-  } catch (error) {
-    console.error("Error in updateNews:", error)
-    return { data: null, error: "Failed to update news" }
-  }
-}
-
-// 뉴스 삭제
-export async function deleteNews(id: number) {
-  try {
-    const tablesExist = await checkNewsTablesExist()
-    if (!tablesExist) {
-      return { error: "News tables do not exist" }
-    }
-
-    const supabase = createClient()
-
-    const { error } = await supabase.from("news").delete().eq("id", Number(id))
-
-    if (error) {
-      console.error("Error deleting news:", error)
-      return { error: error.message }
-    }
-
-    revalidatePath("/dashboard-mgmt-2024")
-    return { error: null }
-  } catch (error) {
-    console.error("Error in deleteNews:", error)
-    return { error: "Failed to delete news" }
-  }
-}
-
-// 뉴스 조회수 증가
-export async function incrementNewsViewCount(id: number) {
-  try {
-    const tablesExist = await checkNewsTablesExist()
-    if (!tablesExist) {
-      return { error: "News tables do not exist" }
-    }
-
-    const supabase = createClient()
-
-    // RPC 함수가 없을 수 있으므로 직접 업데이트
-    const { data: currentNews } = await supabase.from("news").select("view_count").eq("id", Number(id)).single()
-
-    if (currentNews) {
-      const newViewCount = (Number(currentNews.view_count) || 0) + 1
-
-      const { error } = await supabase.from("news").update({ view_count: newViewCount }).eq("id", Number(id))
-
-      if (error) {
-        console.error("Error incrementing view count:", error)
-        return { error: error.message }
-      }
-    }
-
-    return { error: null }
   } catch (error) {
     console.error("Error in incrementNewsViewCount:", error)
-    return { error: "Failed to increment view count" }
   }
 }
 
-// AI 뉴스 분석 및 저장
-export async function analyzeAndSaveNews(url: string) {
+export async function analyzeNewsUrl(url: string) {
   try {
-    const tablesExist = await checkNewsTablesExist()
-    if (!tablesExist) {
-      return {
-        success: false,
-        error: "News tables do not exist. Please run the database setup script first.",
-      }
+    // URL 검증
+    if (!url || !url.startsWith("http")) {
+      throw new Error("유효하지 않은 URL입니다.")
     }
 
-    // 뉴스 스크래핑 API 호출
-    const apiUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-    const response = await fetch(`${apiUrl}/api/scrape-news`, {
-      method: "POST",
+    console.log("Analyzing URL:", url)
+
+    // 웹 스크래핑
+    const response = await fetch(url, {
       headers: {
-        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       },
-      body: JSON.stringify({ url: String(url) }),
     })
 
     if (!response.ok) {
-      const errorData = await response.json()
-      return {
-        success: false,
-        error: errorData.error || "Failed to analyze news",
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const html = await response.text()
+
+    // 기본 메타데이터 추출
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i)
+    const imageMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
+
+    const title = titleMatch?.[1]?.trim() || "No title found"
+    const description = descMatch?.[1]?.trim() || ""
+    const imageUrl = imageMatch?.[1]?.trim() || null
+
+    // 본문 텍스트 추출 (간단한 방식)
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
+    let bodyText = bodyMatch?.[1] || html
+
+    // HTML 태그 제거
+    bodyText = bodyText
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .substring(0, 3000) // 처음 3000자만
+
+    console.log("Extracted content:", { title, description, bodyText: bodyText.substring(0, 200) })
+
+    // AI 분석
+    const { text: analysis } = await generateText({
+      model: openai("gpt-4o"),
+      prompt: `다음 뉴스 기사를 분석해주세요:
+
+제목: ${title}
+설명: ${description}
+내용: ${bodyText}
+
+다음 형식으로 JSON 응답해주세요:
+{
+  "title": "정제된 제목",
+  "summary": "3-4문장의 요약",
+  "content": "상세 내용 (원본 내용을 정리하여 작성)",
+  "category": "정치|경제|사회|문화|스포츠|기술|국제|기타 중 하나",
+  "tags": ["태그1", "태그2", "태그3"],
+  "author": "작성자명 (추출 가능한 경우)",
+  "language": "ko|en|th 중 하나"
+}
+
+한국어로 응답해주세요.`,
+    })
+
+    console.log("AI Analysis result:", analysis)
+
+    let analysisData
+    try {
+      analysisData = JSON.parse(analysis)
+    } catch (parseError) {
+      console.error("JSON parse error:", parseError)
+      // 파싱 실패 시 기본값 사용
+      analysisData = {
+        title: title,
+        summary: description || bodyText.substring(0, 200) + "...",
+        content: bodyText,
+        category: "기타",
+        tags: ["뉴스"],
+        author: null,
+        language: "ko",
       }
     }
 
-    const result = await response.json()
+    // 카테고리 ID 찾기
+    const { data: categories } = await supabase.from("news_categories").select("id, name")
 
-    if (!result.success) {
-      return {
-        success: false,
-        error: result.error || "Failed to analyze news",
+    const categoryMap: { [key: string]: number } = {
+      정치: 1,
+      경제: 2,
+      사회: 3,
+      문화: 4,
+      스포츠: 5,
+      기술: 6,
+      국제: 7,
+      기타: 8,
+    }
+
+    const categoryId = categoryMap[analysisData.category] || 8
+
+    // 뉴스 기사 저장
+    const { data: newsArticle, error: insertError } = await supabase
+      .from("news_articles")
+      .insert({
+        title: analysisData.title,
+        summary: analysisData.summary,
+        content: analysisData.content,
+        author: analysisData.author,
+        source_url: url,
+        image_url: imageUrl,
+        category_id: categoryId,
+        published_at: new Date().toISOString(),
+        view_count: 0,
+        is_featured: false,
+        is_active: true,
+        original_language: analysisData.language,
+        is_translated: analysisData.language !== "ko",
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error("Error inserting news article:", insertError)
+      throw new Error("뉴스 기사 저장에 실패했습니다.")
+    }
+
+    // 태그 처리
+    if (analysisData.tags && analysisData.tags.length > 0) {
+      for (const tagName of analysisData.tags) {
+        // 태그 존재 확인 또는 생성
+        const { data: existingTag } = await supabase.from("news_tags").select("id").eq("name", tagName).single()
+
+        let tagId = existingTag?.id
+
+        if (!tagId) {
+          const { data: newTag } = await supabase.from("news_tags").insert({ name: tagName }).select("id").single()
+
+          tagId = newTag?.id
+        }
+
+        if (tagId) {
+          await supabase.from("news_article_tags").insert({
+            article_id: newsArticle.id,
+            tag_id: tagId,
+          })
+        }
       }
     }
 
-    revalidatePath("/dashboard-mgmt-2024")
     return {
       success: true,
-      data: result.data,
-      message: "News analyzed and saved successfully",
+      message: "뉴스 분석이 완료되었습니다.",
+      data: newsArticle,
     }
   } catch (error) {
-    console.error("Error in analyzeAndSaveNews:", error)
+    console.error("Error in analyzeNewsUrl:", error)
     return {
       success: false,
-      error: "Failed to analyze and save news",
+      message: error instanceof Error ? error.message : "뉴스 분석 중 오류가 발생했습니다.",
+      data: null,
+    }
+  }
+}
+
+export async function deleteNewsArticle(id: number) {
+  try {
+    const { error } = await supabase.from("news_articles").delete().eq("id", id)
+
+    if (error) {
+      throw error
+    }
+
+    return { success: true, message: "뉴스 기사가 삭제되었습니다." }
+  } catch (error) {
+    console.error("Error deleting news article:", error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "삭제 중 오류가 발생했습니다.",
+    }
+  }
+}
+
+export async function toggleNewsFeature(id: number, featured: boolean) {
+  try {
+    const { error } = await supabase.from("news_articles").update({ is_featured: featured }).eq("id", id)
+
+    if (error) {
+      throw error
+    }
+
+    return { success: true, message: "뉴스 추천 상태가 변경되었습니다." }
+  } catch (error) {
+    console.error("Error toggling news feature:", error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "상태 변경 중 오류가 발생했습니다.",
     }
   }
 }

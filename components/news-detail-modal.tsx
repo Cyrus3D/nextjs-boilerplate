@@ -3,8 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { ExternalLink, Calendar, User, Eye } from "lucide-react"
+import { Calendar, User, Eye, ExternalLink, X } from "lucide-react"
 
 interface NewsDetailModalProps {
   news: {
@@ -21,12 +20,14 @@ interface NewsDetailModalProps {
     category?: {
       id: number
       name: string
-      color_class: string
+      color_class?: string
     } | null
     tags: Array<{
       id: number
       name: string
     }>
+    original_language?: string
+    is_translated?: boolean
   }
   isOpen: boolean
   onClose: () => void
@@ -43,78 +44,87 @@ export function NewsDetailModal({ news, isOpen, onClose }: NewsDetailModalProps)
         minute: "2-digit",
       })
     } catch (error) {
-      return "날짜 없음"
+      return "날짜 정보 없음"
     }
   }
 
   const formatViewCount = (count: number) => {
-    if (count >= 1000) {
-      return `${(count / 1000).toFixed(1)}k`
+    try {
+      return count.toLocaleString()
+    } catch (error) {
+      return "0"
     }
-    return count.toString()
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-start justify-between gap-4 mb-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                {news.category && (
-                  <Badge variant="secondary" className={news.category.color_class}>
-                    {news.category.name}
-                  </Badge>
-                )}
-                {news.is_featured && (
-                  <Badge variant="default" className="bg-blue-500 text-white">
-                    추천
-                  </Badge>
-                )}
-              </div>
-
-              <DialogTitle className="text-xl leading-tight">{news.title}</DialogTitle>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>{formatDate(news.published_at)}</span>
-              </div>
-
-              {news.author && (
-                <div className="flex items-center gap-1">
-                  <User className="w-4 h-4" />
-                  <span>{news.author}</span>
-                </div>
-              )}
-
-              <div className="flex items-center gap-1">
-                <Eye className="w-4 h-4" />
-                <span>{formatViewCount(news.view_count)} 조회</span>
-              </div>
-            </div>
-
-            {news.source_url && (
-              <Button variant="outline" size="sm" onClick={() => window.open(news.source_url!, "_blank")}>
-                <ExternalLink className="w-4 h-4 mr-2" />
-                원문 보기
-              </Button>
-            )}
+          <div className="flex items-start justify-between gap-4">
+            <DialogTitle className="text-xl font-bold leading-tight pr-8">{news.title}</DialogTitle>
+            <Button variant="ghost" size="sm" onClick={onClose} className="shrink-0">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </DialogHeader>
 
-        <Separator className="my-4" />
+        <div className="space-y-4">
+          {/* 메타 정보 */}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
+              <span>{formatDate(news.published_at)}</span>
+            </div>
 
-        <div className="space-y-6">
+            {news.author && (
+              <div className="flex items-center gap-1">
+                <User className="h-4 w-4" />
+                <span>{news.author}</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-1">
+              <Eye className="h-4 w-4" />
+              <span>{formatViewCount(news.view_count)} 조회</span>
+            </div>
+
+            {news.original_language && (
+              <Badge variant="outline" className="text-xs">
+                {news.original_language.toUpperCase()}
+              </Badge>
+            )}
+
+            {news.is_translated && (
+              <Badge variant="outline" className="text-xs">
+                번역됨
+              </Badge>
+            )}
+          </div>
+
+          {/* 카테고리 및 태그 */}
+          <div className="flex flex-wrap items-center gap-2">
+            {news.category && (
+              <Badge variant="secondary" className={news.category.color_class || ""}>
+                {news.category.name}
+              </Badge>
+            )}
+
+            {news.is_featured && <Badge className="bg-blue-500 hover:bg-blue-600">추천</Badge>}
+
+            {news.tags.map((tag) => (
+              <Badge key={tag.id} variant="outline" className="text-xs">
+                {tag.name}
+              </Badge>
+            ))}
+          </div>
+
+          {/* 이미지 */}
           {news.image_url && (
-            <div className="aspect-video overflow-hidden rounded-lg">
+            <div className="w-full">
               <img
                 src={news.image_url || "/placeholder.svg"}
                 alt={news.title}
-                className="w-full h-full object-cover"
+                className="w-full h-auto max-h-96 object-cover rounded-lg"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement
                   target.style.display = "none"
@@ -123,23 +133,29 @@ export function NewsDetailModal({ news, isOpen, onClose }: NewsDetailModalProps)
             </div>
           )}
 
-          <div className="prose prose-sm max-w-none">
-            <div className="text-lg font-medium text-muted-foreground mb-4">{news.summary}</div>
+          {/* 요약 */}
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <h3 className="font-semibold mb-2">요약</h3>
+            <p className="text-sm leading-relaxed">{news.summary}</p>
+          </div>
 
+          {/* 본문 */}
+          <div className="prose prose-sm max-w-none">
+            <h3 className="font-semibold mb-3">본문</h3>
             <div className="whitespace-pre-wrap leading-relaxed">{news.content}</div>
           </div>
 
-          {news.tags && news.tags.length > 0 && (
-            <div>
-              <Separator className="mb-4" />
-              <div className="flex flex-wrap gap-2">
-                <span className="text-sm font-medium text-muted-foreground mr-2">태그:</span>
-                {news.tags.map((tag) => (
-                  <Badge key={tag.id} variant="outline">
-                    {tag.name}
-                  </Badge>
-                ))}
-              </div>
+          {/* 원문 링크 */}
+          {news.source_url && (
+            <div className="flex justify-center pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => window.open(news.source_url!, "_blank")}
+                className="flex items-center gap-2"
+              >
+                <ExternalLink className="h-4 w-4" />
+                원문 보기
+              </Button>
             </div>
           )}
         </div>
