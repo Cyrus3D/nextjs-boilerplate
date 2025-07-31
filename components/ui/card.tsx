@@ -48,7 +48,6 @@ const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 )
 CardFooter.displayName = "CardFooter"
 
-// 데이터베이스 이미지 로딩을 위한 CardImage 컴포넌트
 interface CardImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallback?: string
 }
@@ -70,10 +69,8 @@ const CardImage = React.forwardRef<HTMLImageElement, CardImageProps>(
     }
 
     React.useEffect(() => {
-      if (src) {
-        setImageError(false)
-        setImageLoading(true)
-      }
+      setImageError(false)
+      setImageLoading(true)
     }, [src])
 
     return (
