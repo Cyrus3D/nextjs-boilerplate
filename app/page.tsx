@@ -1,5 +1,4 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Thermometer, DollarSign, Newspaper, Building } from "lucide-react"
 import NewsCardList from "@/components/news-card-list"
 import BusinessCardList from "@/components/business-card-list"
@@ -17,36 +16,6 @@ interface ExchangeRateData {
   rate: number
   timestamp: number
   source: string
-}
-
-// Skeleton components for loading states
-function HeaderSkeleton() {
-  return (
-    <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg mb-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <Skeleton className="h-8 w-64 mb-2 bg-white/20" />
-          <Skeleton className="h-4 w-96 bg-white/20" />
-        </div>
-        <div className="flex flex-col sm:flex-row gap-4 text-sm">
-          <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
-            <div className="flex items-center gap-2 mb-1">
-              <Thermometer className="w-4 h-4" />
-              <Skeleton className="h-4 w-16 bg-white/20" />
-            </div>
-            <Skeleton className="h-3 w-20 bg-white/20" />
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
-            <div className="flex items-center gap-2 mb-1">
-              <DollarSign className="w-4 h-4" />
-              <Skeleton className="h-4 w-20 bg-white/20" />
-            </div>
-            <Skeleton className="h-3 w-24 bg-white/20" />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 // Client component for interactive features

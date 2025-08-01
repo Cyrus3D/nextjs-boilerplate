@@ -19,12 +19,6 @@ export async function getBusinessCards(limit?: number): Promise<BusinessCard[]> 
           id,
           name,
           color_class
-        ),
-        business_card_tags (
-          tags (
-            id,
-            name
-          )
         )
       `)
       .eq("is_active", true)
@@ -54,7 +48,7 @@ export async function getBusinessCards(limit?: number): Promise<BusinessCard[]> 
       hours: card.hours,
       price: card.price,
       promotion: card.promotion,
-      tags: card.business_card_tags?.map((bt: any) => bt.tags.name) || [],
+      tags: [], // Tags would need separate query
       image: card.image_url,
       isPromoted: card.is_promoted || false,
       isPremium: card.is_premium || false,
@@ -129,15 +123,8 @@ export async function getNewsArticles(limit?: number): Promise<NewsArticle[]> {
   try {
     let query = supabase
       .from("news_articles")
-      .select(`
-        *,
-        news_article_tags (
-          tags (
-            id,
-            name
-          )
-        )
-      `)
+      .select("*")
+      .eq("is_published", true)
       .eq("status", "published")
       .order("published_at", { ascending: false })
 
@@ -154,20 +141,20 @@ export async function getNewsArticles(limit?: number): Promise<NewsArticle[]> {
 
     return (
       data?.map((article) => ({
-        id: article.id,
+        id: article.id.toString(),
         title: article.title,
         excerpt: article.excerpt,
         content: article.content,
         author: article.author,
         category: article.category,
-        tags: article.news_article_tags?.map((nt: any) => nt.tags.name) || [],
+        tags: article.tags || [],
         publishedAt: article.published_at,
         imageUrl: article.image_url,
         sourceUrl: article.source_url,
         viewCount: article.view_count || 0,
         readTime: article.read_time || 5,
         isBreaking: article.is_breaking || false,
-        isPremium: article.is_premium || false,
+        isPremium: false,
         status: article.status,
       })) || []
     )
@@ -185,16 +172,9 @@ export async function getNewsArticlesByCategory(category: string, limit?: number
   try {
     let query = supabase
       .from("news_articles")
-      .select(`
-        *,
-        news_article_tags (
-          tags (
-            id,
-            name
-          )
-        )
-      `)
+      .select("*")
       .eq("category", category)
+      .eq("is_published", true)
       .eq("status", "published")
       .order("published_at", { ascending: false })
 
@@ -211,20 +191,20 @@ export async function getNewsArticlesByCategory(category: string, limit?: number
 
     return (
       data?.map((article) => ({
-        id: article.id,
+        id: article.id.toString(),
         title: article.title,
         excerpt: article.excerpt,
         content: article.content,
         author: article.author,
         category: article.category,
-        tags: article.news_article_tags?.map((nt: any) => nt.tags.name) || [],
+        tags: article.tags || [],
         publishedAt: article.published_at,
         imageUrl: article.image_url,
         sourceUrl: article.source_url,
         viewCount: article.view_count || 0,
         readTime: article.read_time || 5,
         isBreaking: article.is_breaking || false,
-        isPremium: article.is_premium || false,
+        isPremium: false,
         status: article.status,
       })) || []
     )
@@ -271,12 +251,6 @@ export async function searchBusinessCards(query: string): Promise<BusinessCard[]
           id,
           name,
           color_class
-        ),
-        business_card_tags (
-          tags (
-            id,
-            name
-          )
         )
       `)
       .or(`title.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`)
@@ -302,7 +276,7 @@ export async function searchBusinessCards(query: string): Promise<BusinessCard[]
         hours: card.hours,
         price: card.price,
         promotion: card.promotion,
-        tags: card.business_card_tags?.map((bt: any) => bt.tags.name) || [],
+        tags: [],
         image: card.image_url,
         isPromoted: card.is_promoted || false,
         isPremium: card.is_premium || false,
@@ -332,16 +306,9 @@ export async function searchNewsArticles(query: string): Promise<NewsArticle[]> 
   try {
     const { data, error } = await supabase
       .from("news_articles")
-      .select(`
-        *,
-        news_article_tags (
-          tags (
-            id,
-            name
-          )
-        )
-      `)
+      .select("*")
       .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%,content.ilike.%${query}%`)
+      .eq("is_published", true)
       .eq("status", "published")
       .order("published_at", { ascending: false })
 
@@ -352,20 +319,20 @@ export async function searchNewsArticles(query: string): Promise<NewsArticle[]> 
 
     return (
       data?.map((article) => ({
-        id: article.id,
+        id: article.id.toString(),
         title: article.title,
         excerpt: article.excerpt,
         content: article.content,
         author: article.author,
         category: article.category,
-        tags: article.news_article_tags?.map((nt: any) => nt.tags.name) || [],
+        tags: article.tags || [],
         publishedAt: article.published_at,
         imageUrl: article.image_url,
         sourceUrl: article.source_url,
         viewCount: article.view_count || 0,
         readTime: article.read_time || 5,
         isBreaking: article.is_breaking || false,
-        isPremium: article.is_premium || false,
+        isPremium: false,
         status: article.status,
       })) || []
     )
