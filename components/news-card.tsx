@@ -206,7 +206,7 @@ export default function NewsCard({ news, onDetailClick }: NewsCardProps) {
           {String(news.title || "")}
         </h3>
 
-        {/* Image Area - 기준 크기 */}
+        {/* Image Area - 개선된 이미지 처리 */}
         <div className="h-[7.5rem] bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mb-2 overflow-hidden relative">
           {hasValidImage && !imageError ? (
             <>

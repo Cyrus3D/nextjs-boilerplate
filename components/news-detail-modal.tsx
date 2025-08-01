@@ -3,12 +3,13 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Calendar, Clock, Eye, Globe, ExternalLink, X } from "lucide-react"
+import { Globe, ExternalLink, X } from "lucide-react"
 import { useState } from "react"
 import type { NewsItem } from "@/types/news"
+import * as React from "react"
 
 interface NewsDetailModalProps {
-  news: NewsItem
+  news: NewsItem | null
   isOpen: boolean
   onClose: () => void
 }
@@ -16,6 +17,28 @@ interface NewsDetailModalProps {
 export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailModalProps) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const [imageError, setImageError] = useState(false)
+  const [hasValidImage, setHasValidImage] = useState(false)
+  const [normalizedImageUrl, setNormalizedImageUrl] = useState("")
+
+  // Initialize image state
+  React.useEffect(() => {
+    if (news) {
+      const imageUrl = news.image_url ? normalizeUrl(news.image_url) : ""
+      const validImageUrl = imageUrl && isValidUrl(imageUrl) ? imageUrl : ""
+
+      if (validImageUrl) {
+        setNormalizedImageUrl(validImageUrl)
+        setHasValidImage(true)
+      } else {
+        setHasValidImage(false)
+        setNormalizedImageUrl("")
+      }
+      setImageLoaded(false)
+      setImageError(false)
+    }
+  }, [news])
+
+  if (!news) return null
 
   const getCategoryColor = (category: string) => {
     const colors = {
@@ -49,172 +72,212 @@ export default function NewsDetailModal({ news, isOpen, onClose }: NewsDetailMod
     }
   }
 
-  // 이미지 URL 유효성 검증 함수
-  const isValidImageUrl = (url: string | null | undefined): boolean => {
-    if (!url) return false
+  const getSourceBadgeInfo = (sourceUrl: string, source: string) => {
+    if (!sourceUrl && !source) return { name: "기타", color: "bg-gray-200 text-gray-800" }
 
-    const urlString = String(url).trim()
-    if (!urlString || urlString === "null" || urlString === "undefined") return false
+    const urlToBadgeMap: { [key: string]: { name: string; color: string } } = {
+      "thaipbs.or.th": { name: "타이피비에스", color: "bg-blue-500 text-white" },
+      "bangkokpost.com": { name: "방콕포스트", color: "bg-blue-600 text-white" },
+      "nationthailand.com": { name: "네이션", color: "bg-blue-400 text-white" },
+      "thairath.co.th": { name: "타이랏", color: "bg-red-500 text-white" },
+      "khaosod.co.th": { name: "카오솟", color: "bg-orange-500 text-white" },
+      "matichon.co.th": { name: "마티촌", color: "bg-green-600 text-white" },
+      "dailynews.co.th": { name: "데일리뉴스", color: "bg-purple-500 text-white" },
+      "newsk.net": { name: "뉴스케이", color: "bg-slate-600 text-white" },
+    }
 
-    // URL 형식 검증
+    let domain = ""
+    if (sourceUrl) {
+      try {
+        const url = new URL(sourceUrl.startsWith("http") ? sourceUrl : `https://${sourceUrl}`)
+        domain = url.hostname.replace("www.", "")
+      } catch {
+        const match = sourceUrl.match(/(?:https?:\/\/)?(?:www\.)?([^/\s]+)/i)
+        domain = match ? match[1] : ""
+      }
+    }
+
+    if (domain && urlToBadgeMap[domain]) {
+      return urlToBadgeMap[domain]
+    }
+
+    if (source) {
+      const koreanChars = source.match(/[가-힣]/g)
+      if (koreanChars && koreanChars.length > 0) {
+        return {
+          name: koreanChars.slice(0, 4).join(""),
+          color: "bg-gray-500 text-white",
+        }
+      }
+
+      const words = source.split(/\s+/)
+      return {
+        name: words
+          .map((word) => word.charAt(0).toUpperCase())
+          .join("")
+          .slice(0, 4),
+        color: "bg-gray-500 text-white",
+      }
+    }
+
+    return { name: "기타", color: "bg-gray-400 text-white" }
+  }
+
+  const isValidUrl = (url: string): boolean => {
     try {
-      new URL(urlString.startsWith("http") ? urlString : `https://${urlString}`)
+      new URL(url)
       return true
     } catch {
       return false
     }
   }
 
-  // 이미지 URL 정규화 함수
-  const normalizeImageUrl = (url: string): string => {
-    const urlString = url.trim()
-    if (urlString.startsWith("http")) {
-      return urlString
-    }
-    return `https://${urlString}`
+  const normalizeUrl = (url: string): string => {
+    if (!url) return ""
+    if (url.startsWith("//")) return `https:${url}`
+    if (url.startsWith("/")) return `https://example.com${url}`
+    if (!url.startsWith("http")) return `https://${url}`
+    return url
   }
 
-  const hasValidImage = isValidImageUrl(news.image_url)
-  const normalizedImageUrl = hasValidImage ? normalizeImageUrl(String(news.image_url)) : ""
+  const handleExternalLink = () => {
+    if (news.source_url) {
+      window.open(news.source_url, "_blank", "noopener,noreferrer")
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge className={`${getCategoryColor(String(news.category))} text-xs`}>{String(news.category)}</Badge>
-              <Badge variant="outline" className="text-xs">
-                {String(news.language || "ko").toUpperCase()}
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge
+                className={`${getSourceBadgeInfo(String(news.source_url || ""), String(news.source || "")).color} text-xs font-medium`}
+              >
+                {getSourceBadgeInfo(String(news.source_url || ""), String(news.source || "")).name}
               </Badge>
-              {news.is_featured && <Badge className="bg-yellow-500 text-white text-xs">⭐ 주요뉴스</Badge>}
+              <Badge className={`${getCategoryColor(String(news.category))} text-xs`}>{String(news.category)}</Badge>
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <Globe className="w-3 h-3" />
+                <span>{String(news.language || "ko").toUpperCase()}</span>
+              </div>
             </div>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="w-4 h-4" />
-              <span className="sr-only">닫기</span>
             </Button>
           </div>
-          <DialogTitle className="text-2xl font-bold leading-tight pr-8">{String(news.title || "")}</DialogTitle>
-          <DialogDescription className="text-base text-gray-600 leading-relaxed">
-            {String(news.summary || "")}
-          </DialogDescription>
+
+          <DialogTitle className="text-2xl font-bold leading-tight mb-2">{String(news.title || "")}</DialogTitle>
+          <DialogDescription className="sr-only">뉴스 기사 상세 내용을 표시하는 모달입니다.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* 이미지 영역 - 개선된 이미지 처리 */}
-          {hasValidImage && (
-            <div className="relative w-full h-64 bg-gray-100 rounded-lg overflow-hidden">
-              {!imageError ? (
-                <>
-                  <img
-                    src={normalizedImageUrl || "/placeholder.svg"}
-                    alt={String(news.title || "뉴스 이미지")}
-                    className={`w-full h-full object-cover transition-all duration-300 ${
-                      imageLoaded ? "opacity-100 scale-100" : "opacity-0 scale-95"
-                    }`}
-                    onLoad={() => setImageLoaded(true)}
-                    onError={() => setImageError(true)}
-                  />
+        {/* 메인 이미지 영역 */}
+        <div className="mb-6">
+          <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+            <img
+              src={hasValidImage && !imageError ? normalizedImageUrl : "/placeholder.svg?height=200&width=400"}
+              alt={String(news.title || "뉴스 이미지")}
+              className={`w-full h-full object-cover transition-all duration-300 ${
+                imageLoaded ? "opacity-100" : "opacity-0"
+              }`}
+              loading="lazy"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
+            />
 
-                  {/* 로딩 스피너 */}
-                  {!imageLoaded && !imageError && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-500">
-                  <div className="text-center">
-                    <div className="text-4xl mb-2">📷</div>
-                    <div className="text-sm">이미지를 불러올 수 없습니다</div>
-                  </div>
-                </div>
-              )}
+            {!imageLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-6 p-6">
+          {/* 요약 */}
+          {news.summary && (
+            <div className="mb-6">
+              <h3 className="font-semibold text-lg mb-2">📝 요약</h3>
+              <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                <p className="text-blue-800 leading-relaxed whitespace-pre-wrap">{String(news.summary)}</p>
+              </div>
             </div>
           )}
 
-          {/* 메타 정보 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              <span>발행일: {formatDate(String(news.published_at || news.created_at))}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4" />
-              <span>출처: {String(news.source || "알 수 없음")}</span>
-            </div>
-
-            {news.author && (
-              <div className="flex items-center gap-2">
-                <span>👤</span>
-                <span>기자: {String(news.author)}</span>
+          {/* 본문 */}
+          {news.content && (
+            <div className="mb-6">
+              <h3 className="font-semibold text-lg mb-2">📄 본문</h3>
+              <div className="prose max-w-none">
+                <div
+                  className="text-gray-800 leading-relaxed whitespace-pre-wrap"
+                  dangerouslySetInnerHTML={{
+                    __html: String(news.content).replace(/\n/g, "<br />"),
+                  }}
+                />
               </div>
-            )}
-
-            {news.reading_time && (
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                <span>읽기 시간: {Number(news.reading_time)} 분</span>
-              </div>
-            )}
-
-            {news.location && (
-              <div className="flex items-center gap-2">
-                <span>📍</span>
-                <span>지역: {String(news.location)}</span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
-              <Eye className="w-4 h-4" />
-              <span>조회수: {Number(news.view_count || 0).toLocaleString()}</span>
-            </div>
-          </div>
-
-          {/* 태그 */}
-          {Array.isArray(news.tags) && news.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {news.tags.map((tag, index) => (
-                <Badge key={index} variant="outline" className="text-xs">
-                  #{String(tag)}
-                </Badge>
-              ))}
             </div>
           )}
 
           {/* AI 분석 */}
           {news.ai_analysis && (
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <h4 className="font-medium text-purple-900 mb-2">🤖 AI 분석</h4>
-              <p className="text-purple-800 text-sm">{String(news.ai_analysis)}</p>
+            <div className="mb-6">
+              <h3 className="font-semibold text-lg mb-2">🤖 AI 분석</h3>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <p className="text-purple-800">{String(news.ai_analysis)}</p>
+              </div>
             </div>
           )}
 
-          {/* 본문 내용 */}
-          <div className="prose max-w-none">
-            <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-              {String(news.content || news.summary || "")}
+          {/* 태그 */}
+          {Array.isArray(news.tags) && news.tags.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold text-lg mb-2">🏷️ 태그</h3>
+              <div className="flex flex-wrap gap-2">
+                {news.tags.map((tag, index) => (
+                  <Badge key={index} variant="outline" className="text-sm">
+                    #{String(tag)}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 메타 정보 */}
+          <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <strong>카테고리:</strong> {String(news.category || "알 수 없음")}
+              </div>
+              <div>
+                <strong>언어:</strong> {String(news.language || "알 수 없음")}
+              </div>
+              {news.author && (
+                <div>
+                  <strong>작성자:</strong> {String(news.author)}
+                </div>
+              )}
+              {news.location && (
+                <div>
+                  <strong>지역:</strong> {String(news.location)}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 원문 링크 */}
-          {news.source_url && (
-            <div className="border-t pt-4">
-              <Button asChild variant="outline" className="w-full bg-transparent">
-                <a
-                  href={String(news.source_url)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  원문 보기
-                </a>
+          {/* 액션 버튼 */}
+          <div className="flex gap-3 pt-4 border-t">
+            {news.source_url && (
+              <Button onClick={handleExternalLink} className="flex items-center gap-2">
+                <ExternalLink className="w-4 h-4" />
+                원문 보기
               </Button>
-            </div>
-          )}
+            )}
+            <Button variant="outline" onClick={onClose}>
+              닫기
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
