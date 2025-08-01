@@ -6,23 +6,27 @@ export interface NewsArticle {
   imageUrl: string
   category: string
   tags: string[]
+  author: string
   publishedAt: string
   readTime: number
-  views: number
   isBreaking: boolean
-  author: {
-    name: string
-    avatar: string
-  }
-  source: {
-    name: string
-    url: string
-  }
+  viewCount: number
+  likeCount: number
+  shareCount: number
+  source: string
+  sourceUrl?: string
 }
 
 export interface NewsCategory {
   id: string
   name: string
-  count: number
   color: string
+  count: number
+}
+
+export interface NewsStats {
+  totalArticles: number
+  categoryCounts: Record<string, number>
+  totalViews: number
+  totalLikes: number
 }

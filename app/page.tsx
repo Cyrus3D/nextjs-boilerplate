@@ -16,8 +16,10 @@ import {
   setCachedData,
 } from "@/lib/optimized-api"
 
-// Lazy load components for better performance
-const BusinessDetailModal = lazy(() => import("@/components/business-detail-modal"))
+// Lazy load components for better performance - using default import
+const BusinessDetailModal = lazy(() =>
+  import("@/components/business-detail-modal").then((module) => ({ default: module.default })),
+)
 
 // Weather and exchange rate interfaces
 interface WeatherData {
