@@ -63,7 +63,7 @@ export default function NewsCard({ article, onReadMore }: NewsCardProps) {
         )}
 
         {/* 요약 */}
-        <p className="text-gray-600 text-sm line-clamp-3 flex-1">{article.excerpt}</p>
+        <p className="text-gray-600 text-sm line-clamp-3 flex-1 min-h-[4.5rem] leading-6">{article.excerpt}</p>
 
         {/* 태그 */}
         <div className="flex flex-wrap gap-1">
