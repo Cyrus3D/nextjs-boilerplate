@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import NewsCardList from "@/components/news-card-list"
+import { getNewsArticles } from "@/lib/api"
 
 export const metadata: Metadata = {
   title: "뉴스 | 핫타이 HOT THAI",
@@ -7,7 +8,10 @@ export const metadata: Metadata = {
   keywords: ["태국뉴스", "현지뉴스", "교민업체", "비자", "정책", "교통"],
 }
 
-export default function NewsPage() {
+export default async function NewsPage() {
+  // 실제 데이터베이스에서 뉴스 데이터 가져오기
+  const newsArticles = await getNewsArticles()
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 페이지 헤더 */}
@@ -21,7 +25,7 @@ export default function NewsPage() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        <NewsCardList />
+        <NewsCardList initialArticles={newsArticles} />
       </div>
     </div>
   )

@@ -6,13 +6,13 @@ import NewsCard from "./news-card"
 import InFeedAd from "./in-feed-ad"
 import { NewsDetailModal } from "./news-detail-modal"
 import type { NewsArticle } from "../types/news"
-import { sampleNewsArticles } from "../data/sample-news"
+import { incrementNewsViewCount } from "../lib/api"
 
 interface NewsListProps {
-  initialArticles?: NewsArticle[]
+  initialArticles: NewsArticle[]
 }
 
-export default function NewsList({ initialArticles = sampleNewsArticles }: NewsListProps) {
+export default function NewsList({ initialArticles }: NewsListProps) {
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
   const [activeTab, setActiveTab] = useState("all")
 
@@ -44,10 +44,14 @@ export default function NewsList({ initialArticles = sampleNewsArticles }: NewsL
     return initialArticles.filter((article) => article.category === targetCategory).length
   }
 
-  const handleDetailClick = (article: NewsArticle) => {
+  const handleDetailClick = async (article: NewsArticle) => {
     setSelectedArticle(article)
-    // 조회수 증가 로직 (실제 구현시 API 호출)
-    console.log(`Incrementing view count for article: ${article.id}`)
+    // 조회수 증가
+    try {
+      await incrementNewsViewCount(article.id.toString())
+    } catch (error) {
+      console.error("조회수 증가 실패:", error)
+    }
   }
 
   return (
