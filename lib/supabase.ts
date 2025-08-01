@@ -5,7 +5,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Database types
+// Database Types
 export interface Database {
   public: {
     Tables: {
@@ -15,63 +15,90 @@ export interface Database {
           title: string
           description: string
           category: string
+          location?: string
           phone?: string
           kakao_id?: string
           line_id?: string
-          website_url?: string
+          website?: string
+          hours?: string
+          price?: string
+          promotion?: string
           image_url?: string
+          is_promoted: boolean
           is_premium: boolean
-          exposure_level: number
-          view_count: number
-          created_at: string
-          updated_at: string
-          tags?: string[]
+          premium_expires_at?: string
+          exposure_count: number
+          last_exposed_at?: string
+          exposure_weight: number
           facebook_url?: string
           instagram_url?: string
+          tiktok_url?: string
+          threads_url?: string
           youtube_url?: string
-          twitter_url?: string
+          view_count: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
         }
         Insert: {
           id?: number
           title: string
           description: string
           category: string
+          location?: string
           phone?: string
           kakao_id?: string
           line_id?: string
-          website_url?: string
+          website?: string
+          hours?: string
+          price?: string
+          promotion?: string
           image_url?: string
+          is_promoted?: boolean
           is_premium?: boolean
-          exposure_level?: number
-          view_count?: number
-          created_at?: string
-          updated_at?: string
-          tags?: string[]
+          premium_expires_at?: string
+          exposure_count?: number
+          last_exposed_at?: string
+          exposure_weight?: number
           facebook_url?: string
           instagram_url?: string
+          tiktok_url?: string
+          threads_url?: string
           youtube_url?: string
-          twitter_url?: string
+          view_count?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: number
           title?: string
           description?: string
           category?: string
+          location?: string
           phone?: string
           kakao_id?: string
           line_id?: string
-          website_url?: string
+          website?: string
+          hours?: string
+          price?: string
+          promotion?: string
           image_url?: string
+          is_promoted?: boolean
           is_premium?: boolean
-          exposure_level?: number
-          view_count?: number
-          created_at?: string
-          updated_at?: string
-          tags?: string[]
+          premium_expires_at?: string
+          exposure_count?: number
+          last_exposed_at?: string
+          exposure_weight?: number
           facebook_url?: string
           instagram_url?: string
+          tiktok_url?: string
+          threads_url?: string
           youtube_url?: string
-          twitter_url?: string
+          view_count?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
         }
       }
       news_articles: {
@@ -87,14 +114,15 @@ export interface Database {
           is_published: boolean
           is_breaking: boolean
           view_count: number
-          created_at: string
-          updated_at: string
-          published_at?: string
-          tags?: string[]
+          read_time: number
+          tags: string[]
           language: string
           translated_title?: string
           translated_content?: string
           translated_summary?: string
+          created_at: string
+          updated_at: string
+          published_at?: string
         }
         Insert: {
           id?: number
@@ -108,14 +136,15 @@ export interface Database {
           is_published?: boolean
           is_breaking?: boolean
           view_count?: number
-          created_at?: string
-          updated_at?: string
-          published_at?: string
+          read_time?: number
           tags?: string[]
           language?: string
           translated_title?: string
           translated_content?: string
           translated_summary?: string
+          created_at?: string
+          updated_at?: string
+          published_at?: string
         }
         Update: {
           id?: number
@@ -129,14 +158,15 @@ export interface Database {
           is_published?: boolean
           is_breaking?: boolean
           view_count?: number
-          created_at?: string
-          updated_at?: string
-          published_at?: string
+          read_time?: number
           tags?: string[]
           language?: string
           translated_title?: string
           translated_content?: string
           translated_summary?: string
+          created_at?: string
+          updated_at?: string
+          published_at?: string
         }
       }
       categories: {
@@ -144,21 +174,21 @@ export interface Database {
           id: number
           name: string
           description?: string
-          type: "business" | "news"
+          type: string
           created_at: string
         }
         Insert: {
           id?: number
           name: string
           description?: string
-          type: "business" | "news"
+          type: string
           created_at?: string
         }
         Update: {
           id?: number
           name?: string
           description?: string
-          type?: "business" | "news"
+          type?: string
           created_at?: string
         }
       }
@@ -166,42 +196,32 @@ export interface Database {
         Row: {
           id: number
           name: string
-          type: "business" | "news"
+          type: string
           created_at: string
         }
         Insert: {
           id?: number
           name: string
-          type: "business" | "news"
+          type: string
           created_at?: string
         }
         Update: {
           id?: number
           name?: string
-          type?: "business" | "news"
+          type?: string
           created_at?: string
         }
       }
     }
-    Views: {
-      [_ in never]: never
-    }
     Functions: {
       increment_view_count: {
-        Args: {
-          card_id: number
-        }
+        Args: { card_id: number }
         Returns: void
       }
       increment_news_view_count: {
-        Args: {
-          article_id: number
-        }
+        Args: { article_id: number }
         Returns: void
       }
-    }
-    Enums: {
-      [_ in never]: never
     }
   }
 }
