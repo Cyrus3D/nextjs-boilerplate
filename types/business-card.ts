@@ -3,42 +3,69 @@ export interface BusinessCard {
   title: string
   description: string
   category: string
-  location?: string | null
-  phone?: string | null
-  kakaoId?: string | null
-  lineId?: string | null
-  website?: string | null
-  hours?: string | null
-  price?: string | null
-  promotion?: string | null
+  location?: string
+  phone?: string
+  website?: string
+  image?: string
   tags: string[]
-  image?: string | null
-  isPromoted: boolean
+  hours?: string
+  price?: string
+  promotion?: string
+  kakaoId?: string
+  lineId?: string
+  facebookUrl?: string
+  instagramUrl?: string
+  youtubeUrl?: string
+  tiktokUrl?: string
   isPremium: boolean
-  premiumExpiresAt?: string | null
-  exposureCount: number
-  lastExposedAt?: string | null
-  exposureWeight: number
-  // 소셜 미디어 필드 추가
-  facebookUrl?: string | null
-  instagramUrl?: string | null
-  tiktokUrl?: string | null
-  threadsUrl?: string | null
-  youtubeUrl?: string | null
+  isPromoted: boolean
+  exposureCount?: number
+  viewCount: number
+  created_at: string
+  updated_at: string
 }
 
-export interface Category {
-  id: number
-  name: string
-  color_class: string
+export interface BusinessCardFormData {
+  title: string
+  description: string
+  category: string
+  location?: string
+  phone?: string
+  website?: string
+  image?: string
+  tags: string[]
+  hours?: string
+  price?: string
+  promotion?: string
+  kakaoId?: string
+  lineId?: string
+  facebookUrl?: string
+  instagramUrl?: string
+  youtubeUrl?: string
+  tiktokUrl?: string
+  isPremium?: boolean
+  isPromoted?: boolean
 }
 
-export interface Tag {
-  id: number
-  name: string
+export interface BusinessCardFilters {
+  category?: string
+  search?: string
+  isPremium?: boolean
+  isPromoted?: boolean
 }
 
-export interface BusinessCardTag {
-  business_card_id: number
-  tag_id: number
-}
+export const BUSINESS_CATEGORIES = [
+  "음식점",
+  "배송서비스",
+  "여행서비스",
+  "식품",
+  "이벤트서비스",
+  "방송서비스",
+  "전자제품",
+  "유흥업소",
+  "교통서비스",
+  "서비스",
+  "프리미엄",
+] as const
+
+export type BusinessCategory = (typeof BUSINESS_CATEGORIES)[number]

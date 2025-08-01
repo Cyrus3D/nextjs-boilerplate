@@ -1,21 +1,150 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export function isSupabaseConfigured(): boolean {
-  return !!(supabaseUrl && supabaseAnonKey)
-}
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-export const supabase = isSupabaseConfigured() ? createClient(supabaseUrl!, supabaseAnonKey!) : null
-
-// Named export for compatibility
-export function createSupabaseClient() {
-  if (!isSupabaseConfigured()) {
-    throw new Error("Supabase is not configured. Please check your environment variables.")
+// Types for our database tables
+export interface Database {
+  public: {
+    Tables: {
+      business_cards: {
+        Row: {
+          id: number
+          title: string
+          description: string
+          category: string
+          location: string | null
+          phone: string | null
+          website: string | null
+          image: string | null
+          tags: string[]
+          hours: string | null
+          price: string | null
+          promotion: string | null
+          kakaoId: string | null
+          lineId: string | null
+          facebookUrl: string | null
+          instagramUrl: string | null
+          youtubeUrl: string | null
+          tiktokUrl: string | null
+          isPremium: boolean
+          isPromoted: boolean
+          exposureCount: number | null
+          viewCount: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          title: string
+          description: string
+          category: string
+          location?: string | null
+          phone?: string | null
+          website?: string | null
+          image?: string | null
+          tags?: string[]
+          hours?: string | null
+          price?: string | null
+          promotion?: string | null
+          kakaoId?: string | null
+          lineId?: string | null
+          facebookUrl?: string | null
+          instagramUrl?: string | null
+          youtubeUrl?: string | null
+          tiktokUrl?: string | null
+          isPremium?: boolean
+          isPromoted?: boolean
+          exposureCount?: number | null
+          viewCount?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          title?: string
+          description?: string
+          category?: string
+          location?: string | null
+          phone?: string | null
+          website?: string | null
+          image?: string | null
+          tags?: string[]
+          hours?: string | null
+          price?: string | null
+          promotion?: string | null
+          kakaoId?: string | null
+          lineId?: string | null
+          facebookUrl?: string | null
+          instagramUrl?: string | null
+          youtubeUrl?: string | null
+          tiktokUrl?: string | null
+          isPremium?: boolean
+          isPromoted?: boolean
+          exposureCount?: number | null
+          viewCount?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      news_articles: {
+        Row: {
+          id: number
+          title: string
+          excerpt: string
+          content: string
+          author: string
+          category: string
+          tags: string[]
+          imageUrl: string | null
+          sourceUrl: string | null
+          publishedAt: string
+          isBreaking: boolean
+          isPublished: boolean
+          viewCount: number
+          readTime: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          title: string
+          excerpt: string
+          content: string
+          author: string
+          category: string
+          tags?: string[]
+          imageUrl?: string | null
+          sourceUrl?: string | null
+          publishedAt?: string
+          isBreaking?: boolean
+          isPublished?: boolean
+          viewCount?: number
+          readTime?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          title?: string
+          excerpt?: string
+          content?: string
+          author?: string
+          category?: string
+          tags?: string[]
+          imageUrl?: string | null
+          sourceUrl?: string | null
+          publishedAt?: string
+          isBreaking?: boolean
+          isPublished?: boolean
+          viewCount?: number
+          readTime?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+    }
   }
-  return createClient(supabaseUrl!, supabaseAnonKey!)
 }
-
-// Default export
-export default supabase

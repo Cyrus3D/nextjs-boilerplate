@@ -1,46 +1,68 @@
 export interface NewsArticle {
-  id: string
+  id: number
   title: string
   excerpt: string
   content: string
+  author: string
   category: string
   tags: string[]
-  author: string
-  publishedAt: string
-  readTime: number
-  viewCount: number
-  isBreaking: boolean
-  isPublished?: boolean
   imageUrl?: string
   sourceUrl?: string
-  createdAt?: string
-  updatedAt?: string
+  publishedAt: string
+  isBreaking: boolean
+  isPublished: boolean
+  viewCount: number
+  readTime: number
+  created_at: string
+  updated_at: string
 }
 
-export interface NewsCategory {
-  id: number
-  name: string
-  color_class: string
-  created_at?: string
-}
-
-export interface NewsTag {
-  id: number
-  name: string
-  created_at?: string
-}
-
-export interface NewsArticleData {
+export interface NewsArticleFormData {
   title: string
-  excerpt?: string
+  excerpt: string
   content: string
+  author: string
   category: string
   tags: string[]
-  author: string
-  published_at?: string
-  read_time?: number
-  is_breaking?: boolean
-  is_published?: boolean
-  image_url?: string
-  source_url?: string
+  imageUrl?: string
+  sourceUrl?: string
+  publishedAt?: string
+  isBreaking?: boolean
+  isPublished?: boolean
+  readTime?: number
+}
+
+export interface NewsFilters {
+  category?: string
+  search?: string
+  isBreaking?: boolean
+  author?: string
+  dateFrom?: string
+  dateTo?: string
+}
+
+export const NEWS_CATEGORIES = [
+  "현지",
+  "업체",
+  "정책",
+  "교통",
+  "비자",
+  "경제",
+  "문화",
+  "사회",
+  "스포츠",
+  "연예",
+  "기술",
+  "건강",
+] as const
+
+export type NewsCategory = (typeof NEWS_CATEGORIES)[number]
+
+export interface NewsStats {
+  totalArticles: number
+  publishedArticles: number
+  breakingNews: number
+  totalViews: number
+  categoryCounts: Record<string, number>
+  recentArticles: NewsArticle[]
 }

@@ -3,8 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { Clock, Eye, User, Calendar, ExternalLink, Share2, Bookmark } from "lucide-react"
+import { Clock, Eye, Share2, ExternalLink, Zap, User } from "lucide-react"
 import type { NewsArticle } from "@/types/news"
 
 interface NewsDetailModalProps {
@@ -28,26 +27,16 @@ export function NewsDetailModal({ article, isOpen, onClose }: NewsDetailModalPro
   }
 
   const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "현지 뉴스":
-        return "bg-blue-100 text-blue-800"
-      case "교민 업체":
-        return "bg-green-100 text-green-800"
-      case "정책":
-        return "bg-purple-100 text-purple-800"
-      case "교통":
-        return "bg-orange-100 text-orange-800"
-      case "비자":
-        return "bg-red-100 text-red-800"
-      case "경제":
-        return "bg-yellow-100 text-yellow-800"
-      case "문화":
-        return "bg-pink-100 text-pink-800"
-      case "스포츠":
-        return "bg-indigo-100 text-indigo-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+    const colors: Record<string, string> = {
+      현지: "bg-blue-100 text-blue-800",
+      업체: "bg-green-100 text-green-800",
+      정책: "bg-purple-100 text-purple-800",
+      교통: "bg-orange-100 text-orange-800",
+      비자: "bg-red-100 text-red-800",
+      경제: "bg-yellow-100 text-yellow-800",
+      문화: "bg-pink-100 text-pink-800",
     }
+    return colors[category] || "bg-gray-100 text-gray-800"
   }
 
   const handleShare = async () => {
@@ -59,12 +48,17 @@ export function NewsDetailModal({ article, isOpen, onClose }: NewsDetailModalPro
           url: window.location.href,
         })
       } catch (error) {
-        console.log("공유 취소됨")
+        console.log("Error sharing:", error)
       }
     } else {
-      // 폴백: 클립보드에 복사
+      // Fallback: copy to clipboard
       navigator.clipboard.writeText(window.location.href)
-      alert("링크가 클립보드에 복사되었습니다!")
+    }
+  }
+
+  const handleSourceClick = () => {
+    if (article.sourceUrl) {
+      window.open(article.sourceUrl, "_blank", "noopener,noreferrer")
     }
   }
 
@@ -72,49 +66,57 @@ export function NewsDetailModal({ article, isOpen, onClose }: NewsDetailModalPro
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-4">
-          {/* 카테고리와 속보 배지 */}
-          <div className="flex items-center gap-2">
-            <Badge className={getCategoryColor(article.category)} variant="secondary">
-              {article.category}
-            </Badge>
-            {article.isBreaking && <Badge className="bg-red-600 text-white animate-pulse">속보</Badge>}
-          </div>
+          {/* Breaking News Badge */}
+          {article.isBreaking && (
+            <div className="flex justify-center">
+              <Badge className="bg-red-600 text-white flex items-center gap-1">
+                <Zap className="w-3 h-3" />
+                속보
+              </Badge>
+            </div>
+          )}
 
-          {/* 제목 */}
-          <DialogTitle className="text-2xl font-bold leading-tight text-left">{article.title}</DialogTitle>
+          {/* Title */}
+          <DialogTitle className="text-2xl font-bold leading-tight">{article.title}</DialogTitle>
 
-          {/* 메타 정보 */}
+          {/* Meta Information */}
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-1">
               <User className="w-4 h-4" />
               <span>{article.author}</span>
             </div>
             <div className="flex items-center gap-1">
-              <Calendar className="w-4 h-4" />
-              <span>{formatDate(article.publishedAt)}</span>
-            </div>
-            <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
-              <span>{article.readTime}분 읽기</span>
+              <span>{formatDate(article.publishedAt)}</span>
             </div>
             <div className="flex items-center gap-1">
               <Eye className="w-4 h-4" />
               <span>{article.viewCount.toLocaleString()} 조회</span>
             </div>
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              <span>{article.readTime}분 읽기</span>
+            </div>
           </div>
 
-          {/* 액션 버튼들 */}
+          {/* Category and Tags */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className={getCategoryColor(article.category)}>{article.category}</Badge>
+            {article.tags.map((tag, index) => (
+              <Badge key={index} variant="outline" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+
+          {/* Action Buttons */}
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleShare}>
+            <Button onClick={handleShare} variant="outline" size="sm">
               <Share2 className="w-4 h-4 mr-2" />
               공유하기
             </Button>
-            <Button variant="outline" size="sm">
-              <Bookmark className="w-4 h-4 mr-2" />
-              북마크
-            </Button>
             {article.sourceUrl && (
-              <Button variant="outline" size="sm" onClick={() => window.open(article.sourceUrl, "_blank")}>
+              <Button onClick={handleSourceClick} variant="outline" size="sm">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 원문 보기
               </Button>
@@ -122,51 +124,51 @@ export function NewsDetailModal({ article, isOpen, onClose }: NewsDetailModalPro
           </div>
         </DialogHeader>
 
-        <Separator className="my-6" />
-
-        {/* 요약 */}
-        <div className="bg-gray-50 p-4 rounded-lg mb-6">
-          <h3 className="font-semibold text-gray-900 mb-2">📝 요약</h3>
-          <p className="text-gray-700 leading-relaxed">{article.excerpt}</p>
-        </div>
-
-        {/* 이미지 */}
+        {/* Article Image */}
         {article.imageUrl && (
-          <div className="mb-6">
+          <div className="mt-6">
             <img
               src={article.imageUrl || "/placeholder.svg"}
               alt={article.title}
               className="w-full h-64 object-cover rounded-lg"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.src = "/placeholder.svg?height=256&width=512&text=뉴스+이미지"
+              }}
             />
           </div>
         )}
 
-        {/* 본문 */}
-        <div className="prose max-w-none">
-          <div className="text-gray-800 leading-relaxed whitespace-pre-line">{article.content}</div>
+        {/* Article Excerpt */}
+        <div className="mt-6">
+          <p className="text-lg text-gray-700 leading-relaxed font-medium">{article.excerpt}</p>
         </div>
 
-        {/* 태그 */}
-        <div className="mt-8 pt-6 border-t">
-          <h3 className="font-semibold text-gray-900 mb-3">🏷️ 관련 태그</h3>
-          <div className="flex flex-wrap gap-2">
-            {article.tags.map((tag) => (
-              <Badge key={tag} variant="outline" className="hover:bg-gray-100 cursor-pointer">
-                #{tag}
-              </Badge>
-            ))}
+        {/* Article Content */}
+        <div className="mt-6 prose prose-lg max-w-none">
+          <div
+            className="text-gray-800 leading-relaxed"
+            dangerouslySetInnerHTML={{
+              __html: article.content.replace(/\n/g, "<br />"),
+            }}
+          />
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="flex justify-between items-center text-sm text-gray-500">
+            <span>
+              작성일: {formatDate(article.created_at)}
+              {article.updated_at !== article.created_at && (
+                <span className="ml-2">(수정일: {formatDate(article.updated_at)})</span>
+              )}
+            </span>
+            <span>조회수: {article.viewCount.toLocaleString()}</span>
           </div>
-        </div>
-
-        {/* 관련 기사 추천 (향후 구현) */}
-        <div className="mt-8 pt-6 border-t">
-          <h3 className="font-semibold text-gray-900 mb-3">📰 관련 기사</h3>
-          <p className="text-gray-500 text-sm">관련 기사 기능은 곧 추가될 예정입니다.</p>
         </div>
       </DialogContent>
     </Dialog>
   )
 }
 
-// Default export for backward compatibility
 export default NewsDetailModal
