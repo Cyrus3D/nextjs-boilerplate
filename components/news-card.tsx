@@ -1,16 +1,17 @@
 "use client"
 
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Clock, Eye, User } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Clock, Eye, User, Calendar, ExternalLink, TrendingUp } from "lucide-react"
 import type { NewsArticle } from "@/types/news"
 
 interface NewsCardProps {
   article: NewsArticle
-  onClick: () => void
+  onDetailClick: (article: NewsArticle) => void
 }
 
-export default function NewsCard({ article, onClick }: NewsCardProps) {
+export default function NewsCard({ article, onDetailClick }: NewsCardProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -18,7 +19,6 @@ export default function NewsCard({ article, onClick }: NewsCardProps) {
 
     if (diffInHours < 1) return "방금 전"
     if (diffInHours < 24) return `${diffInHours}시간 전`
-    if (diffInHours < 48) return "어제"
     return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
   }
 
@@ -34,79 +34,100 @@ export default function NewsCard({ article, onClick }: NewsCardProps) {
   }
 
   return (
-    <Card
-      className="group cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 border-0 shadow-md"
-      onClick={onClick}
-    >
-      <CardContent className="p-0">
-        <div className="flex flex-col h-full">
-          {/* 이미지 영역 */}
-          <div className="aspect-video relative overflow-hidden rounded-t-lg bg-gray-100">
+    <Card className="h-full hover:shadow-lg transition-all duration-300 cursor-pointer group border-0 shadow-sm bg-white">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge className={`${getCategoryColor(article.category)} border`} variant="outline">
+              {article.category}
+            </Badge>
+            {article.isBreaking && <Badge className="bg-red-600 text-white animate-pulse border-red-600">속보</Badge>}
+          </div>
+          <TrendingUp className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors flex-shrink-0" />
+        </div>
+
+        <CardTitle className="text-lg line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors min-h-[3rem]">
+          {article.title}
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {/* 이미지 */}
+        {article.imageUrl && (
+          <div className="aspect-video w-full overflow-hidden rounded-lg bg-gray-100">
             <img
               src={article.imageUrl || "/placeholder.svg"}
               alt={article.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
-            {/* 카테고리 배지 */}
-            <div className="absolute top-3 left-3">
-              <Badge className={`${getCategoryColor(article.category)} text-xs font-medium border`} variant="secondary">
-                {article.category}
-              </Badge>
-            </div>
-            {/* 속보 배지 */}
-            {article.isBreaking && (
-              <div className="absolute top-3 right-3">
-                <Badge className="bg-red-600 text-white animate-pulse text-xs font-medium border-0">속보</Badge>
-              </div>
-            )}
           </div>
+        )}
 
-          {/* 콘텐츠 영역 */}
-          <div className="p-4 flex flex-col flex-1 space-y-3">
-            {/* 제목 */}
-            <h3 className="font-bold text-lg leading-tight line-clamp-2 min-h-[3.5rem] group-hover:text-blue-600 transition-colors">
-              {article.title}
-            </h3>
+        {/* 요약 */}
+        <p className="text-gray-600 text-sm line-clamp-3 flex-1 min-h-[4.5rem] leading-6">{article.excerpt}</p>
 
-            {/* 요약 */}
-            <p className="text-gray-600 text-sm line-clamp-3 flex-1 min-h-[4.5rem] leading-relaxed">
-              {article.excerpt}
-            </p>
+        {/* 태그 */}
+        <div className="flex flex-wrap gap-1">
+          {article.tags.slice(0, 3).map((tag, index) => (
+            <Badge
+              key={index}
+              variant="secondary"
+              className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 cursor-pointer transition-colors"
+            >
+              #{tag}
+            </Badge>
+          ))}
+          {article.tags.length > 3 && (
+            <Badge variant="secondary" className="text-xs px-2 py-1 bg-gray-100">
+              +{article.tags.length - 3}
+            </Badge>
+          )}
+        </div>
 
-            {/* 태그 */}
-            <div className="flex flex-wrap gap-1">
-              {article.tags.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full hover:bg-gray-200 transition-colors"
-                >
-                  #{tag}
-                </span>
-              ))}
-              {article.tags.length > 3 && (
-                <span className="text-gray-400 text-xs px-2 py-1">+{article.tags.length - 3}</span>
-              )}
+        {/* 메타 정보 */}
+        <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-1">
+              <User className="w-3 h-3" />
+              <span>{article.author}</span>
             </div>
-
-            {/* 메타 정보 */}
-            <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-1">
-                  <User className="w-3 h-3" />
-                  <span>{article.author}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Clock className="w-3 h-3" />
-                  <span>{article.readTime}분</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Eye className="w-3 h-3" />
-                  <span>{article.viewCount.toLocaleString()}</span>
-                </div>
-              </div>
-              <span className="font-medium">{formatDate(article.publishedAt)}</span>
+            <div className="flex items-center space-x-1">
+              <Clock className="w-3 h-3" />
+              <span>{article.readTime}분</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Eye className="w-3 h-3" />
+              <span>{article.viewCount.toLocaleString()}</span>
             </div>
           </div>
+          <div className="flex items-center space-x-1">
+            <Calendar className="w-3 h-3" />
+            <span>{formatDate(article.publishedAt)}</span>
+          </div>
+        </div>
+
+        {/* 액션 버튼 */}
+        <div className="flex gap-2 pt-2">
+          <Button
+            onClick={() => onDetailClick(article)}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            size="sm"
+          >
+            자세히 보기
+          </Button>
+          {article.sourceUrl && (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation()
+                window.open(article.sourceUrl, "_blank")
+              }}
+              variant="outline"
+              size="sm"
+              className="px-3"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

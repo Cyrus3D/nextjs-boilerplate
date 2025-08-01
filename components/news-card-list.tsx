@@ -2,52 +2,61 @@
 
 import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Search, TrendingUp, Zap } from "lucide-react"
-import NewsCard from "./news-card"
-import NewsDetailModal from "./news-detail-modal"
-import { sampleNews } from "@/data/sample-news"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Search, Filter, TrendingUp, Clock, Newspaper } from "lucide-react"
+import NewsCard from "@/components/news-card"
+import NewsDetailModal from "@/components/news-detail-modal"
+import { sampleNewsArticles } from "@/data/sample-news"
 import type { NewsArticle } from "@/types/news"
 
 export default function NewsCardList() {
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [sortBy, setSortBy] = useState<string>("latest")
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
 
-  // 뉴스 필터링 및 정렬
-  const filteredAndSortedNews = useMemo(() => {
-    let filtered = sampleNews
+  // 필터링 및 정렬된 뉴스 기사
+  const filteredAndSortedArticles = useMemo(() => {
+    let filtered = sampleNewsArticles
 
-    // 검색 필터링
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
+    // 카테고리 필터
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((article) => article.category === selectedCategory)
+    }
+
+    // 검색 필터
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase()
       filtered = filtered.filter(
         (article) =>
-          article.title.toLowerCase().includes(query) ||
-          article.excerpt.toLowerCase().includes(query) ||
-          article.content.toLowerCase().includes(query) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(query)) ||
-          article.author.toLowerCase().includes(query),
+          article.title.toLowerCase().includes(searchLower) ||
+          article.excerpt.toLowerCase().includes(searchLower) ||
+          article.content.toLowerCase().includes(searchLower) ||
+          article.tags.some((tag) => tag.toLowerCase().includes(searchLower)),
       )
     }
 
-    // 정렬: 속보 우선 → 최신순 → 조회수순
+    // 정렬
     return filtered.sort((a, b) => {
-      // 속보 우선
-      if (a.isBreaking && !b.isBreaking) return -1
-      if (!a.isBreaking && b.isBreaking) return 1
-
-      // 최신순
-      const dateA = new Date(a.publishedAt).getTime()
-      const dateB = new Date(b.publishedAt).getTime()
-      if (dateA !== dateB) return dateB - dateA
-
-      // 조회수순
-      return b.viewCount - a.viewCount
+      switch (sortBy) {
+        case "latest":
+          // 속보 우선, 그 다음 최신순
+          if (a.isBreaking && !b.isBreaking) return -1
+          if (!a.isBreaking && b.isBreaking) return 1
+          return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+        case "popular":
+          return b.viewCount - a.viewCount
+        case "readTime":
+          return a.readTime - b.readTime
+        default:
+          return 0
+      }
     })
-  }, [searchQuery])
+  }, [searchTerm, selectedCategory, sortBy])
 
-  const handleCardClick = (article: NewsArticle) => {
+  const handleDetailClick = (article: NewsArticle) => {
     setSelectedArticle(article)
     setIsModalOpen(true)
   }
@@ -59,90 +68,145 @@ export default function NewsCardList() {
 
   // 통계 계산
   const stats = useMemo(() => {
-    const totalNews = sampleNews.length
-    const breakingNews = sampleNews.filter((article) => article.isBreaking).length
-    const localNews = sampleNews.filter((article) => article.category === "현지 뉴스").length
-    const businessNews = sampleNews.filter((article) => article.category === "교민 업체").length
+    const total = sampleNewsArticles.length
+    const breaking = sampleNewsArticles.filter((article) => article.isBreaking).length
+    const today = sampleNewsArticles.filter((article) => {
+      const today = new Date()
+      const articleDate = new Date(article.publishedAt)
+      return articleDate.toDateString() === today.toDateString()
+    }).length
+    const categories = {
+      local: sampleNewsArticles.filter((article) => article.category === "현지 뉴스").length,
+      business: sampleNewsArticles.filter((article) => article.category === "교민 업체").length,
+    }
 
-    return { totalNews, breakingNews, localNews, businessNews }
+    return { total, breaking, today, categories }
   }, [])
 
   return (
     <div className="space-y-6">
-      {/* 헤더 섹션 */}
-      <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-xl border border-gray-200">
+      {/* 헤더 */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">📰 최신 뉴스</h2>
-            <p className="text-gray-600">태국 현지 소식과 교민 업체 정보를 한눈에 확인하세요</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+              <Newspaper className="h-6 w-6 text-blue-600" />
+              뉴스
+            </h2>
+            <p className="text-gray-600">태국 현지 뉴스와 교민 업체 소식을 확인하세요</p>
           </div>
 
           {/* 통계 */}
           <div className="flex gap-4">
             <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
               <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-blue-600" />
+                <Newspaper className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-medium text-gray-600">전체</span>
-                <span className="text-lg font-bold text-blue-600">{stats.totalNews}</span>
+                <span className="text-lg font-bold text-blue-600">{stats.total}</span>
               </div>
             </div>
-            {stats.breakingNews > 0 && (
-              <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-red-600" />
-                  <span className="text-sm font-medium text-gray-600">속보</span>
-                  <span className="text-lg font-bold text-red-600">{stats.breakingNews}</span>
-                </div>
+            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-red-600" />
+                <span className="text-sm font-medium text-gray-600">속보</span>
+                <span className="text-lg font-bold text-red-600">{stats.breaking}</span>
               </div>
-            )}
+            </div>
+            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium text-gray-600">오늘</span>
+                <span className="text-lg font-bold text-green-600">{stats.today}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 검색 섹션 */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-        <Input
-          placeholder="뉴스 제목, 내용, 태그, 작성자로 검색..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-12 text-base border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-        />
-      </div>
+      {/* 검색 및 필터 */}
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* 검색 */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="제목, 내용, 태그로 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-      {/* 카테고리 통계 */}
-      <div className="flex gap-3">
-        <Badge variant="outline" className="px-3 py-1 bg-blue-50 text-blue-700 border-blue-200">
-          현지 뉴스 {stats.localNews}개
-        </Badge>
-        <Badge variant="outline" className="px-3 py-1 bg-green-50 text-green-700 border-green-200">
-          교민 업체 {stats.businessNews}개
-        </Badge>
-      </div>
+          {/* 카테고리 필터 */}
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="카테고리 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 카테고리</SelectItem>
+              <SelectItem value="현지 뉴스">현지 뉴스 ({stats.categories.local})</SelectItem>
+              <SelectItem value="교민 업체">교민 업체 ({stats.categories.business})</SelectItem>
+            </SelectContent>
+          </Select>
 
-      {/* 검색 결과 표시 */}
-      {searchQuery && (
-        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-          <p className="text-blue-800">
-            <span className="font-semibold">"{searchQuery}"</span> 검색 결과: {filteredAndSortedNews.length}개의 기사
-          </p>
+          {/* 정렬 */}
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="정렬 기준" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="latest">최신순</SelectItem>
+              <SelectItem value="popular">인기순</SelectItem>
+              <SelectItem value="readTime">읽기 시간순</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      )}
+      </div>
 
-      {/* 뉴스 그리드 */}
-      {filteredAndSortedNews.length > 0 ? (
+      {/* 결과 요약 */}
+      <div className="flex items-center justify-between text-sm text-gray-600">
+        <span>
+          총 {filteredAndSortedArticles.length}개의 뉴스
+          {searchTerm && ` (검색: "${searchTerm}")`}
+          {selectedCategory !== "all" && ` (카테고리: ${selectedCategory})`}
+        </span>
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4" />
+          <span>
+            {sortBy === "latest" && "최신순"}
+            {sortBy === "popular" && "인기순"}
+            {sortBy === "readTime" && "읽기 시간순"}
+          </span>
+          {(searchTerm || selectedCategory !== "all") && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchTerm("")
+                setSelectedCategory("all")
+              }}
+              className="text-xs"
+            >
+              필터 초기화
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* 뉴스 카드 그리드 */}
+      {filteredAndSortedArticles.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAndSortedNews.map((article) => (
-            <NewsCard key={article.id} article={article} onClick={() => handleCardClick(article)} />
+          {filteredAndSortedArticles.map((article) => (
+            <NewsCard key={article.id} article={article} onDetailClick={handleDetailClick} />
           ))}
         </div>
       ) : (
         <div className="text-center py-12">
-          <div className="text-gray-400 mb-4">
-            <Search className="w-16 h-16 mx-auto" />
+          <div className="text-gray-500 mb-4">
+            <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium">검색 결과가 없습니다</p>
+            <p className="text-sm">다른 키워드나 카테고리로 검색해보세요</p>
           </div>
-          <h3 className="text-lg font-semibold text-gray-600 mb-2">검색 결과가 없습니다</h3>
-          <p className="text-gray-500">다른 키워드로 검색해보세요.</p>
         </div>
       )}
 
