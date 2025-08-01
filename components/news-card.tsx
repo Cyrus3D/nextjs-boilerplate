@@ -28,6 +28,18 @@ export default function NewsCard({ article, onReadMore }: NewsCardProps) {
         return "bg-blue-100 text-blue-800"
       case "교민 업체":
         return "bg-green-100 text-green-800"
+      case "정책":
+        return "bg-purple-100 text-purple-800"
+      case "교통":
+        return "bg-orange-100 text-orange-800"
+      case "비자":
+        return "bg-red-100 text-red-800"
+      case "경제":
+        return "bg-yellow-100 text-yellow-800"
+      case "문화":
+        return "bg-pink-100 text-pink-800"
+      case "스포츠":
+        return "bg-indigo-100 text-indigo-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -42,6 +54,7 @@ export default function NewsCard({ article, onReadMore }: NewsCardProps) {
               {article.category}
             </Badge>
             {article.isBreaking && <Badge className="bg-red-600 text-white animate-pulse">속보</Badge>}
+            {article.isPremium && <Badge className="bg-yellow-600 text-white">프리미엄</Badge>}
           </div>
           <TrendingUp className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
         </div>
@@ -58,6 +71,10 @@ export default function NewsCard({ article, onReadMore }: NewsCardProps) {
               src={article.imageUrl || "/placeholder.svg"}
               alt={article.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.src = "/placeholder.svg?height=160&width=320&text=이미지 없음"
+              }}
             />
           </div>
         )}
@@ -66,18 +83,20 @@ export default function NewsCard({ article, onReadMore }: NewsCardProps) {
         <p className="text-gray-600 text-sm line-clamp-3 flex-1 min-h-[4.5rem] leading-6">{article.excerpt}</p>
 
         {/* 태그 */}
-        <div className="flex flex-wrap gap-1">
-          {article.tags.slice(0, 3).map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs">
-              #{tag}
-            </Badge>
-          ))}
-          {article.tags.length > 3 && (
-            <Badge variant="outline" className="text-xs">
-              +{article.tags.length - 3}
-            </Badge>
-          )}
-        </div>
+        {article.tags && article.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {article.tags.slice(0, 3).map((tag) => (
+              <Badge key={tag} variant="outline" className="text-xs">
+                #{tag}
+              </Badge>
+            ))}
+            {article.tags.length > 3 && (
+              <Badge variant="outline" className="text-xs">
+                +{article.tags.length - 3}
+              </Badge>
+            )}
+          </div>
+        )}
 
         {/* 메타 정보 */}
         <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
