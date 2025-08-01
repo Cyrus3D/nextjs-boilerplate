@@ -183,7 +183,14 @@ export async function createNewsArticle(data: NewsArticleData) {
   }
 
   try {
-    const insertData = {
+    // 먼저 테이블 스키마 확인
+    const { data: tableInfo, error: schemaError } = await supabase.from("news_articles").select("*").limit(0)
+
+    if (schemaError) {
+      console.error("테이블 스키마 확인 오류:", schemaError)
+    }
+
+    const insertData: any = {
       title: data.title,
       excerpt: data.excerpt || data.content.substring(0, 200) + "...",
       content: data.content,
@@ -196,16 +203,25 @@ export async function createNewsArticle(data: NewsArticleData) {
       is_published: data.is_published !== false,
       image_url: data.image_url || null,
       source_url: data.source_url || null,
-      original_language: data.original_language || "ko",
-      translated: data.translated || false,
       view_count: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
 
+    // 번역 관련 필드는 존재하는 경우에만 추가
+    if (data.original_language !== undefined) {
+      insertData.original_language = data.original_language || "ko"
+    }
+    if (data.translated !== undefined) {
+      insertData.translated = data.translated || false
+    }
+
+    console.log("삽입할 뉴스 데이터:", insertData)
+
     const { data: result, error } = await supabase.from("news_articles").insert([insertData]).select().single()
 
     if (error) {
+      console.error("Supabase 삽입 오류:", error)
       throw new Error(`뉴스 생성 실패: ${error.message}`)
     }
 
