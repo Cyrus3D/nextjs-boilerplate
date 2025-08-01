@@ -3,29 +3,29 @@ export interface NewsArticle {
   title: string
   excerpt: string
   content: string
-  category: "politics" | "economy" | "society" | "international" | "breaking"
+  imageUrl: string
+  category: string
   tags: string[]
   author: string
   publishedAt: string
-  imageUrl?: string
   readTime: number
-  isBreaking?: boolean
+  isBreaking: boolean
   views: number
   likes: number
+  shares: number
   source: string
-  sourceUrl?: string
+  sourceUrl: string
 }
 
 export interface NewsCategory {
   id: string
   name: string
-  count: number
   color: string
+  count: number
 }
 
 export interface NewsStats {
   totalArticles: number
-  categoryCounts: Record<string, number>
-  todayArticles: number
   breakingNews: number
+  categoryCounts: Record<string, number>
 }
