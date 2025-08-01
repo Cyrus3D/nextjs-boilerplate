@@ -3,7 +3,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Clock, Eye, Share2, Bookmark, ExternalLink, X } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { Calendar, User, Eye, Clock, Share2, Bookmark, ExternalLink, X } from "lucide-react"
 import Image from "next/image"
 import type { NewsArticle } from "../types/news"
 
@@ -38,17 +39,33 @@ export function NewsDetailModal({ article, isOpen, onClose }: NewsDetailModalPro
     }
   }
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: article.title,
+          text: article.excerpt,
+          url: window.location.href,
+        })
+      } catch (err) {
+        console.log("Share cancelled")
+      }
+    } else {
+      navigator.clipboard.writeText(window.location.href)
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-4">
           <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
+              {article.isBreaking && <Badge className="bg-red-600 text-white font-bold animate-pulse">속보</Badge>}
               <Badge className={`${getCategoryColor(article.category)} font-medium`}>{article.category}</Badge>
-              {article.isBreaking && <Badge className="bg-red-600 text-white font-bold">속보</Badge>}
             </div>
-            <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
-              <X className="w-4 h-4" />
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
             </Button>
           </div>
 
@@ -56,46 +73,73 @@ export function NewsDetailModal({ article, isOpen, onClose }: NewsDetailModalPro
 
           <div className="flex items-center justify-between text-sm text-gray-600">
             <div className="flex items-center space-x-4">
-              <span>by {article.author}</span>
-              <span>{formatDate(article.publishedAt)}</span>
-            </div>
-            <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-1">
-                <Clock className="w-4 h-4" />
+                <User className="h-4 w-4" />
+                <span>{article.author}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Calendar className="h-4 w-4" />
+                <span>{formatDate(article.publishedAt)}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Clock className="h-4 w-4" />
                 <span>{article.readTime}분 읽기</span>
               </div>
               <div className="flex items-center space-x-1">
-                <Eye className="w-4 h-4" />
+                <Eye className="h-4 w-4" />
                 <span>{article.viewCount.toLocaleString()}</span>
               </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm" onClick={handleShare}>
+                <Share2 className="h-4 w-4 mr-1" />
+                공유
+              </Button>
+              <Button variant="outline" size="sm">
+                <Bookmark className="h-4 w-4 mr-1" />
+                저장
+              </Button>
+              {article.sourceUrl && (
+                <Button variant="outline" size="sm" onClick={() => window.open(article.sourceUrl, "_blank")}>
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  원문
+                </Button>
+              )}
             </div>
           </div>
         </DialogHeader>
 
+        <Separator />
+
         <div className="space-y-6">
-          <div className="aspect-video relative overflow-hidden rounded-lg">
-            <Image
-              src={article.imageUrl || "/placeholder.svg"}
-              alt={article.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 800px"
-            />
-          </div>
+          {article.imageUrl && (
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+              <Image
+                src={article.imageUrl || "/placeholder.svg"}
+                alt={article.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 70vw"
+              />
+            </div>
+          )}
 
           <div className="prose prose-gray max-w-none">
-            <div className="text-lg leading-relaxed whitespace-pre-line">{article.content}</div>
+            <p className="text-lg text-gray-700 font-medium leading-relaxed mb-6">{article.excerpt}</p>
+
+            <div className="text-gray-800 leading-relaxed whitespace-pre-line">{article.content}</div>
           </div>
 
           {article.tags.length > 0 && (
             <div className="space-y-2">
-              <h4 className="font-semibold text-gray-900">태그</h4>
+              <h4 className="font-medium text-gray-900">관련 태그</h4>
               <div className="flex flex-wrap gap-2">
                 {article.tags.map((tag) => (
                   <Badge
                     key={tag}
                     variant="secondary"
-                    className="px-3 py-1 bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    className="bg-gray-100 text-gray-600 hover:bg-gray-200 cursor-pointer"
                   >
                     #{tag}
                   </Badge>
@@ -103,27 +147,19 @@ export function NewsDetailModal({ article, isOpen, onClose }: NewsDetailModalPro
               </div>
             </div>
           )}
+        </div>
 
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
-                <Share2 className="w-4 h-4 mr-2" />
-                공유하기
-              </Button>
-              <Button variant="outline" size="sm">
-                <Bookmark className="w-4 h-4 mr-2" />
-                북마크
-              </Button>
-            </div>
+        <Separator />
 
-            {article.sourceUrl && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  원문 보기
-                </a>
-              </Button>
-            )}
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-500">이 기사가 도움이 되셨나요?</div>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm">
+              👍 도움됨
+            </Button>
+            <Button variant="outline" size="sm">
+              👎 아니요
+            </Button>
           </div>
         </div>
       </DialogContent>
