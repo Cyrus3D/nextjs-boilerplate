@@ -1,12 +1,12 @@
 import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-css-merge"
+import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDateTime(date: string | Date): string {
-  const d = new Date(date)
+export function formatDateTime(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "long",
@@ -17,21 +17,12 @@ export function formatDateTime(date: string | Date): string {
   }).format(d)
 }
 
-export function formatDate(date: string | Date): string {
-  const d = new Date(date)
+export function formatDate(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
-    timeZone: "Asia/Bangkok",
-  }).format(d)
-}
-
-export function formatTime(date: string | Date): string {
-  const d = new Date(date)
-  return new Intl.DateTimeFormat("ko-KR", {
-    hour: "2-digit",
-    minute: "2-digit",
     timeZone: "Asia/Bangkok",
   }).format(d)
 }
@@ -45,56 +36,33 @@ export function formatPhoneNumber(phone: string): string {
   // Thai phone number formatting
   if (cleaned.startsWith("66")) {
     // International format: +66 XX XXX XXXX
-    const withoutCountry = cleaned.slice(2)
-    if (withoutCountry.length === 9) {
-      return `+66 ${withoutCountry.slice(0, 2)} ${withoutCountry.slice(2, 5)} ${withoutCountry.slice(5)}`
+    const number = cleaned.substring(2)
+    if (number.length === 9) {
+      return `+66 ${number.substring(0, 2)} ${number.substring(2, 5)} ${number.substring(5)}`
     }
   } else if (cleaned.startsWith("0") && cleaned.length === 10) {
     // Local format: 0XX XXX XXXX
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`
-  } else if (cleaned.length === 9) {
-    // Without leading 0: XX XXX XXXX
-    return `0${cleaned.slice(0, 2)} ${cleaned.slice(2, 5)} ${cleaned.slice(5)}`
+    return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 6)} ${cleaned.substring(6)}`
   }
 
-  return phone // Return original if no pattern matches
+  return phone
 }
 
 export function getUrlType(
   url: string,
-):
-  | "website"
-  | "facebook"
-  | "instagram"
-  | "youtube"
-  | "tiktok"
-  | "line"
-  | "kakao"
-  | "phone"
-  | "email"
-  | "maps"
-  | "unknown" {
-  if (!url) return "unknown"
+): "website" | "facebook" | "line" | "instagram" | "youtube" | "tiktok" | "twitter" | "other" {
+  if (!url) return "other"
 
   const lowerUrl = url.toLowerCase()
 
   if (lowerUrl.includes("facebook.com") || lowerUrl.includes("fb.com")) return "facebook"
+  if (lowerUrl.includes("line.me") || lowerUrl.includes("line://")) return "line"
   if (lowerUrl.includes("instagram.com")) return "instagram"
   if (lowerUrl.includes("youtube.com") || lowerUrl.includes("youtu.be")) return "youtube"
   if (lowerUrl.includes("tiktok.com")) return "tiktok"
-  if (lowerUrl.includes("line.me") || lowerUrl.startsWith("line://")) return "line"
-  if (lowerUrl.includes("kakao") || lowerUrl.startsWith("kakao")) return "kakao"
-  if (lowerUrl.startsWith("tel:") || lowerUrl.startsWith("phone:")) return "phone"
-  if (lowerUrl.startsWith("mailto:")) return "email"
-  if (lowerUrl.includes("maps.google.com") || lowerUrl.includes("goo.gl/maps") || lowerUrl.includes("maps.app.goo.gl"))
-    return "maps"
+  if (lowerUrl.includes("twitter.com") || lowerUrl.includes("x.com")) return "twitter"
 
   return "website"
-}
-
-export function truncateText(text: string, maxLength: number): string {
-  if (!text || text.length <= maxLength) return text
-  return text.slice(0, maxLength).trim() + "..."
 }
 
 export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
@@ -111,18 +79,17 @@ export function debounce<T extends (...args: any[]) => any>(func: T, wait: numbe
   }
 }
 
+export function truncateText(text: string, maxLength: number): string {
+  if (!text || text.length <= maxLength) return text
+  return text.substring(0, maxLength) + "..."
+}
+
 export function generateSlug(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^\w\s-]/g, "") // Remove special characters
-    .replace(/[\s_-]+/g, "-") // Replace spaces and underscores with hyphens
-    .replace(/^-+|-+$/g, "") // Remove leading/trailing hyphens
-}
-
-export function calculateReadTime(content: string): number {
-  const wordsPerMinute = 200 // Average reading speed
-  const words = content.split(/\s+/).length
-  return Math.ceil(words / wordsPerMinute)
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
 }
 
 export function isValidUrl(url: string): boolean {
@@ -149,9 +116,9 @@ export function formatViewCount(count: number): string {
   return `${(count / 1000000).toFixed(1)}M`
 }
 
-export function getRelativeTime(date: string | Date): string {
+export function getTimeAgo(date: Date | string): string {
   const now = new Date()
-  const past = new Date(date)
+  const past = typeof date === "string" ? new Date(date) : date
   const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000)
 
   if (diffInSeconds < 60) return "방금 전"
@@ -160,18 +127,4 @@ export function getRelativeTime(date: string | Date): string {
   if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}일 전`
   if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)}개월 전`
   return `${Math.floor(diffInSeconds / 31536000)}년 전`
-}
-
-export function sanitizeHtml(html: string): string {
-  // Basic HTML sanitization - remove script tags and dangerous attributes
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/on\w+="[^"]*"/g, "")
-    .replace(/javascript:/gi, "")
-}
-
-export function generateExcerpt(content: string, maxLength = 150): string {
-  // Remove HTML tags and get plain text
-  const plainText = content.replace(/<[^>]*>/g, "").trim()
-  return truncateText(plainText, maxLength)
 }
