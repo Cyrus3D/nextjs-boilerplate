@@ -53,12 +53,14 @@ export function formatPhoneNumber(phone: string): string {
 
 export function getUrlType(
   url: string,
-): "website" | "facebook" | "line" | "kakao" | "instagram" | "youtube" | "tiktok" | "unknown" {
+): "website" | "facebook" | "line" | "kakao" | "instagram" | "youtube" | "tiktok" | "map" | "unknown" {
   if (!url) return "unknown"
 
   const lowerUrl = url.toLowerCase()
 
-  if (lowerUrl.includes("facebook.com") || lowerUrl.includes("fb.com")) {
+  if (lowerUrl.includes("maps.google") || lowerUrl.includes("goo.gl/maps") || lowerUrl.includes("maps.app.goo.gl")) {
+    return "map"
+  } else if (lowerUrl.includes("facebook.com") || lowerUrl.includes("fb.com")) {
     return "facebook"
   } else if (lowerUrl.includes("line.me") || lowerUrl.includes("line://")) {
     return "line"
@@ -106,4 +108,65 @@ export function extractDomain(url: string): string {
   } catch {
     return url
   }
+}
+
+export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null
+
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }
+}
+
+export function throttle<T extends (...args: any[]) => any>(func: T, limit: number): (...args: Parameters<T>) => void {
+  let inThrottle: boolean
+
+  return (...args: Parameters<T>) => {
+    if (!inThrottle) {
+      func(...args)
+      inThrottle = true
+      setTimeout(() => (inThrottle = false), limit)
+    }
+  }
+}
+
+export function generateId(): string {
+  return Math.random().toString(36).substr(2, 9)
+}
+
+export function capitalizeFirst(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+export function removeHtmlTags(html: string): string {
+  return html.replace(/<[^>]*>/g, "")
+}
+
+export function formatDate(date: string | Date): string {
+  const targetDate = new Date(date)
+  return targetDate.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  })
+}
+
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+export function isValidPhoneNumber(phone: string): boolean {
+  const phoneRegex = /^[0-9+\-\s()]+$/
+  return phoneRegex.test(phone) && phone.replace(/\D/g, "").length >= 9
+}
+
+export function createSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
 }

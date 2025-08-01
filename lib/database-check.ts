@@ -63,7 +63,7 @@ export async function checkDatabaseStatus(): Promise<DatabaseStatus> {
     const tableNames = ["business_cards", "news_articles", "categories", "tags", "business_card_tags"]
 
     for (const tableName of tableNames) {
-      const tableStatus = await checkTable(tableName)
+      const tableStatus = await checkTableStatus(tableName)
       status.tables.push(tableStatus)
     }
 
@@ -71,7 +71,7 @@ export async function checkDatabaseStatus(): Promise<DatabaseStatus> {
     const functionNames = ["increment_view_count", "increment_news_view_count"]
 
     for (const functionName of functionNames) {
-      const functionStatus = await checkFunction(functionName)
+      const functionStatus = await checkFunctionStatus(functionName)
       status.functions.push(functionStatus)
     }
   } catch (error) {
@@ -81,7 +81,7 @@ export async function checkDatabaseStatus(): Promise<DatabaseStatus> {
   return status
 }
 
-async function checkTable(tableName: string): Promise<TableStatus> {
+async function checkTableStatus(tableName: string): Promise<TableStatus> {
   try {
     const { count, error } = await supabase!.from(tableName).select("*", { count: "exact", head: true })
 
@@ -109,21 +109,23 @@ async function checkTable(tableName: string): Promise<TableStatus> {
   }
 }
 
-async function checkFunction(functionName: string): Promise<FunctionStatus> {
+async function checkFunctionStatus(functionName: string): Promise<FunctionStatus> {
   try {
-    // Try to call the function with dummy parameters to see if it exists
-    const { error } = await supabase!.rpc(
-      functionName,
-      functionName === "increment_view_count" ? { card_id: -1 } : { article_id: -1 },
-    )
+    // Try to get function information from pg_proc
+    const { data, error } = await supabase!.rpc("check_function_exists", { function_name: functionName })
 
-    // If the function exists but fails due to invalid ID, that's expected
-    const exists = !error || !error.message.includes("function") || error.message.includes("does not exist")
+    if (error) {
+      // If the check function doesn't exist, assume the function doesn't exist
+      return {
+        name: functionName,
+        exists: false,
+        error: error.message,
+      }
+    }
 
     return {
       name: functionName,
-      exists,
-      error: exists ? undefined : error?.message,
+      exists: !!data,
     }
   } catch (error) {
     return {
@@ -140,21 +142,17 @@ export async function getSchemaInfo(): Promise<SchemaInfo[]> {
   }
 
   try {
-    const { data, error } = await supabase!
-      .from("information_schema.columns")
-      .select("table_name, column_name, data_type, is_nullable, column_default")
-      .in("table_name", ["business_cards", "news_articles", "categories", "tags", "business_card_tags"])
-      .order("table_name")
-      .order("ordinal_position")
+    const { data, error } = await supabase!.rpc("get_table_schema")
 
     if (error) {
-      console.error("Failed to fetch schema info:", error)
+      console.error("Failed to get schema info:", error)
       return []
     }
 
+    // Group columns by table name
     const schemaMap = new Map<string, ColumnInfo[]>()
 
-    data.forEach((row: any) => {
+    data?.forEach((row: any) => {
       if (!schemaMap.has(row.table_name)) {
         schemaMap.set(row.table_name, [])
       }

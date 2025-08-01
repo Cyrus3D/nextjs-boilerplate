@@ -7,30 +7,20 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
-import {
-  CheckCircle,
-  XCircle,
-  RefreshCw,
-  Database,
-  Table,
-  ActivityIcon as Function,
-  Info,
-  AlertTriangle,
-} from "lucide-react"
-import { checkDatabaseStatus, getSchemaInfo, type DatabaseStatus, type SchemaInfo } from "@/lib/database-check"
-import { formatDateTime } from "@/lib/utils"
+import { RefreshCw, Database, CheckCircle, XCircle, AlertTriangle, Table, Settings } from "lucide-react"
+import { checkDatabaseStatus, getSchemaInfo } from "@/lib/database-check"
 
-export function DatabaseComponent() {
-  const [status, setStatus] = useState<DatabaseStatus | null>(null)
-  const [schema, setSchema] = useState<SchemaInfo[]>([])
+export function DatabaseStatusComponent() {
+  const [status, setStatus] = useState<any | null>(null)
+  const [schemaInfo, setSchemaInfo] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const checkStatus = async () => {
     setLoading(true)
     try {
-      const [dbStatus, schemaInfo] = await Promise.all([checkDatabaseStatus(), getSchemaInfo()])
+      const [dbStatus, schema] = await Promise.all([checkDatabaseStatus(), getSchemaInfo()])
       setStatus(dbStatus)
-      setSchema(schemaInfo)
+      setSchemaInfo(schema)
     } catch (error) {
       console.error("Failed to check database status:", error)
     } finally {
@@ -44,10 +34,20 @@ export function DatabaseComponent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-        <span>데이터베이스 상태 확인 중...</span>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Database className="h-5 w-5" />
+            <span>데이터베이스 상태 확인 중...</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-2">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            <span>상태를 확인하고 있습니다...</span>
+          </div>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -62,55 +62,51 @@ export function DatabaseComponent() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">데이터베이스 상태</h1>
-          <p className="text-muted-foreground">마지막 확인: {formatDateTime(status.lastChecked)}</p>
-        </div>
-        <Button onClick={checkStatus} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-          새로고침
-        </Button>
-      </div>
-
-      {/* Connection Status */}
+      {/* Status Overview */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Database className="h-5 w-5 mr-2" />
-            연결 상태
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Database className="h-5 w-5" />
+              <CardTitle>데이터베이스 연결 상태</CardTitle>
+            </div>
+            <Button onClick={checkStatus} size="sm" variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              새로고침
+            </Button>
+          </div>
+          <CardDescription>마지막 확인: {status.lastChecked.toLocaleString("ko-KR")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <span>환경변수 설정:</span>
-            {status.isConfigured ? (
-              <Badge variant="default" className="bg-green-500">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                설정됨
-              </Badge>
-            ) : (
-              <Badge variant="destructive">
-                <XCircle className="h-3 w-3 mr-1" />
-                미설정
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <span>데이터베이스 연결:</span>
-            {status.isConnected ? (
-              <Badge variant="default" className="bg-green-500">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                연결됨
-              </Badge>
-            ) : (
-              <Badge variant="destructive">
-                <XCircle className="h-3 w-3 mr-1" />
-                연결 실패
-              </Badge>
-            )}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center space-x-2">
+              <span className="font-medium">환경변수 설정:</span>
+              {status.isConfigured ? (
+                <Badge variant="default" className="bg-green-100 text-green-800">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  설정됨
+                </Badge>
+              ) : (
+                <Badge variant="destructive">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  미설정
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="font-medium">데이터베이스 연결:</span>
+              {status.isConnected ? (
+                <Badge variant="default" className="bg-green-100 text-green-800">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  연결됨
+                </Badge>
+              ) : (
+                <Badge variant="destructive">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  연결 실패
+                </Badge>
+              )}
+            </div>
           </div>
 
           {status.error && (
@@ -122,9 +118,9 @@ export function DatabaseComponent() {
 
           {!status.isConfigured && (
             <Alert>
-              <Info className="h-4 w-4" />
+              <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <strong>환경변수 설정이 필요합니다:</strong>
+                환경변수를 설정해주세요:
                 <br />• NEXT_PUBLIC_SUPABASE_URL
                 <br />• NEXT_PUBLIC_SUPABASE_ANON_KEY
               </AlertDescription>
@@ -136,35 +132,39 @@ export function DatabaseComponent() {
       {/* Detailed Information */}
       <Tabs defaultValue="tables" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="tables">테이블</TabsTrigger>
-          <TabsTrigger value="functions">함수</TabsTrigger>
-          <TabsTrigger value="schema">스키마</TabsTrigger>
+          <TabsTrigger value="tables">테이블 상태</TabsTrigger>
+          <TabsTrigger value="functions">함수 상태</TabsTrigger>
+          <TabsTrigger value="schema">스키마 정보</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tables" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Table className="h-5 w-5 mr-2" />
-                테이블 상태
+              <CardTitle className="flex items-center space-x-2">
+                <Table className="h-5 w-5" />
+                <span>테이블 상태</span>
               </CardTitle>
-              <CardDescription>각 테이블의 존재 여부와 레코드 수를 확인합니다.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {status.tables.map((table) => (
                   <div key={table.name} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center space-x-3">
+                      <div className="font-medium">{table.name}</div>
                       {table.exists ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <Badge variant="default" className="bg-green-100 text-green-800">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          존재함
+                        </Badge>
                       ) : (
-                        <XCircle className="h-4 w-4 text-red-500" />
+                        <Badge variant="destructive">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          없음
+                        </Badge>
                       )}
-                      <span className="font-medium">{table.name}</span>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {table.exists && <Badge variant="secondary">{table.recordCount}개 레코드</Badge>}
-                      {table.error && <Badge variant="destructive">오류</Badge>}
+                    <div className="text-sm text-gray-600">
+                      {table.exists ? `${table.recordCount}개 레코드` : table.error}
                     </div>
                   </div>
                 ))}
@@ -176,25 +176,30 @@ export function DatabaseComponent() {
         <TabsContent value="functions" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Function className="h-5 w-5 mr-2" />
-                함수 상태
+              <CardTitle className="flex items-center space-x-2">
+                <Settings className="h-5 w-5" />
+                <span>함수 상태</span>
               </CardTitle>
-              <CardDescription>데이터베이스 함수의 존재 여부를 확인합니다.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {status.functions.map((func) => (
                   <div key={func.name} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center space-x-3">
+                      <div className="font-medium">{func.name}</div>
                       {func.exists ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <Badge variant="default" className="bg-green-100 text-green-800">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          존재함
+                        </Badge>
                       ) : (
-                        <XCircle className="h-4 w-4 text-red-500" />
+                        <Badge variant="destructive">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          없음
+                        </Badge>
                       )}
-                      <span className="font-medium">{func.name}</span>
                     </div>
-                    {func.error && <Badge variant="destructive">{func.error}</Badge>}
+                    {func.error && <div className="text-sm text-red-600">{func.error}</div>}
                   </div>
                 ))}
               </div>
@@ -203,28 +208,28 @@ export function DatabaseComponent() {
         </TabsContent>
 
         <TabsContent value="schema" className="space-y-4">
-          {schema.length > 0 ? (
-            schema.map((table) => (
-              <Card key={table.tableName}>
+          {schemaInfo.length > 0 ? (
+            schemaInfo.map((schema) => (
+              <Card key={schema.tableName}>
                 <CardHeader>
-                  <CardTitle>{table.tableName}</CardTitle>
-                  <CardDescription>{table.columns.length}개 컬럼</CardDescription>
+                  <CardTitle>{schema.tableName}</CardTitle>
+                  <CardDescription>{schema.columns.length}개 컬럼</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {table.columns.map((column, index) => (
+                    {schema.columns.map((column, index) => (
                       <div key={column.name}>
-                        <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <span className="font-medium">{column.name}</span>
                             <Badge variant="outline">{column.type}</Badge>
                             {!column.nullable && <Badge variant="secondary">NOT NULL</Badge>}
                           </div>
                           {column.defaultValue && (
-                            <span className="text-sm text-muted-foreground">기본값: {column.defaultValue}</span>
+                            <span className="text-sm text-gray-600">기본값: {column.defaultValue}</span>
                           )}
                         </div>
-                        {index < table.columns.length - 1 && <Separator />}
+                        {index < schema.columns.length - 1 && <Separator className="mt-2" />}
                       </div>
                     ))}
                   </div>
@@ -233,8 +238,8 @@ export function DatabaseComponent() {
             ))
           ) : (
             <Card>
-              <CardContent className="p-6">
-                <p className="text-center text-muted-foreground">스키마 정보를 가져올 수 없습니다.</p>
+              <CardContent className="text-center py-8">
+                <p className="text-gray-600">스키마 정보를 가져올 수 없습니다.</p>
               </CardContent>
             </Card>
           )}
