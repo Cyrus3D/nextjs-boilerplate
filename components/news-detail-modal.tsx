@@ -4,7 +4,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { X, Clock, Eye, User, Calendar, ExternalLink, Share2, Heart, Copy, Check, Tag } from "lucide-react"
+import { X, Clock, Eye, Calendar, User, ExternalLink, Share2, Heart, Bookmark, Zap, Tag } from "lucide-react"
 import { useState } from "react"
 import type { NewsArticle } from "@/types/news"
 
@@ -15,41 +15,27 @@ interface NewsDetailModalProps {
 }
 
 export default function NewsDetailModal({ article, isOpen, onClose }: NewsDetailModalProps) {
-  const [isFavorited, setIsFavorited] = useState(false)
-  const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [isLiked, setIsLiked] = useState(false)
 
   if (!article) return null
 
+  const getCategoryColor = (category: string) => {
+    return category === "local" ? "bg-blue-500 text-white" : "bg-green-500 text-white"
+  }
+
+  const getCategoryLabel = (category: string) => {
+    return category === "local" ? "현지 뉴스" : "교민 업체"
+  }
+
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("ko-KR", {
+    return new Date(dateString).toLocaleDateString("ko-KR", {
       year: "numeric",
       month: "long",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     })
-  }
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "현지 뉴스":
-        return "bg-blue-100 text-blue-800 border-blue-200"
-      case "교민 업체":
-        return "bg-green-100 text-green-800 border-green-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
-    }
-  }
-
-  const handleCopy = async (text: string, field: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopiedField(field)
-      setTimeout(() => setCopiedField(null), 2000)
-    } catch (err) {
-      console.error("Failed to copy:", err)
-    }
   }
 
   const handleShare = async () => {
@@ -63,123 +49,183 @@ export default function NewsDetailModal({ article, isOpen, onClose }: NewsDetail
       } catch (err) {
         console.error("Error sharing:", err)
       }
-    } else {
-      handleCopy(window.location.href, "share")
+    }
+  }
+
+  const handleExternalLink = () => {
+    if (article.sourceUrl) {
+      window.open(article.sourceUrl, "_blank")
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] p-0 gap-0 rounded-xl overflow-hidden">
-        <div className="flex flex-col h-[95vh]">
-          {/* 헤더 */}
+      <DialogContent className="max-w-4xl w-[95vw] sm:w-[90vw] lg:w-[80vw] max-h-[90vh] p-0 gap-0 rounded-xl">
+        <div className="flex flex-col h-[90vh] rounded-xl overflow-hidden">
+          {/* Header with Image */}
           <div className="relative flex-shrink-0">
-            {/* 이미지 */}
             {article.imageUrl && (
-              <div className="aspect-video w-full bg-gray-100">
+              <div className="relative h-64 sm:h-80">
                 <img
                   src={article.imageUrl || "/placeholder.svg"}
                   alt={article.title}
                   className="w-full h-full object-cover"
                 />
-              </div>
-            )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-            {/* 오버레이 */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                {/* Close Button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-4 right-4 h-10 w-10 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full"
+                  onClick={onClose}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
 
-            {/* 닫기 버튼 */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-4 right-4 h-10 w-10 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full"
-              onClick={onClose}
-            >
-              <X className="h-5 w-5" />
-            </Button>
+                {/* Action Buttons */}
+                <div className="absolute top-4 left-4 flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full"
+                    onClick={() => setIsLiked(!isLiked)}
+                  >
+                    <Heart className={`h-5 w-5 ${isLiked ? "fill-red-500 text-red-500" : ""}`} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full"
+                    onClick={() => setIsBookmarked(!isBookmarked)}
+                  >
+                    <Bookmark className={`h-5 w-5 ${isBookmarked ? "fill-yellow-500 text-yellow-500" : ""}`} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full"
+                    onClick={handleShare}
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </Button>
+                </div>
 
-            {/* 액션 버튼들 */}
-            <div className="absolute top-4 left-4 flex gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full"
-                onClick={() => setIsFavorited(!isFavorited)}
-              >
-                <Heart className={`h-5 w-5 ${isFavorited ? "fill-red-500 text-red-500" : ""}`} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full"
-                onClick={handleShare}
-              >
-                <Share2 className="h-5 w-5" />
-              </Button>
-            </div>
-
-            {/* 제목과 메타 정보 */}
-            <div className="absolute bottom-0 left-0 right-0 p-8">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Badge className={`${getCategoryColor(article.category)} border`} variant="outline">
-                      {article.category}
-                    </Badge>
+                {/* Title and Meta Info */}
+                <div className="absolute bottom-0 left-0 right-0 p-6">
+                  <div className="flex items-center gap-2 mb-3">
                     {article.isBreaking && (
-                      <Badge className="bg-red-600 text-white animate-pulse border-red-600">속보</Badge>
+                      <Badge className="bg-red-500 text-white flex items-center gap-1 animate-pulse">
+                        <Zap className="h-3 w-3" />
+                        속보
+                      </Badge>
                     )}
+                    <Badge className={getCategoryColor(article.category)}>{getCategoryLabel(article.category)}</Badge>
                   </div>
-                  <h1 className="text-3xl font-bold text-white mb-4 leading-tight">{article.title}</h1>
-                  <div className="flex items-center gap-6 text-white/80 text-sm">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3 leading-tight">{article.title}</h1>
+                  <div className="flex items-center gap-4 text-white/80 text-sm">
                     <div className="flex items-center gap-1">
-                      <User className="h-4 w-4" />
-                      <span>{article.author}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{formatDate(article.publishedAt)}</span>
+                      <Eye className="h-4 w-4" />
+                      <span>{article.viewCount.toLocaleString()}회 조회</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
                       <span>{article.readTime}분 읽기</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Eye className="h-4 w-4" />
-                      <span>{article.viewCount.toLocaleString()}회 조회</span>
+                      <Calendar className="h-4 w-4" />
+                      <span>{formatDate(article.publishedAt)}</span>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Header without image */}
+            {!article.imageUrl && (
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-2">
+                    {article.isBreaking && (
+                      <Badge className="bg-red-500 text-white flex items-center gap-1 animate-pulse">
+                        <Zap className="h-3 w-3" />
+                        속보
+                      </Badge>
+                    )}
+                    <Badge className="bg-white/20 text-white">{getCategoryLabel(article.category)}</Badge>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-white hover:bg-white/20"
+                    onClick={onClose}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-3 leading-tight">{article.title}</h1>
+                <div className="flex items-center gap-4 text-white/80 text-sm">
+                  <div className="flex items-center gap-1">
+                    <Eye className="h-4 w-4" />
+                    <span>{article.viewCount.toLocaleString()}회</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    <span>{article.readTime}분</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* 스크롤 가능한 콘텐츠 */}
+          {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="p-8 space-y-8">
-              {/* 요약 */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                <h2 className="text-lg font-semibold mb-3 text-blue-900">📋 요약</h2>
-                <p className="text-blue-800 leading-relaxed text-base">{article.excerpt}</p>
-              </div>
-
-              {/* 본문 */}
-              <div>
-                <h2 className="text-xl font-semibold mb-4 text-gray-900">📰 본문</h2>
-                <div className="prose prose-lg max-w-none">
-                  <div className="text-gray-700 leading-relaxed whitespace-pre-line text-base">{article.content}</div>
+            <div className="p-6 space-y-6">
+              {/* Author and Date */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gray-100 rounded-full">
+                    <User className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{article.author}</p>
+                    <p className="text-sm text-gray-500">{formatDate(article.publishedAt)}</p>
+                  </div>
                 </div>
+                {article.sourceUrl && (
+                  <Button
+                    onClick={handleExternalLink}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2 bg-transparent"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    원문 보기
+                  </Button>
+                )}
               </div>
 
               <Separator />
 
-              {/* 태그 */}
-              {article.tags && article.tags.length > 0 && (
+              {/* Excerpt */}
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <p className="text-blue-900 font-medium leading-relaxed">{article.excerpt}</p>
+              </div>
+
+              {/* Content */}
+              <div className="prose prose-lg max-w-none">
+                <div className="text-gray-700 leading-relaxed whitespace-pre-line">{article.content}</div>
+              </div>
+
+              <Separator />
+
+              {/* Tags */}
+              {article.tags.length > 0 && (
                 <div>
-                  <h2 className="text-lg font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                    <Tag className="h-5 w-5" />
-                    태그
-                  </h2>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Tag className="h-5 w-5 text-gray-600" />
+                    <h3 className="font-semibold text-gray-900">관련 태그</h3>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {article.tags.map((tag, index) => (
                       <Badge
@@ -194,41 +240,41 @@ export default function NewsDetailModal({ article, isOpen, onClose }: NewsDetail
                 </div>
               )}
 
-              {/* 원문 링크 */}
-              {article.sourceUrl && (
-                <>
-                  <Separator />
-                  <div>
-                    <h2 className="text-lg font-semibold mb-4 text-gray-900">🔗 원문 링크</h2>
-                    <div className="flex items-center gap-4 p-4 rounded-xl bg-gray-50 border border-gray-200">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-gray-700 break-all text-sm">{article.sourceUrl}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => window.open(article.sourceUrl, "_blank")}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                          size="sm"
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          원문 보기
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCopy(article.sourceUrl!, "source")}
-                          className="w-12"
-                        >
-                          {copiedField === "source" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
+              {/* Bottom Actions */}
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsLiked(!isLiked)}
+                    className={isLiked ? "text-red-600 border-red-200 bg-red-50" : ""}
+                  >
+                    <Heart className={`h-4 w-4 mr-2 ${isLiked ? "fill-current" : ""}`} />
+                    좋아요
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsBookmarked(!isBookmarked)}
+                    className={isBookmarked ? "text-yellow-600 border-yellow-200 bg-yellow-50" : ""}
+                  >
+                    <Bookmark className={`h-4 w-4 mr-2 ${isBookmarked ? "fill-current" : ""}`} />
+                    북마크
+                  </Button>
+                </div>
+                <Button
+                  onClick={handleShare}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 bg-transparent"
+                >
+                  <Share2 className="h-4 w-4" />
+                  공유하기
+                </Button>
+              </div>
 
-              {/* 하단 여백 */}
-              <div className="h-8" />
+              {/* Bottom Spacing */}
+              <div className="h-4" />
             </div>
           </div>
         </div>

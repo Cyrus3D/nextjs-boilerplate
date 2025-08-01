@@ -317,7 +317,12 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                         >
                           지도에서 보기
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleCopy(card.location!, "location")} className="w-12">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopy(card.location!, "location")}
+                          className="w-12"
+                        >
                           {copiedField === "location" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                         </Button>
                       </div>
@@ -341,7 +346,12 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                         >
                           전화하기
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleCopy(card.phone!, "phone")} className="w-12">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopy(card.phone!, "phone")}
+                          className="w-12"
+                        >
                           {copiedField === "phone" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                         </Button>
                       </div>
@@ -380,7 +390,12 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                           <ExternalLink className="h-4 w-4 mr-1" />
                           {urlType === "map" ? "지도 보기" : "사이트 방문"}
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleCopy(card.website!, "website")} className="w-12">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopy(card.website!, "website")}
+                          className="w-12"
+                        >
                           {copiedField === "website" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                         </Button>
                       </div>
@@ -413,7 +428,12 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                             >
                               카톡 열기
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleCopy(card.kakaoId!, "kakao")} className="w-12">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCopy(card.kakaoId!, "kakao")}
+                              className="w-12"
+                            >
                               {copiedField === "kakao" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             </Button>
                           </div>
@@ -436,7 +456,12 @@ export default function BusinessDetailModal({ card, isOpen, onClose }: BusinessD
                             >
                               라인 열기
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleCopy(card.lineId!, "line")} className="w-12">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCopy(card.lineId!, "line")}
+                              className="w-12"
+                            >
                               {copiedField === "line" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             </Button>
                           </div>

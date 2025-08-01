@@ -2,49 +2,45 @@
 
 import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Search, Filter, TrendingUp, Clock, Newspaper } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Search, Filter, TrendingUp, Clock, Eye } from "lucide-react"
 import NewsCard from "@/components/news-card"
 import NewsDetailModal from "@/components/news-detail-modal"
-import { sampleNewsArticles } from "@/data/sample-news"
+import { sampleNews } from "@/data/sample-news"
 import type { NewsArticle } from "@/types/news"
 
 export default function NewsCardList() {
+  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("latest")
-  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
 
-  // 필터링 및 정렬된 뉴스 기사
-  const filteredAndSortedArticles = useMemo(() => {
-    let filtered = sampleNewsArticles
+  // Filter and sort news
+  const filteredAndSortedNews = useMemo(() => {
+    let filtered = sampleNews
 
-    // 카테고리 필터
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (article) =>
+          article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          article.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())),
+      )
+    }
+
+    // Filter by category
     if (selectedCategory !== "all") {
       filtered = filtered.filter((article) => article.category === selectedCategory)
     }
 
-    // 검색 필터
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
-      filtered = filtered.filter(
-        (article) =>
-          article.title.toLowerCase().includes(searchLower) ||
-          article.excerpt.toLowerCase().includes(searchLower) ||
-          article.content.toLowerCase().includes(searchLower) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(searchLower)),
-      )
-    }
-
-    // 정렬
-    return filtered.sort((a, b) => {
+    // Sort articles
+    const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case "latest":
-          // 속보 우선, 그 다음 최신순
-          if (a.isBreaking && !b.isBreaking) return -1
-          if (!a.isBreaking && b.isBreaking) return 1
           return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
         case "popular":
           return b.viewCount - a.viewCount
@@ -54,9 +50,11 @@ export default function NewsCardList() {
           return 0
       }
     })
+
+    return sorted
   }, [searchTerm, selectedCategory, sortBy])
 
-  const handleDetailClick = (article: NewsArticle) => {
+  const handleReadMore = (article: NewsArticle) => {
     setSelectedArticle(article)
     setIsModalOpen(true)
   }
@@ -66,90 +64,89 @@ export default function NewsCardList() {
     setSelectedArticle(null)
   }
 
-  // 통계 계산
-  const stats = useMemo(() => {
-    const total = sampleNewsArticles.length
-    const breaking = sampleNewsArticles.filter((article) => article.isBreaking).length
-    const today = sampleNewsArticles.filter((article) => {
-      const today = new Date()
-      const articleDate = new Date(article.publishedAt)
-      return articleDate.toDateString() === today.toDateString()
-    }).length
-    const categories = {
-      local: sampleNewsArticles.filter((article) => article.category === "현지 뉴스").length,
-      business: sampleNewsArticles.filter((article) => article.category === "교민 업체").length,
-    }
-
-    return { total, breaking, today, categories }
-  }, [])
+  const breakingNews = sampleNews.filter((article) => article.isBreaking)
+  const localNewsCount = sampleNews.filter((article) => article.category === "local").length
+  const businessNewsCount = sampleNews.filter((article) => article.category === "business").length
 
   return (
     <div className="space-y-6">
-      {/* 헤더 */}
+      {/* Header with Statistics */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-              <Newspaper className="h-6 w-6 text-blue-600" />
-              뉴스
-            </h2>
-            <p className="text-gray-600">태국 현지 뉴스와 교민 업체 소식을 확인하세요</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">📰 최신 뉴스</h2>
+            <p className="text-gray-600">태국 현지 소식과 교민 업체 정보를 실시간으로 확인하세요</p>
           </div>
 
-          {/* 통계 */}
+          {/* Statistics */}
           <div className="flex gap-4">
             <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
               <div className="flex items-center gap-2">
-                <Newspaper className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-gray-600">전체</span>
-                <span className="text-lg font-bold text-blue-600">{stats.total}</span>
+                <TrendingUp className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-gray-600">현지 뉴스</span>
+                <span className="text-lg font-bold text-blue-600">{localNewsCount}</span>
               </div>
             </div>
             <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
               <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-red-600" />
-                <span className="text-sm font-medium text-gray-600">속보</span>
-                <span className="text-lg font-bold text-red-600">{stats.breaking}</span>
-              </div>
-            </div>
-            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium text-gray-600">오늘</span>
-                <span className="text-lg font-bold text-green-600">{stats.today}</span>
+                <Eye className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium text-gray-600">교민 업체</span>
+                <span className="text-lg font-bold text-green-600">{businessNewsCount}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 검색 및 필터 */}
+      {/* Breaking News Banner */}
+      {breakingNews.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge className="bg-red-500 text-white animate-pulse">속보</Badge>
+            <span className="font-semibold text-red-800">긴급 뉴스</span>
+          </div>
+          <div className="space-y-2">
+            {breakingNews.map((article) => (
+              <button
+                key={article.id}
+                onClick={() => handleReadMore(article)}
+                className="block w-full text-left p-2 hover:bg-red-100 rounded transition-colors"
+              >
+                <p className="font-medium text-red-900 hover:text-red-700">{article.title}</p>
+                <p className="text-sm text-red-600 mt-1">{article.excerpt.substring(0, 100)}...</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Search and Filter Controls */}
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4">
-          {/* 검색 */}
+          {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="제목, 내용, 태그로 검색..."
+              placeholder="뉴스 검색..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
 
-          {/* 카테고리 필터 */}
+          {/* Category Filter */}
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="카테고리 선택" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">전체 카테고리</SelectItem>
-              <SelectItem value="현지 뉴스">현지 뉴스 ({stats.categories.local})</SelectItem>
-              <SelectItem value="교민 업체">교민 업체 ({stats.categories.business})</SelectItem>
+              <SelectItem value="all">전체</SelectItem>
+              <SelectItem value="local">현지 뉴스</SelectItem>
+              <SelectItem value="business">교민 업체</SelectItem>
             </SelectContent>
           </Select>
 
-          {/* 정렬 */}
+          {/* Sort Options */}
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="정렬 기준" />
@@ -161,56 +158,73 @@ export default function NewsCardList() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Active Filters */}
+        {(searchTerm || selectedCategory !== "all") && (
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <span className="text-sm text-gray-600">활성 필터:</span>
+            {searchTerm && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                검색: {searchTerm}
+                <button onClick={() => setSearchTerm("")} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
+                  ×
+                </button>
+              </Badge>
+            )}
+            {selectedCategory !== "all" && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                {selectedCategory === "local" ? "현지 뉴스" : "교민 업체"}
+                <button
+                  onClick={() => setSelectedCategory("all")}
+                  className="ml-1 hover:bg-gray-300 rounded-full p-0.5"
+                >
+                  ×
+                </button>
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* 결과 요약 */}
-      <div className="flex items-center justify-between text-sm text-gray-600">
-        <span>
-          총 {filteredAndSortedArticles.length}개의 뉴스
-          {searchTerm && ` (검색: "${searchTerm}")`}
-          {selectedCategory !== "all" && ` (카테고리: ${selectedCategory})`}
-        </span>
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4" />
-          <span>
-            {sortBy === "latest" && "최신순"}
-            {sortBy === "popular" && "인기순"}
-            {sortBy === "readTime" && "읽기 시간순"}
-          </span>
-          {(searchTerm || selectedCategory !== "all") && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSearchTerm("")
-                setSelectedCategory("all")
-              }}
-              className="text-xs"
-            >
-              필터 초기화
-            </Button>
-          )}
+      {/* Results Summary */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-600">
+          총 <span className="font-semibold text-gray-900">{filteredAndSortedNews.length}</span>개의 뉴스
+        </p>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Clock className="h-4 w-4" />
+          <span>마지막 업데이트: {new Date().toLocaleTimeString("ko-KR")}</span>
         </div>
       </div>
 
-      {/* 뉴스 카드 그리드 */}
-      {filteredAndSortedArticles.length > 0 ? (
+      {/* News Grid */}
+      {filteredAndSortedNews.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAndSortedArticles.map((article) => (
-            <NewsCard key={article.id} article={article} onDetailClick={handleDetailClick} />
+          {filteredAndSortedNews.map((article) => (
+            <NewsCard key={article.id} article={article} onReadMore={handleReadMore} />
           ))}
         </div>
       ) : (
         <div className="text-center py-12">
-          <div className="text-gray-500 mb-4">
-            <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">검색 결과가 없습니다</p>
-            <p className="text-sm">다른 키워드나 카테고리로 검색해보세요</p>
+          <div className="text-gray-400 mb-4">
+            <Search className="h-12 w-12 mx-auto" />
           </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">검색 결과가 없습니다</h3>
+          <p className="text-gray-600 mb-4">다른 검색어나 필터를 시도해보세요.</p>
+          <Button
+            onClick={() => {
+              setSearchTerm("")
+              setSelectedCategory("all")
+            }}
+            variant="outline"
+          >
+            필터 초기화
+          </Button>
         </div>
       )}
 
-      {/* 뉴스 상세 모달 */}
+      {/* News Detail Modal */}
       <NewsDetailModal article={selectedArticle} isOpen={isModalOpen} onClose={handleCloseModal} />
     </div>
   )

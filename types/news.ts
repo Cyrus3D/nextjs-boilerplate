@@ -3,23 +3,19 @@ export interface NewsArticle {
   title: string
   excerpt: string
   content: string
-  category: "현지 뉴스" | "교민 업체"
+  category: "local" | "business"
+  tags: string[]
   author: string
   publishedAt: string
   readTime: number
   viewCount: number
   isBreaking: boolean
-  tags: string[]
   imageUrl?: string
   sourceUrl?: string
 }
 
-export interface NewsStats {
-  total: number
-  breaking: number
-  today: number
-  categories: {
-    local: number
-    business: number
-  }
+export interface NewsCategory {
+  id: string
+  name: string
+  count: number
 }
