@@ -1,31 +1,16 @@
 export interface NewsArticle {
   id: string
-  title: string
-  excerpt: string
-  content: string
-  imageUrl: string
   category: string
-  tags: string[]
+  title: string
   author: string
   publishedAt: string
+  viewCount: number
   readTime: number
-  isBreaking: boolean
-  views: number
-  likes: number
-  shares: number
-  source: string
-  sourceUrl: string
-}
-
-export interface NewsCategory {
-  id: string
-  name: string
-  color: string
-  count: number
-}
-
-export interface NewsStats {
-  totalArticles: number
-  breakingNews: number
-  categoryCounts: Record<string, number>
+  imageUrl?: string
+  excerpt: string
+  content: string
+  tags: string[]
+  source?: string
+  sourceUrl?: string
+  isBreaking?: boolean
 }
