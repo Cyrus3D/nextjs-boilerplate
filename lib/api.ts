@@ -2,406 +2,210 @@ import { supabase } from "./supabase"
 import type { BusinessCard } from "@/types/business-card"
 import type { NewsArticle } from "@/types/news"
 
-// News Articles API
-export async function getNewsArticles(limit = 50): Promise<NewsArticle[]> {
-  try {
-    const { data, error } = await supabase
-      .from("news_articles")
-      .select("*")
-      .eq("is_published", true)
-      .order("is_breaking", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(limit)
-
-    if (error) {
-      console.error("Error fetching news articles:", error)
-      return []
-    }
-
-    return (data || []).map((article: any) => ({
-      id: article.id,
-      title: article.title,
-      excerpt: article.summary || article.content.substring(0, 200) + "...",
-      content: article.content,
-      author: article.author || "편집부",
-      category: article.category,
-      tags: article.tags || [],
-      imageUrl: article.image_url,
-      sourceUrl: article.source_url,
-      publishedAt: article.published_at || article.created_at,
-      isBreaking: article.is_breaking,
-      isPublished: article.is_published,
-      viewCount: article.view_count,
-      readTime: article.read_time || 3,
-      created_at: article.created_at,
-      updated_at: article.updated_at,
-    }))
-  } catch (error) {
-    console.error("Error fetching news articles:", error)
-    return []
-  }
-}
-
-export async function getNewsArticlesByCategory(category: string, limit = 20): Promise<NewsArticle[]> {
-  try {
-    const { data, error } = await supabase
-      .from("news_articles")
-      .select("*")
-      .eq("is_published", true)
-      .eq("category", category)
-      .order("created_at", { ascending: false })
-      .limit(limit)
-
-    if (error) {
-      console.error("Error fetching news articles by category:", error)
-      return []
-    }
-
-    return (data || []).map((article: any) => ({
-      id: article.id,
-      title: article.title,
-      excerpt: article.summary || article.content.substring(0, 200) + "...",
-      content: article.content,
-      author: article.author || "편집부",
-      category: article.category,
-      tags: article.tags || [],
-      imageUrl: article.image_url,
-      sourceUrl: article.source_url,
-      publishedAt: article.published_at || article.created_at,
-      isBreaking: article.is_breaking,
-      isPublished: article.is_published,
-      viewCount: article.view_count,
-      readTime: article.read_time || 3,
-      created_at: article.created_at,
-      updated_at: article.updated_at,
-    }))
-  } catch (error) {
-    console.error("Error fetching news articles by category:", error)
-    return []
-  }
-}
-
-export async function getNewsArticleById(id: string): Promise<NewsArticle | null> {
-  try {
-    const { data, error } = await supabase.from("news_articles").select("*").eq("id", id).single()
-
-    if (error) {
-      console.error("Error fetching news article:", error)
-      return null
-    }
-
-    return {
-      id: data.id,
-      title: data.title,
-      excerpt: data.summary || data.content.substring(0, 200) + "...",
-      content: data.content,
-      author: data.author || "편집부",
-      category: data.category,
-      tags: data.tags || [],
-      imageUrl: data.image_url,
-      sourceUrl: data.source_url,
-      publishedAt: data.published_at || data.created_at,
-      isBreaking: data.is_breaking,
-      isPublished: data.is_published,
-      viewCount: data.view_count,
-      readTime: data.read_time || 3,
-      created_at: data.created_at,
-      updated_at: data.updated_at,
-    }
-  } catch (error) {
-    console.error("Error fetching news article:", error)
-    return null
-  }
-}
-
-export async function incrementNewsViewCount(id: number): Promise<void> {
-  try {
-    const { error } = await supabase.rpc("increment_news_view_count", { article_id: id })
-
-    if (error) {
-      console.error("Error incrementing news view count:", error)
-    }
-  } catch (error) {
-    console.error("Error incrementing news view count:", error)
-  }
-}
-
-export async function searchNewsArticles(query: string, category?: string): Promise<NewsArticle[]> {
-  try {
-    let queryBuilder = supabase.from("news_articles").select("*").eq("is_published", true)
-
-    if (category && category !== "all") {
-      queryBuilder = queryBuilder.eq("category", category)
-    }
-
-    if (query) {
-      queryBuilder = queryBuilder.or(`title.ilike.%${query}%,content.ilike.%${query}%,summary.ilike.%${query}%`)
-    }
-
-    const { data, error } = await queryBuilder.order("created_at", { ascending: false }).limit(100)
-
-    if (error) {
-      console.error("Error searching news articles:", error)
-      return []
-    }
-
-    return (data || []).map((article: any) => ({
-      id: article.id,
-      title: article.title,
-      excerpt: article.summary || article.content.substring(0, 200) + "...",
-      content: article.content,
-      author: article.author || "편집부",
-      category: article.category,
-      tags: article.tags || [],
-      imageUrl: article.image_url,
-      sourceUrl: article.source_url,
-      publishedAt: article.published_at || article.created_at,
-      isBreaking: article.is_breaking,
-      isPublished: article.is_published,
-      viewCount: article.view_count,
-      readTime: article.read_time || 3,
-      created_at: article.created_at,
-      updated_at: article.updated_at,
-    }))
-  } catch (error) {
-    console.error("Error searching news articles:", error)
-    return []
-  }
-}
-
-export async function getBreakingNews(): Promise<NewsArticle[]> {
-  try {
-    const { data, error } = await supabase
-      .from("news_articles")
-      .select("*")
-      .eq("is_published", true)
-      .eq("is_breaking", true)
-      .order("created_at", { ascending: false })
-      .limit(5)
-
-    if (error) {
-      console.error("Error fetching breaking news:", error)
-      return []
-    }
-
-    return (data || []).map((article: any) => ({
-      id: article.id,
-      title: article.title,
-      excerpt: article.summary || article.content.substring(0, 200) + "...",
-      content: article.content,
-      author: article.author || "편집부",
-      category: article.category,
-      tags: article.tags || [],
-      imageUrl: article.image_url,
-      sourceUrl: article.source_url,
-      publishedAt: article.published_at || article.created_at,
-      isBreaking: article.is_breaking,
-      isPublished: article.is_published,
-      viewCount: article.view_count,
-      readTime: article.read_time || 3,
-      created_at: article.created_at,
-      updated_at: article.updated_at,
-    }))
-  } catch (error) {
-    console.error("Error fetching breaking news:", error)
-    return []
-  }
-}
-
 // Business Cards API
-export async function getBusinessCards(limit = 50): Promise<BusinessCard[]> {
-  try {
-    const { data, error } = await supabase
-      .from("business_cards")
-      .select("*")
-      .eq("is_active", true)
-      .order("is_premium", { ascending: false })
-      .order("is_promoted", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(limit)
+export async function getBusinessCards(): Promise<BusinessCard[]> {
+  const { data, error } = await supabase
+    .from("business_cards")
+    .select(`
+      *,
+      business_card_tags (
+        tags (
+          name
+        )
+      )
+    `)
+    .eq("is_published", true)
+    .order("is_premium", { ascending: false })
+    .order("is_promoted", { ascending: false })
+    .order("created_at", { ascending: false })
 
-    if (error) {
-      console.error("Error fetching business cards:", error)
-      return []
-    }
-
-    return (data || []).map((card: any) => ({
-      id: card.id,
-      title: card.title,
-      description: card.description,
-      category: card.category,
-      location: card.location,
-      phone: card.phone,
-      kakaoId: card.kakao_id,
-      lineId: card.line_id,
-      website: card.website,
-      hours: card.hours,
-      price: card.price,
-      promotion: card.promotion,
-      tags: [],
-      image: card.image_url,
-      isPromoted: card.is_promoted || false,
-      isPremium: card.is_premium || false,
-      premiumExpiresAt: card.premium_expires_at,
-      exposureCount: card.exposure_count || 0,
-      lastExposedAt: card.last_exposed_at,
-      exposureWeight: card.exposure_weight || 1.0,
-      facebookUrl: card.facebook_url,
-      instagramUrl: card.instagram_url,
-      tiktokUrl: card.tiktok_url,
-      threadsUrl: card.threads_url,
-      youtubeUrl: card.youtube_url,
-      viewCount: card.view_count || 0,
-      created_at: card.created_at,
-    }))
-  } catch (error) {
+  if (error) {
     console.error("Error fetching business cards:", error)
-    return []
+    throw error
   }
+
+  return data?.map(mapBusinessCardFromDB) || []
 }
 
-export async function getBusinessCardById(id: string): Promise<BusinessCard | null> {
-  try {
-    const { data, error } = await supabase.from("business_cards").select("*").eq("id", id).single()
+export async function searchBusinessCards(query: string, category?: string): Promise<BusinessCard[]> {
+  let queryBuilder = supabase
+    .from("business_cards")
+    .select(`
+      *,
+      business_card_tags (
+        tags (
+          name
+        )
+      )
+    `)
+    .eq("is_published", true)
 
-    if (error) {
-      console.error("Error fetching business card:", error)
-      return null
-    }
-
-    return {
-      id: data.id,
-      title: data.title,
-      description: data.description,
-      category: data.category,
-      location: data.location,
-      phone: data.phone,
-      kakaoId: data.kakao_id,
-      lineId: data.line_id,
-      website: data.website,
-      hours: data.hours,
-      price: data.price,
-      promotion: data.promotion,
-      tags: [],
-      image: data.image_url,
-      isPromoted: data.is_promoted || false,
-      isPremium: data.is_premium || false,
-      premiumExpiresAt: data.premium_expires_at,
-      exposureCount: data.exposure_count || 0,
-      lastExposedAt: data.last_exposed_at,
-      exposureWeight: data.exposure_weight || 1.0,
-      facebookUrl: data.facebook_url,
-      instagramUrl: data.instagram_url,
-      tiktokUrl: data.tiktok_url,
-      threadsUrl: data.threads_url,
-      youtubeUrl: data.youtube_url,
-      viewCount: data.view_count || 0,
-      created_at: data.created_at,
-    }
-  } catch (error) {
-    console.error("Error fetching business card:", error)
-    return null
+  if (query) {
+    queryBuilder = queryBuilder.or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
   }
+
+  if (category && category !== "all") {
+    queryBuilder = queryBuilder.eq("category", category)
+  }
+
+  const { data, error } = await queryBuilder
+    .order("is_premium", { ascending: false })
+    .order("is_promoted", { ascending: false })
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("Error searching business cards:", error)
+    throw error
+  }
+
+  return data?.map(mapBusinessCardFromDB) || []
 }
 
-export async function incrementViewCount(id: string): Promise<void> {
-  try {
-    const { error } = await supabase.rpc("increment_view_count", { card_id: Number.parseInt(id) })
+export async function incrementViewCount(cardId: string): Promise<void> {
+  const { error } = await supabase.rpc("increment_view_count", {
+    card_id: Number.parseInt(cardId),
+  })
 
-    if (error) {
-      console.error("Error incrementing view count:", error)
-    }
-  } catch (error) {
+  if (error) {
     console.error("Error incrementing view count:", error)
   }
 }
 
-export async function searchBusinessCards(query: string, category?: string): Promise<BusinessCard[]> {
-  try {
-    let queryBuilder = supabase.from("business_cards").select("*").eq("is_active", true)
+// News Articles API
+export async function getNewsArticles(): Promise<NewsArticle[]> {
+  const { data, error } = await supabase
+    .from("news_articles")
+    .select("*")
+    .eq("is_published", true)
+    .order("is_breaking", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(50)
 
-    if (category && category !== "all") {
-      queryBuilder = queryBuilder.eq("category", category)
-    }
+  if (error) {
+    console.error("Error fetching news articles:", error)
+    throw error
+  }
 
-    if (query) {
-      queryBuilder = queryBuilder.or(`title.ilike.%${query}%,description.ilike.%${query}%`)
-    }
+  return data?.map(mapNewsArticleFromDB) || []
+}
 
-    const { data, error } = await queryBuilder.order("created_at", { ascending: false }).limit(100)
+export async function searchNewsArticles(query: string, category?: string): Promise<NewsArticle[]> {
+  let queryBuilder = supabase.from("news_articles").select("*").eq("is_published", true)
 
-    if (error) {
-      console.error("Error searching business cards:", error)
-      return []
-    }
+  if (query) {
+    queryBuilder = queryBuilder.or(`title.ilike.%${query}%,content.ilike.%${query}%,summary.ilike.%${query}%`)
+  }
 
-    return (data || []).map((card: any) => ({
-      id: card.id,
-      title: card.title,
-      description: card.description,
-      category: card.category,
-      location: card.location,
-      phone: card.phone,
-      kakaoId: card.kakao_id,
-      lineId: card.line_id,
-      website: card.website,
-      hours: card.hours,
-      price: card.price,
-      promotion: card.promotion,
-      tags: [],
-      image: card.image_url,
-      isPromoted: card.is_promoted || false,
-      isPremium: card.is_premium || false,
-      premiumExpiresAt: card.premium_expires_at,
-      exposureCount: card.exposure_count || 0,
-      lastExposedAt: card.last_exposed_at,
-      exposureWeight: card.exposure_weight || 1.0,
-      facebookUrl: card.facebook_url,
-      instagramUrl: card.instagram_url,
-      tiktokUrl: card.tiktok_url,
-      threadsUrl: card.threads_url,
-      youtubeUrl: card.youtube_url,
-      viewCount: card.view_count || 0,
-      created_at: card.created_at,
-    }))
-  } catch (error) {
-    console.error("Error searching business cards:", error)
-    return []
+  if (category && category !== "all") {
+    queryBuilder = queryBuilder.eq("category", category)
+  }
+
+  const { data, error } = await queryBuilder
+    .order("is_breaking", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(50)
+
+  if (error) {
+    console.error("Error searching news articles:", error)
+    throw error
+  }
+
+  return data?.map(mapNewsArticleFromDB) || []
+}
+
+export async function getBreakingNews(): Promise<NewsArticle[]> {
+  const { data, error } = await supabase
+    .from("news_articles")
+    .select("*")
+    .eq("is_published", true)
+    .eq("is_breaking", true)
+    .order("created_at", { ascending: false })
+    .limit(3)
+
+  if (error) {
+    console.error("Error fetching breaking news:", error)
+    throw error
+  }
+
+  return data?.map(mapNewsArticleFromDB) || []
+}
+
+export async function incrementNewsViewCount(articleId: number): Promise<void> {
+  const { error } = await supabase.rpc("increment_news_view_count", {
+    article_id: articleId,
+  })
+
+  if (error) {
+    console.error("Error incrementing news view count:", error)
   }
 }
 
-// Statistics API
-export async function getStatistics(): Promise<{
-  totalNews: number
-  totalBusinesses: number
-  totalBreaking: number
-  totalPremium: number
-}> {
-  try {
-    const [newsResult, businessResult, breakingResult, premiumResult] = await Promise.all([
-      supabase.from("news_articles").select("id", { count: "exact", head: true }).eq("is_published", true),
-      supabase.from("business_cards").select("id", { count: "exact", head: true }).eq("is_active", true),
-      supabase
-        .from("news_articles")
-        .select("id", { count: "exact", head: true })
-        .eq("is_breaking", true)
-        .eq("is_published", true),
-      supabase.from("business_cards").select("id", { count: "exact", head: true }).eq("is_premium", true),
-    ])
+export async function getStatistics() {
+  const [newsCount, businessCount, breakingCount, premiumCount] = await Promise.all([
+    supabase.from("news_articles").select("id", { count: "exact" }).eq("is_published", true),
+    supabase.from("business_cards").select("id", { count: "exact" }).eq("is_published", true),
+    supabase.from("news_articles").select("id", { count: "exact" }).eq("is_published", true).eq("is_breaking", true),
+    supabase.from("business_cards").select("id", { count: "exact" }).eq("is_published", true).eq("is_premium", true),
+  ])
 
-    return {
-      totalNews: newsResult.count || 0,
-      totalBusinesses: businessResult.count || 0,
-      totalBreaking: breakingResult.count || 0,
-      totalPremium: premiumResult.count || 0,
-    }
-  } catch (error) {
-    console.error("Error fetching statistics:", error)
-    return {
-      totalNews: 0,
-      totalBusinesses: 0,
-      totalBreaking: 0,
-      totalPremium: 0,
-    }
+  return {
+    newsCount: newsCount.count || 0,
+    businessCount: businessCount.count || 0,
+    breakingCount: breakingCount.count || 0,
+    premiumCount: premiumCount.count || 0,
+  }
+}
+
+// Helper functions to map database objects to frontend types
+function mapBusinessCardFromDB(dbCard: any): BusinessCard {
+  return {
+    id: dbCard.id,
+    title: dbCard.title,
+    description: dbCard.description,
+    category: dbCard.category,
+    location: dbCard.location,
+    phone: dbCard.phone,
+    website: dbCard.website,
+    image: dbCard.image,
+    hours: dbCard.hours,
+    price: dbCard.price,
+    promotion: dbCard.promotion,
+    kakaoId: dbCard.kakao_id,
+    lineId: dbCard.line_id,
+    facebookUrl: dbCard.facebook_url,
+    instagramUrl: dbCard.instagram_url,
+    youtubeUrl: dbCard.youtube_url,
+    tiktokUrl: dbCard.tiktok_url,
+    isPremium: dbCard.is_premium,
+    isPromoted: dbCard.is_promoted,
+    exposureCount: dbCard.exposure_count,
+    viewCount: dbCard.view_count,
+    tags: dbCard.business_card_tags?.map((bct: any) => bct.tags.name) || [],
+    created_at: dbCard.created_at,
+    updated_at: dbCard.updated_at,
+  }
+}
+
+function mapNewsArticleFromDB(dbArticle: any): NewsArticle {
+  return {
+    id: dbArticle.id,
+    title: dbArticle.title,
+    content: dbArticle.content,
+    summary: dbArticle.summary,
+    category: dbArticle.category,
+    tags: dbArticle.tags || [],
+    imageUrl: dbArticle.image_url,
+    sourceUrl: dbArticle.source_url,
+    author: dbArticle.author,
+    isPublished: dbArticle.is_published,
+    isBreaking: dbArticle.is_breaking,
+    viewCount: dbArticle.view_count,
+    language: dbArticle.language,
+    translatedTitle: dbArticle.translated_title,
+    translatedContent: dbArticle.translated_content,
+    translatedSummary: dbArticle.translated_summary,
+    createdAt: dbArticle.created_at,
+    updatedAt: dbArticle.updated_at,
+    publishedAt: dbArticle.published_at,
   }
 }

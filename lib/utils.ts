@@ -5,10 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString)
+export function formatRelativeTime(date: string | Date): string {
   const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  const targetDate = new Date(date)
+  const diffInSeconds = Math.floor((now.getTime() - targetDate.getTime()) / 1000)
 
   if (diffInSeconds < 60) {
     return "방금 전"
@@ -43,92 +43,66 @@ export function formatRelativeTime(dateString: string): string {
   return `${diffInYears}년 전`
 }
 
-export function formatDateTime(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString("ko-KR", {
+export function formatDate(date: string | Date): string {
+  const targetDate = new Date(date)
+  return targetDate.toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
+    weekday: "long",
+  })
+}
+
+export function formatDateTime(date: string | Date): string {
+  const targetDate = new Date(date)
+  return targetDate.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   })
 }
 
-export function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-}
-
-export function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((word) => word.charAt(0))
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
-}
-
-export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text
-  return text.slice(0, maxLength).trim() + "..."
-}
-
-export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-}
-
-export function getUrlType(url: string): "website" | "map" | "unknown" {
+export function getUrlType(url?: string): "website" | "map" | "unknown" {
   if (!url) return "unknown"
 
   const lowerUrl = url.toLowerCase()
 
-  if (
-    lowerUrl.includes("maps.google") ||
-    lowerUrl.includes("goo.gl/maps") ||
-    lowerUrl.includes("maps.app.goo.gl") ||
-    lowerUrl.includes("google.com/maps")
-  ) {
+  if (lowerUrl.includes("maps.google") || lowerUrl.includes("goo.gl/maps") || lowerUrl.includes("maps.app.goo.gl")) {
     return "map"
   }
 
-  if (lowerUrl.startsWith("http://") || lowerUrl.startsWith("https://")) {
-    return "website"
-  }
-
-  return "unknown"
+  return "website"
 }
 
 export function formatPhoneNumber(phone: string): string {
-  if (!phone) return ""
-
   // Remove all non-digit characters
   const digits = phone.replace(/\D/g, "")
 
   // Thai phone number formatting
   if (digits.length === 10 && digits.startsWith("0")) {
-    // Format: 010-123-4567
     return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
   }
 
   if (digits.length === 9) {
-    // Format: 81-123-4567 (without leading 0)
     return `${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5)}`
   }
 
-  // International format
-  if (digits.length > 10) {
-    return `+${digits.slice(0, 2)} ${digits.slice(2, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`
-  }
-
   return phone
+}
+
+export function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text
+  return text.slice(0, maxLength) + "..."
+}
+
+export function createSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
 }
 
 export function isValidEmail(email: string): boolean {
@@ -136,8 +110,8 @@ export function isValidEmail(email: string): boolean {
   return emailRegex.test(email)
 }
 
-export function isValidPhone(phone: string): boolean {
-  const phoneRegex = /^[+]?[0-9\-$$$$\s]+$/
+export function isValidPhoneNumber(phone: string): boolean {
+  const phoneRegex = /^[0-9+\-\s()]+$/
   return phoneRegex.test(phone) && phone.replace(/\D/g, "").length >= 9
 }
 
@@ -148,10 +122,6 @@ export function isValidUrl(url: string): boolean {
   } catch {
     return false
   }
-}
-
-export function generateId(): string {
-  return Math.random().toString(36).substr(2, 9)
 }
 
 export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
@@ -175,42 +145,22 @@ export function throttle<T extends (...args: any[]) => any>(func: T, limit: numb
   }
 }
 
-export function formatNumber(num: number): string {
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + "M"
+export function generateId(): string {
+  return Math.random().toString(36).substr(2, 9)
+}
+
+export function capitalizeFirst(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+export function removeHtmlTags(html: string): string {
+  return html.replace(/<[^>]*>/g, "")
+}
+
+export function extractDomain(url: string): string {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return url
   }
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1) + "K"
-  }
-  return num.toString()
-}
-
-export function calculateReadTime(text: string): number {
-  const wordsPerMinute = 200 // Average reading speed
-  const words = text.split(/\s+/).length
-  return Math.ceil(words / wordsPerMinute)
-}
-
-export function sanitizeHtml(html: string): string {
-  // Basic HTML sanitization - remove script tags and dangerous attributes
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/on\w+="[^"]*"/g, "")
-    .replace(/javascript:/gi, "")
-}
-
-export function extractTextFromHtml(html: string): string {
-  // Remove HTML tags and get plain text
-  return html.replace(/<[^>]*>/g, "").trim()
-}
-
-export function getColorFromString(str: string): string {
-  // Generate a consistent color from a string
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  }
-
-  const hue = hash % 360
-  return `hsl(${hue}, 70%, 50%)`
 }

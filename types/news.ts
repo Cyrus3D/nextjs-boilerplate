@@ -2,22 +2,22 @@ export interface NewsArticle {
   id: number
   title: string
   content: string
-  summary?: string
+  summary: string | null
   category: string
-  author?: string
-  source_url?: string
-  image_url?: string
-  is_published: boolean
-  is_breaking: boolean
-  view_count: number
-  created_at: string
-  updated_at: string
-  published_at?: string
-  tags?: string[]
+  tags: string[]
+  imageUrl: string | null
+  sourceUrl: string | null
+  author: string | null
+  isPublished: boolean
+  isBreaking: boolean
+  viewCount: number
   language: string
-  translated_title?: string
-  translated_content?: string
-  translated_summary?: string
+  translatedTitle: string | null
+  translatedContent: string | null
+  translatedSummary: string | null
+  createdAt: string
+  updatedAt: string
+  publishedAt: string | null
 }
 
 export interface NewsArticleFormData {
@@ -83,16 +83,16 @@ export interface NewsTag {
 }
 
 export interface NewsSearchParams {
+  query?: string
   category?: string
-  searchTerm?: string
+  isBreaking?: boolean
   limit?: number
   offset?: number
-  isBreaking?: boolean
 }
 
-export interface NewsStats {
+export interface NewsStatistics {
   totalArticles: number
-  totalBreaking: number
-  totalPublished: number
-  totalViews: number
+  breakingNews: number
+  categoryCounts: Record<string, number>
+  recentViews: number
 }

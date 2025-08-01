@@ -5,8 +5,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Database Types
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       business_cards: {
@@ -15,28 +14,23 @@ export interface Database {
           title: string
           description: string
           category: string
-          location?: string
-          phone?: string
-          kakao_id?: string
-          line_id?: string
-          website?: string
-          hours?: string
-          price?: string
-          promotion?: string
-          image_url?: string
-          is_promoted: boolean
+          location: string | null
+          phone: string | null
+          website: string | null
+          image: string | null
+          hours: string | null
+          price: string | null
+          promotion: string | null
+          kakao_id: string | null
+          line_id: string | null
+          facebook_url: string | null
+          instagram_url: string | null
+          youtube_url: string | null
+          tiktok_url: string | null
           is_premium: boolean
-          premium_expires_at?: string
-          exposure_count: number
-          last_exposed_at?: string
-          exposure_weight: number
-          facebook_url?: string
-          instagram_url?: string
-          tiktok_url?: string
-          threads_url?: string
-          youtube_url?: string
+          is_promoted: boolean
+          exposure_count: number | null
           view_count: number
-          is_active: boolean
           created_at: string
           updated_at: string
         }
@@ -45,28 +39,23 @@ export interface Database {
           title: string
           description: string
           category: string
-          location?: string
-          phone?: string
-          kakao_id?: string
-          line_id?: string
-          website?: string
-          hours?: string
-          price?: string
-          promotion?: string
-          image_url?: string
-          is_promoted?: boolean
+          location?: string | null
+          phone?: string | null
+          website?: string | null
+          image?: string | null
+          hours?: string | null
+          price?: string | null
+          promotion?: string | null
+          kakao_id?: string | null
+          line_id?: string | null
+          facebook_url?: string | null
+          instagram_url?: string | null
+          youtube_url?: string | null
+          tiktok_url?: string | null
           is_premium?: boolean
-          premium_expires_at?: string
-          exposure_count?: number
-          last_exposed_at?: string
-          exposure_weight?: number
-          facebook_url?: string
-          instagram_url?: string
-          tiktok_url?: string
-          threads_url?: string
-          youtube_url?: string
+          is_promoted?: boolean
+          exposure_count?: number | null
           view_count?: number
-          is_active?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -75,28 +64,23 @@ export interface Database {
           title?: string
           description?: string
           category?: string
-          location?: string
-          phone?: string
-          kakao_id?: string
-          line_id?: string
-          website?: string
-          hours?: string
-          price?: string
-          promotion?: string
-          image_url?: string
-          is_promoted?: boolean
+          location?: string | null
+          phone?: string | null
+          website?: string | null
+          image?: string | null
+          hours?: string | null
+          price?: string | null
+          promotion?: string | null
+          kakao_id?: string | null
+          line_id?: string | null
+          facebook_url?: string | null
+          instagram_url?: string | null
+          youtube_url?: string | null
+          tiktok_url?: string | null
           is_premium?: boolean
-          premium_expires_at?: string
-          exposure_count?: number
-          last_exposed_at?: string
-          exposure_weight?: number
-          facebook_url?: string
-          instagram_url?: string
-          tiktok_url?: string
-          threads_url?: string
-          youtube_url?: string
+          is_promoted?: boolean
+          exposure_count?: number | null
           view_count?: number
-          is_active?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -106,89 +90,83 @@ export interface Database {
           id: number
           title: string
           content: string
-          summary?: string
+          summary: string | null
           category: string
-          author?: string
-          source_url?: string
-          image_url?: string
+          tags: string[]
+          image_url: string | null
+          source_url: string | null
+          author: string | null
           is_published: boolean
           is_breaking: boolean
           view_count: number
-          read_time: number
-          tags: string[]
           language: string
-          translated_title?: string
-          translated_content?: string
-          translated_summary?: string
+          translated_title: string | null
+          translated_content: string | null
+          translated_summary: string | null
           created_at: string
           updated_at: string
-          published_at?: string
+          published_at: string | null
         }
         Insert: {
           id?: number
           title: string
           content: string
-          summary?: string
+          summary?: string | null
           category: string
-          author?: string
-          source_url?: string
-          image_url?: string
+          tags?: string[]
+          image_url?: string | null
+          source_url?: string | null
+          author?: string | null
           is_published?: boolean
           is_breaking?: boolean
           view_count?: number
-          read_time?: number
-          tags?: string[]
           language?: string
-          translated_title?: string
-          translated_content?: string
-          translated_summary?: string
+          translated_title?: string | null
+          translated_content?: string | null
+          translated_summary?: string | null
           created_at?: string
           updated_at?: string
-          published_at?: string
+          published_at?: string | null
         }
         Update: {
           id?: number
           title?: string
           content?: string
-          summary?: string
+          summary?: string | null
           category?: string
-          author?: string
-          source_url?: string
-          image_url?: string
+          tags?: string[]
+          image_url?: string | null
+          source_url?: string | null
+          author?: string | null
           is_published?: boolean
           is_breaking?: boolean
           view_count?: number
-          read_time?: number
-          tags?: string[]
           language?: string
-          translated_title?: string
-          translated_content?: string
-          translated_summary?: string
+          translated_title?: string | null
+          translated_content?: string | null
+          translated_summary?: string | null
           created_at?: string
           updated_at?: string
-          published_at?: string
+          published_at?: string | null
         }
       }
       categories: {
         Row: {
           id: number
           name: string
-          description?: string
-          type: string
+          description: string | null
           created_at: string
         }
         Insert: {
           id?: number
           name: string
-          description?: string
-          type: string
+          description?: string | null
           created_at?: string
         }
         Update: {
           id?: number
           name?: string
-          description?: string
-          type?: string
+          description?: string | null
           created_at?: string
         }
       }
@@ -196,20 +174,31 @@ export interface Database {
         Row: {
           id: number
           name: string
-          type: string
           created_at: string
         }
         Insert: {
           id?: number
           name: string
-          type: string
           created_at?: string
         }
         Update: {
           id?: number
           name?: string
-          type?: string
           created_at?: string
+        }
+      }
+      business_card_tags: {
+        Row: {
+          business_card_id: number
+          tag_id: number
+        }
+        Insert: {
+          business_card_id: number
+          tag_id: number
+        }
+        Update: {
+          business_card_id?: number
+          tag_id?: number
         }
       }
     }

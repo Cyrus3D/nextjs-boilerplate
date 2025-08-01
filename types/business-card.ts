@@ -3,23 +3,23 @@ export interface BusinessCard {
   title: string
   description: string
   category: string
-  location?: string
-  phone?: string
-  website?: string
-  image?: string
+  location: string | null
+  phone: string | null
+  website: string | null
+  image: string | null
   tags: string[]
-  hours?: string
-  price?: string
-  promotion?: string
-  kakaoId?: string
-  lineId?: string
-  facebookUrl?: string
-  instagramUrl?: string
-  youtubeUrl?: string
-  tiktokUrl?: string
+  hours: string | null
+  price: string | null
+  promotion: string | null
+  kakaoId: string | null
+  lineId: string | null
+  facebookUrl: string | null
+  instagramUrl: string | null
+  youtubeUrl: string | null
+  tiktokUrl: string | null
   isPremium: boolean
   isPromoted: boolean
-  exposureCount?: number
+  exposureCount: number | null
   viewCount: number
   created_at: string
   updated_at: string

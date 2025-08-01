@@ -12,22 +12,22 @@ import { NewsDetailModal } from "@/components/news-detail-modal"
 import { getNewsArticles, searchNewsArticles } from "@/lib/api"
 import { debounce } from "@/lib/utils"
 import type { NewsArticle } from "@/types/news"
-import { Search, Filter, RefreshCw, Zap } from "lucide-react"
+import { Search, Filter, RefreshCw, AlertTriangle } from "lucide-react"
 
 const NEWS_CATEGORIES = [
   "all",
-  "현지",
-  "업체",
-  "정책",
-  "교통",
-  "비자",
+  "속보",
+  "정치",
   "경제",
-  "문화",
   "사회",
+  "문화",
   "스포츠",
-  "연예",
+  "국제",
   "기술",
   "건강",
+  "여행",
+  "교육",
+  "기타",
 ]
 
 export function NewsCardList() {
@@ -53,7 +53,7 @@ export function NewsCardList() {
             setArticles(results)
           }
         } catch (error) {
-          console.error("Error searching articles:", error)
+          console.error("Error searching news articles:", error)
         } finally {
           setLoading(false)
         }
@@ -69,7 +69,7 @@ export function NewsCardList() {
         const results = await getNewsArticles()
         setArticles(results)
       } catch (error) {
-        console.error("Error loading articles:", error)
+        console.error("Error loading news articles:", error)
       } finally {
         setLoading(false)
       }
@@ -105,7 +105,7 @@ export function NewsCardList() {
       const results = await getNewsArticles()
       setArticles(results)
     } catch (error) {
-      console.error("Error refreshing articles:", error)
+      console.error("Error refreshing news articles:", error)
     } finally {
       setLoading(false)
     }
@@ -145,11 +145,11 @@ export function NewsCardList() {
 
             {/* Breaking News Toggle */}
             <Button
-              variant={showBreakingOnly ? "default" : "outline"}
+              variant={showBreakingOnly ? "destructive" : "outline"}
               onClick={() => setShowBreakingOnly(!showBreakingOnly)}
               className="flex items-center gap-2"
             >
-              <Zap className="h-4 w-4" />
+              <AlertTriangle className="h-4 w-4" />
               속보만
             </Button>
 
@@ -169,7 +169,7 @@ export function NewsCardList() {
           </span>
           {showBreakingOnly && (
             <Badge variant="destructive" className="animate-pulse">
-              <Zap className="h-3 w-3 mr-1" />
+              <AlertTriangle className="h-3 w-3 mr-1" />
               속보만 표시
             </Badge>
           )}
@@ -178,7 +178,7 @@ export function NewsCardList() {
         </div>
       </div>
 
-      {/* Articles Grid */}
+      {/* News Articles Grid */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (

@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { BusinessCard } from "@/components/business-card"
-import { BusinessDetailModal } from "@/components/business-detail-modal"
+import BusinessCard from "@/components/business-card"
+import BusinessDetailModal from "@/components/business-detail-modal"
 import { getBusinessCards, searchBusinessCards } from "@/lib/api"
 import { debounce } from "@/lib/utils"
 import type { BusinessCard as BusinessCardType } from "@/types/business-card"
@@ -209,7 +209,7 @@ export function BusinessCardList() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCards.map((card) => (
-            <BusinessCard key={card.id} card={card} onClick={() => handleCardClick(card)} />
+            <BusinessCard key={card.id} card={card} onDetailClick={() => handleCardClick(card)} />
           ))}
         </div>
       )}
