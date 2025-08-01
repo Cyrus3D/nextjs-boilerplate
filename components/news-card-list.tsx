@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Search, Filter } from "lucide-react"
 import NewsCard from "@/components/news-card"
-import { NewsDetailModal } from "@/components/news-detail-modal"
+import NewsDetailModal from "@/components/news-detail-modal"
 import { incrementNewsViewCount } from "@/lib/api"
 import type { NewsArticle } from "@/types/news"
 
