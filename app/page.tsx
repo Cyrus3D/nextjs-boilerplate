@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect, useMemo, Suspense, lazy } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, Thermometer, DollarSign, Newspaper, Building2, Badge, Users, MapPin } from "lucide-react"
 import NewsCardList from "@/components/news-card-list"
 import InfiniteScrollCards from "@/components/infinite-scroll-cards"
+import BusinessDetailModal from "@/components/business-detail-modal"
 import type { BusinessCard as BusinessCardType, Category } from "@/types/business-card"
 import {
   getBusinessCardsPaginated,
@@ -15,11 +16,6 @@ import {
   getCachedData,
   setCachedData,
 } from "@/lib/optimized-api"
-
-// Lazy load components for better performance - using default import
-const BusinessDetailModal = lazy(() =>
-  import("@/components/business-detail-modal").then((module) => ({ default: module.default })),
-)
 
 // Weather and exchange rate interfaces
 interface WeatherData {
@@ -443,16 +439,14 @@ export default function HomePage() {
       </div>
 
       {/* Business Detail Modal */}
-      <Suspense fallback={<div>Loading modal...</div>}>
-        <BusinessDetailModal
-          card={selectedCard}
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false)
-            setSelectedCard(null)
-          }}
-        />
-      </Suspense>
+      <BusinessDetailModal
+        card={selectedCard}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedCard(null)
+        }}
+      />
     </div>
   )
 }
