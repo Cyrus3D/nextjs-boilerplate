@@ -88,6 +88,21 @@ export function formatDate(date: string | Date): string {
   }).format(dateObj)
 }
 
+export function formatRelativeTime(date: string | Date): string {
+  if (!date) return ""
+
+  const dateObj = typeof date === "string" ? new Date(date) : date
+  const now = new Date()
+  const diffInSeconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000)
+
+  if (diffInSeconds < 60) return "방금 전"
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}분 전`
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}시간 전`
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}일 전`
+  if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)}개월 전`
+  return `${Math.floor(diffInSeconds / 31536000)}년 전`
+}
+
 export function truncateText(text: string, maxLength: number): string {
   if (!text || text.length <= maxLength) return text
   return text.substring(0, maxLength) + "..."
@@ -185,4 +200,50 @@ export function removeEmptyFields<T extends Record<string, any>>(obj: T): Partia
   }
 
   return result
+}
+
+export function getUrlType(url?: string): "website" | "map" | "social" | "unknown" {
+  if (!url) return "unknown"
+
+  const lowerUrl = url.toLowerCase()
+
+  if (lowerUrl.includes("maps.google") || lowerUrl.includes("maps.app.goo.gl") || lowerUrl.includes("goo.gl/maps")) {
+    return "map"
+  }
+
+  if (
+    lowerUrl.includes("facebook.com") ||
+    lowerUrl.includes("instagram.com") ||
+    lowerUrl.includes("twitter.com") ||
+    lowerUrl.includes("youtube.com") ||
+    lowerUrl.includes("tiktok.com") ||
+    lowerUrl.includes("line.me")
+  ) {
+    return "social"
+  }
+
+  return "website"
+}
+
+export function calculateReadingTime(text: string): number {
+  const wordsPerMinute = 200
+  const words = text.split(/\s+/).length
+  return Math.ceil(words / wordsPerMinute)
+}
+
+export function formatNumber(num: number): string {
+  return num.toLocaleString("ko-KR")
+}
+
+export function generateId(): string {
+  return Math.random().toString(36).substr(2, 9)
+}
+
+export function removeHtmlTags(html: string): string {
+  return html.replace(/<[^>]*>/g, "")
+}
+
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
 }

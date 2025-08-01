@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Phone, MapPin, Globe, Facebook, Instagram, Youtube, MessageCircle, Star, Eye } from "lucide-react"
+import { Phone, MapPin, Globe, Facebook, Instagram, Youtube, MessageCircle, Eye, Crown, Zap } from "lucide-react"
 import type { BusinessCard } from "@/lib/supabase"
 import { formatPhoneNumber, detectUrlType, formatViewCount } from "@/lib/utils"
 import { incrementExposureCount } from "@/lib/api"
@@ -54,24 +54,37 @@ export default function BusinessCardComponent({ card, onCardClick, showViewCount
 
   return (
     <Card
-      className={`h-full transition-all duration-200 hover:shadow-lg cursor-pointer ${
+      className={`h-full transition-all duration-200 hover:shadow-lg cursor-pointer relative overflow-hidden ${
         card.is_premium ? "ring-2 ring-yellow-400 bg-gradient-to-br from-yellow-50 to-white" : ""
       } ${card.is_promoted ? "ring-2 ring-blue-400 bg-gradient-to-br from-blue-50 to-white" : ""}`}
       onClick={handleCardClick}
     >
+      {/* Premium/Promoted badges */}
+      <div className="absolute top-2 right-2 z-10 flex gap-1">
+        {card.is_premium && (
+          <Badge className="bg-yellow-500 text-white">
+            <Crown className="h-3 w-3 mr-1" />
+            프리미엄
+          </Badge>
+        )}
+        {card.is_promoted && (
+          <Badge className="bg-blue-500 text-white">
+            <Zap className="h-3 w-3 mr-1" />
+            추천
+          </Badge>
+        )}
+      </div>
+
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg font-bold text-gray-900 line-clamp-2">
-              {card.title}
-              {card.is_premium && <Star className="inline-block ml-2 h-4 w-4 text-yellow-500 fill-current" />}
-            </CardTitle>
-            <Badge variant="secondary" className="mt-2">
+          <div className="flex-1 pr-2">
+            <CardTitle className="text-lg font-bold text-gray-900 line-clamp-2 mb-2">{card.title}</CardTitle>
+            <Badge variant="secondary" className="mb-2">
               {card.category}
             </Badge>
           </div>
           {card.image_url && !imageError && (
-            <div className="ml-3 flex-shrink-0">
+            <div className="flex-shrink-0">
               <img
                 src={card.image_url || "/placeholder.svg"}
                 alt={card.title}
@@ -90,14 +103,14 @@ export default function BusinessCardComponent({ card, onCardClick, showViewCount
         <div className="space-y-2 mb-4">
           {card.phone && (
             <div className="flex items-center text-sm text-gray-700">
-              <Phone className="h-4 w-4 mr-2 text-green-600" />
+              <Phone className="h-4 w-4 mr-2 text-green-600 flex-shrink-0" />
               <span>{formatPhoneNumber(card.phone)}</span>
             </div>
           )}
 
           {card.address && (
             <div className="flex items-center text-sm text-gray-700">
-              <MapPin className="h-4 w-4 mr-2 text-red-600" />
+              <MapPin className="h-4 w-4 mr-2 text-red-600 flex-shrink-0" />
               <span className="line-clamp-1">{card.address}</span>
             </div>
           )}
@@ -146,17 +159,16 @@ export default function BusinessCardComponent({ card, onCardClick, showViewCount
 
         {/* View Count */}
         {showViewCount && card.view_count > 0 && (
-          <div className="flex items-center text-xs text-gray-500 mt-2">
-            <Eye className="h-3 w-3 mr-1" />
-            <span>{formatViewCount(card.view_count)} 조회</span>
+          <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
+            <div className="flex items-center">
+              <Eye className="h-3 w-3 mr-1" />
+              <span>{formatViewCount(card.view_count)} 조회</span>
+            </div>
+            <div>
+              <span>노출 {formatViewCount(card.exposure_count)}</span>
+            </div>
           </div>
         )}
-
-        {/* Premium/Promoted Badges */}
-        <div className="flex gap-2 mt-3">
-          {card.is_premium && <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">프리미엄</Badge>}
-          {card.is_promoted && <Badge className="bg-blue-100 text-blue-800 border-blue-300">추천</Badge>}
-        </div>
       </CardContent>
     </Card>
   )

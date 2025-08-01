@@ -1,91 +1,82 @@
 import { supabase } from "./supabase"
 
 export interface DatabaseStatus {
-  isConnected: boolean
+  connected: boolean
   tables: {
-    name: string
-    exists: boolean
-    recordCount: number
-  }[]
+    business_cards: number
+    news_articles: number
+    categories: number
+    tags: number
+  }
   functions: {
-    name: string
-    exists: boolean
-  }[]
+    increment_view_count: boolean
+    increment_exposure_count: boolean
+  }
   error?: string
 }
 
 export async function checkDatabaseStatus(): Promise<DatabaseStatus> {
   const status: DatabaseStatus = {
-    isConnected: false,
-    tables: [],
-    functions: [],
+    connected: false,
+    tables: {
+      business_cards: 0,
+      news_articles: 0,
+      categories: 0,
+      tags: 0,
+    },
+    functions: {
+      increment_view_count: false,
+      increment_exposure_count: false,
+    },
   }
 
   try {
-    // Test basic connection
-    const { data: connectionTest, error: connectionError } = await supabase
-      .from("business_cards")
-      .select("count(*)")
-      .limit(1)
+    // Test connection
+    const { error: connectionError } = await supabase.from("business_cards").select("count(*)").limit(1)
 
     if (connectionError) {
       status.error = connectionError.message
       return status
     }
 
-    status.isConnected = true
+    status.connected = true
 
-    // Check tables
-    const tablesToCheck = [
-      "business_cards",
-      "news_articles",
-      "categories",
-      "tags",
-      "business_card_tags",
-      "news_article_tags",
-    ]
+    // Count records in each table
+    const tables = ["business_cards", "news_articles", "categories", "tags"]
 
-    for (const tableName of tablesToCheck) {
+    for (const table of tables) {
       try {
-        const { data, error } = await supabase.from(tableName).select("*", { count: "exact", head: true })
+        const { count, error } = await supabase.from(table).select("*", { count: "exact", head: true })
 
-        status.tables.push({
-          name: tableName,
-          exists: !error,
-          recordCount: error ? 0 : data?.length || 0,
-        })
-      } catch {
-        status.tables.push({
-          name: tableName,
-          exists: false,
-          recordCount: 0,
-        })
+        if (!error && count !== null) {
+          status.tables[table as keyof typeof status.tables] = count
+        }
+      } catch (error) {
+        console.error(`Error counting ${table}:`, error)
       }
     }
 
-    // Check functions
-    const functionsToCheck = [
-      "increment_view_count",
-      "increment_exposure_count",
-      "get_popular_tags",
-      "search_business_cards",
-    ]
+    // Check if functions exist
+    try {
+      const { data: functions } = await supabase
+        .rpc("increment_view_count", { card_id: "test" })
+        .then(() => ({ data: true }))
+        .catch(() => ({ data: false }))
 
-    for (const functionName of functionsToCheck) {
-      try {
-        // Try to call the function to see if it exists
-        const { error } = await supabase.rpc(functionName, {})
+      status.functions.increment_view_count = !!functions
+    } catch {
+      status.functions.increment_view_count = false
+    }
 
-        status.functions.push({
-          name: functionName,
-          exists: !error || !error.message.includes("does not exist"),
-        })
-      } catch {
-        status.functions.push({
-          name: functionName,
-          exists: false,
-        })
-      }
+    try {
+      const { data: functions } = await supabase
+        .rpc("increment_exposure_count", { card_id: "test" })
+        .then(() => ({ data: true }))
+        .catch(() => ({ data: false }))
+
+      status.functions.increment_exposure_count = !!functions
+    } catch {
+      status.functions.increment_exposure_count = false
     }
   } catch (error) {
     status.error = error instanceof Error ? error.message : "Unknown error"
@@ -94,21 +85,19 @@ export async function checkDatabaseStatus(): Promise<DatabaseStatus> {
   return status
 }
 
-export async function getTableSchema(tableName: string) {
+export async function getTableInfo(tableName: string) {
   try {
-    const { data, error } = await supabase
-      .from("information_schema.columns")
-      .select("column_name, data_type, is_nullable")
-      .eq("table_name", tableName)
+    const { data, error } = await supabase.from(tableName).select("*").limit(5)
 
     if (error) {
-      console.error(`Error getting schema for ${tableName}:`, error)
-      return null
+      return { error: error.message, data: null }
     }
 
-    return data
+    return { data, error: null }
   } catch (error) {
-    console.error(`Exception getting schema for ${tableName}:`, error)
-    return null
+    return {
+      error: error instanceof Error ? error.message : "Unknown error",
+      data: null,
+    }
   }
 }
