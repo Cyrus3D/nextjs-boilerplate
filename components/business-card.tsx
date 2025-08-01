@@ -31,6 +31,7 @@ const getCategoryColor = (category: string) => {
 
 export default function BusinessCardComponent({ card, onDetailClick }: BusinessCardProps) {
   const urlType = getUrlType(card.website)
+  const tags = card.tags || []
 
   return (
     <Card
@@ -99,14 +100,14 @@ export default function BusinessCardComponent({ card, onDetailClick }: BusinessC
           )}
 
           <div className="flex flex-wrap gap-1">
-            {card.tags.slice(0, 4).map((tag, index) => (
+            {tags.slice(0, 4).map((tag, index) => (
               <Badge key={index} variant="outline" className="text-xs">
                 {tag}
               </Badge>
             ))}
-            {card.tags.length > 4 && (
+            {tags.length > 4 && (
               <Badge variant="outline" className="text-xs">
-                +{card.tags.length - 4}
+                +{tags.length - 4}
               </Badge>
             )}
           </div>

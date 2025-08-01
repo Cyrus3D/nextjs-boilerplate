@@ -11,6 +11,7 @@ export function isSupabaseConfigured(): boolean {
 
 export async function safeSupabaseOperation<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
   if (!supabase) {
+    console.warn("Supabase not configured, using fallback data")
     return fallback
   }
 

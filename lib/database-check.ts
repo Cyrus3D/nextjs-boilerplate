@@ -4,19 +4,19 @@ export interface DatabaseStatus {
   isConfigured: boolean
   isConnected: boolean
   lastChecked: Date
-  tables: TableStatus[]
-  functions: FunctionStatus[]
+  tables: TableInfo[]
+  functions: FunctionInfo[]
   error?: string
 }
 
-export interface TableStatus {
+export interface TableInfo {
   name: string
   exists: boolean
   recordCount: number
   error?: string
 }
 
-export interface FunctionStatus {
+export interface FunctionInfo {
   name: string
   exists: boolean
   error?: string
@@ -28,10 +28,10 @@ export interface SchemaInfo {
 }
 
 export interface ColumnInfo {
-  columnName: string
-  dataType: string
-  isNullable: boolean
-  defaultValue: string | null
+  name: string
+  type: string
+  nullable: boolean
+  defaultValue?: string
 }
 
 const REQUIRED_TABLES = ["business_cards", "news_articles", "categories", "tags", "business_card_tags"]
@@ -59,114 +59,106 @@ export async function checkDatabaseStatus(): Promise<DatabaseStatus> {
 
   try {
     // Test basic connection
-    const { data, error } = await supabase.from("business_cards").select("count", { count: "exact", head: true })
+    const { error: connectionError } = await supabase.from("business_cards").select("id").limit(1)
 
-    if (error && !error.message.includes("relation") && !error.message.includes("does not exist")) {
-      throw error
+    if (connectionError && !connectionError.message.includes("does not exist")) {
+      status.error = `Connection failed: ${connectionError.message}`
+      return status
     }
 
     status.isConnected = true
 
     // Check tables
     for (const tableName of REQUIRED_TABLES) {
-      const tableStatus: TableStatus = {
+      const tableInfo: TableInfo = {
         name: tableName,
         exists: false,
         recordCount: 0,
       }
 
       try {
-        const { count, error: tableError } = await supabase.from(tableName).select("*", { count: "exact", head: true })
+        const { count, error } = await supabase.from(tableName).select("*", { count: "exact", head: true })
 
-        if (tableError) {
-          if (tableError.message.includes("relation") || tableError.message.includes("does not exist")) {
-            tableStatus.exists = false
-            tableStatus.error = "Table does not exist"
-          } else {
-            throw tableError
-          }
+        if (error) {
+          tableInfo.error = error.message
+          tableInfo.exists = !error.message.includes("does not exist")
         } else {
-          tableStatus.exists = true
-          tableStatus.recordCount = count || 0
+          tableInfo.exists = true
+          tableInfo.recordCount = count || 0
         }
-      } catch (error) {
-        tableStatus.error = error instanceof Error ? error.message : "Unknown error"
+      } catch (err) {
+        tableInfo.error = err instanceof Error ? err.message : "Unknown error"
       }
 
-      status.tables.push(tableStatus)
+      status.tables.push(tableInfo)
     }
 
     // Check functions
     for (const functionName of REQUIRED_FUNCTIONS) {
-      const functionStatus: FunctionStatus = {
+      const functionInfo: FunctionInfo = {
         name: functionName,
         exists: false,
       }
 
       try {
-        const { data, error } = await supabase.rpc(functionName, { card_id: 1 })
+        // Try to call the function with invalid parameters to test existence
+        const { error } = await supabase.rpc(functionName, {})
 
         if (error) {
-          if (error.message.includes("function") && error.message.includes("does not exist")) {
-            functionStatus.exists = false
-            functionStatus.error = "Function does not exist"
-          } else {
-            // Function exists but might have failed due to invalid parameters
-            functionStatus.exists = true
+          // If error is about missing parameters, function exists
+          functionInfo.exists =
+            !error.message.includes("does not exist") &&
+            !error.message.includes("function") &&
+            !error.message.includes("not found")
+          if (!functionInfo.exists) {
+            functionInfo.error = error.message
           }
         } else {
-          functionStatus.exists = true
+          functionInfo.exists = true
         }
-      } catch (error) {
-        functionStatus.error = error instanceof Error ? error.message : "Unknown error"
+      } catch (err) {
+        functionInfo.error = err instanceof Error ? err.message : "Unknown error"
       }
 
-      status.functions.push(functionStatus)
+      status.functions.push(functionInfo)
     }
   } catch (error) {
-    status.error = error instanceof Error ? error.message : "Unknown connection error"
+    status.error = error instanceof Error ? error.message : "Unknown error"
   }
 
   return status
 }
 
-export async function getSchemaInfo(): Promise<SchemaInfo[]> {
-  if (!supabase) {
-    return []
-  }
+export async function getTableSchema(tableName: string): Promise<SchemaInfo | null> {
+  if (!supabase) return null
 
-  const schemaInfo: SchemaInfo[] = []
+  try {
+    // Get table schema information
+    const { data, error } = await supabase
+      .from("information_schema.columns")
+      .select("column_name, data_type, is_nullable, column_default")
+      .eq("table_name", tableName)
+      .order("ordinal_position")
 
-  for (const tableName of REQUIRED_TABLES) {
-    try {
-      const { data, error } = await supabase
-        .from("information_schema.columns")
-        .select("column_name, data_type, is_nullable, column_default")
-        .eq("table_name", tableName)
-        .order("ordinal_position")
-
-      if (error) {
-        console.error(`Error getting schema for ${tableName}:`, error)
-        continue
-      }
-
-      if (data && data.length > 0) {
-        const columns: ColumnInfo[] = data.map((col: any) => ({
-          columnName: col.column_name,
-          dataType: col.data_type,
-          isNullable: col.is_nullable === "YES",
-          defaultValue: col.column_default,
-        }))
-
-        schemaInfo.push({
-          tableName,
-          columns,
-        })
-      }
-    } catch (error) {
-      console.error(`Error getting schema for ${tableName}:`, error)
+    if (error) {
+      console.error(`Error fetching schema for ${tableName}:`, error)
+      return null
     }
-  }
 
-  return schemaInfo
+    const columns: ColumnInfo[] =
+      data?.map((col: any) => ({
+        name: col.column_name,
+        type: col.data_type,
+        nullable: col.is_nullable === "YES",
+        defaultValue: col.column_default,
+      })) || []
+
+    return {
+      tableName,
+      columns,
+    }
+  } catch (error) {
+    console.error(`Error fetching schema for ${tableName}:`, error)
+    return null
+  }
 }

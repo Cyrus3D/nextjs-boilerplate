@@ -5,99 +5,105 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatRelativeTime(date: string | Date): string {
-  const now = new Date()
-  const targetDate = new Date(date)
-  const diffInSeconds = Math.floor((now.getTime() - targetDate.getTime()) / 1000)
-
-  if (diffInSeconds < 60) {
-    return "방금 전"
-  }
-
-  const diffInMinutes = Math.floor(diffInSeconds / 60)
-  if (diffInMinutes < 60) {
-    return `${diffInMinutes}분 전`
-  }
-
-  const diffInHours = Math.floor(diffInMinutes / 60)
-  if (diffInHours < 24) {
-    return `${diffInHours}시간 전`
-  }
-
-  const diffInDays = Math.floor(diffInHours / 24)
-  if (diffInDays < 7) {
-    return `${diffInDays}일 전`
-  }
-
-  const diffInWeeks = Math.floor(diffInDays / 7)
-  if (diffInWeeks < 4) {
-    return `${diffInWeeks}주 전`
-  }
-
-  const diffInMonths = Math.floor(diffInDays / 30)
-  if (diffInMonths < 12) {
-    return `${diffInMonths}개월 전`
-  }
-
-  const diffInYears = Math.floor(diffInDays / 365)
-  return `${diffInYears}년 전`
+// Debounce function for search inputs
+export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  let timeout: NodeJS.Timeout | null = null
+  return ((...args: any[]) => {
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }) as T
 }
 
-export function formatDate(date: string | Date): string {
-  const targetDate = new Date(date)
-  return targetDate.toLocaleDateString("ko-KR", {
+// Throttle function for limiting function calls
+export function throttle<T extends (...args: any[]) => any>(func: T, limit: number): T {
+  let inThrottle: boolean
+  return ((...args: any[]) => {
+    if (!inThrottle) {
+      func.apply(this, args)
+      inThrottle = true
+      setTimeout(() => (inThrottle = false), limit)
+    }
+  }) as T
+}
+
+// Format date and time in Korean format
+export function formatDateTime(date: string | Date): string {
+  const d = new Date(date)
+  return d.toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
     day: "numeric",
-    weekday: "long",
-  })
-}
-
-export function formatDateTime(date: string | Date): string {
-  const targetDate = new Date(date)
-  return targetDate.toLocaleString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   })
 }
 
-export function getUrlType(url?: string): "website" | "map" | "unknown" {
-  if (!url) return "unknown"
+// Format relative time (e.g., "2시간 전")
+export function formatRelativeTime(date: string | Date): string {
+  const now = new Date()
+  const past = new Date(date)
+  const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000)
 
-  const lowerUrl = url.toLowerCase()
-
-  if (lowerUrl.includes("maps.google") || lowerUrl.includes("goo.gl/maps") || lowerUrl.includes("maps.app.goo.gl")) {
-    return "map"
-  }
-
-  return "website"
+  if (diffInSeconds < 60) return "방금 전"
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}분 전`
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}시간 전`
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}일 전`
+  if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)}개월 전`
+  return `${Math.floor(diffInSeconds / 31536000)}년 전`
 }
 
+// Format Thai phone numbers
 export function formatPhoneNumber(phone: string): string {
-  // Remove all non-digit characters
-  const digits = phone.replace(/\D/g, "")
+  if (!phone) return ""
 
-  // Thai phone number formatting
-  if (digits.length === 10 && digits.startsWith("0")) {
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
+  // Remove all non-digit characters
+  const cleaned = phone.replace(/\D/g, "")
+
+  // Thai mobile numbers (10 digits starting with 0)
+  if (cleaned.length === 10 && cleaned.startsWith("0")) {
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`
   }
 
-  if (digits.length === 9) {
-    return `${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5)}`
+  // Thai landline numbers (9 digits starting with 0)
+  if (cleaned.length === 9 && cleaned.startsWith("0")) {
+    return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 5)}-${cleaned.slice(5)}`
   }
 
   return phone
 }
 
+// Detect URL type (website, map, social media)
+export function getUrlType(url?: string): "website" | "map" | "social" | "unknown" {
+  if (!url) return "unknown"
+
+  const lowerUrl = url.toLowerCase()
+
+  if (lowerUrl.includes("maps.google") || lowerUrl.includes("maps.app.goo.gl") || lowerUrl.includes("goo.gl/maps")) {
+    return "map"
+  }
+
+  if (
+    lowerUrl.includes("facebook.com") ||
+    lowerUrl.includes("instagram.com") ||
+    lowerUrl.includes("twitter.com") ||
+    lowerUrl.includes("youtube.com") ||
+    lowerUrl.includes("tiktok.com") ||
+    lowerUrl.includes("line.me")
+  ) {
+    return "social"
+  }
+
+  return "website"
+}
+
+// Truncate text with ellipsis
 export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text
   return text.slice(0, maxLength) + "..."
 }
 
-export function createSlug(text: string): string {
+// Generate slug from text
+export function generateSlug(text: string): string {
   return text
     .toLowerCase()
     .replace(/[^a-z0-9가-힣]/g, "-")
@@ -105,16 +111,7 @@ export function createSlug(text: string): string {
     .replace(/^-|-$/g, "")
 }
 
-export function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
-}
-
-export function isValidPhoneNumber(phone: string): boolean {
-  const phoneRegex = /^[0-9+\-\s()]+$/
-  return phoneRegex.test(phone) && phone.replace(/\D/g, "").length >= 9
-}
-
+// Validate URL
 export function isValidUrl(url: string): boolean {
   try {
     new URL(url)
@@ -124,43 +121,35 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
-export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
-
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(() => func(...args), wait)
-  }
+// Validate email
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
 }
 
-export function throttle<T extends (...args: any[]) => any>(func: T, limit: number): (...args: Parameters<T>) => void {
-  let inThrottle: boolean
-
-  return (...args: Parameters<T>) => {
-    if (!inThrottle) {
-      func(...args)
-      inThrottle = true
-      setTimeout(() => (inThrottle = false), limit)
-    }
-  }
-}
-
+// Generate random ID
 export function generateId(): string {
   return Math.random().toString(36).substr(2, 9)
 }
 
-export function capitalizeFirst(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1)
+// Capitalize first letter
+export function capitalizeFirst(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
+// Remove HTML tags
 export function removeHtmlTags(html: string): string {
   return html.replace(/<[^>]*>/g, "")
 }
 
-export function extractDomain(url: string): string {
-  try {
-    return new URL(url).hostname
-  } catch {
-    return url
-  }
+// Format number with commas
+export function formatNumber(num: number): string {
+  return num.toLocaleString("ko-KR")
+}
+
+// Calculate reading time
+export function calculateReadingTime(text: string): number {
+  const wordsPerMinute = 200
+  const words = text.split(/\s+/).length
+  return Math.ceil(words / wordsPerMinute)
 }
