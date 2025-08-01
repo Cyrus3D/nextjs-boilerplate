@@ -1,11 +1,11 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co"
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
 
-// Database Types
+// Types
 export interface BusinessCard {
   id: string
   title: string
@@ -17,14 +17,9 @@ export interface BusinessCard {
   facebook?: string
   instagram?: string
   youtube?: string
-  twitter?: string
-  tiktok?: string
   line?: string
-  kakao?: string
-  whatsapp?: string
-  telegram?: string
   image_url?: string
-  tags?: string[]
+  tags: string[]
   is_active: boolean
   is_premium: boolean
   is_promoted: boolean
@@ -43,6 +38,7 @@ export interface NewsArticle {
   source_url?: string
   image_url?: string
   author?: string
+  tags?: string[]
   is_published: boolean
   is_breaking: boolean
   view_count: number
@@ -65,44 +61,47 @@ export interface Category {
 export interface Tag {
   id: string
   name: string
-  description?: string
-  color?: string
-  usage_count: number
   is_active: boolean
+  usage_count: number
   created_at: string
 }
 
 export interface DatabaseStatus {
   connected: boolean
   tables: {
-    business_cards: number
-    news_articles: number
-    categories: number
-    tags: number
+    business_cards: boolean
+    news_articles: boolean
+    categories: boolean
+    tags: boolean
   }
-  functions: string[]
-  error?: string
+  functions: {
+    increment_view_count: boolean
+    increment_exposure_count: boolean
+  }
+  environment: {
+    supabase_url: boolean
+    supabase_anon_key: boolean
+  }
 }
 
-// Safe Supabase operation wrapper
-export async function safeSupabaseOperation<T>(operation: () => Promise<{ data: T | null; error: any }>): Promise<T> {
+// Safe operation wrapper
+export async function safeSupabaseOperation<T>(operation: () => Promise<{ data: T; error: any }>): Promise<T | null> {
+  if (!supabase) {
+    console.warn("Supabase client not initialized")
+    return null
+  }
+
   try {
     const { data, error } = await operation()
 
     if (error) {
-      console.error("Supabase operation failed:", error.message)
-      throw new Error(`Supabase operation failed: ${error.message}`)
+      console.error("Supabase operation error:", error)
+      return null
     }
 
-    return data as T
+    return data
   } catch (error) {
-    console.error("Supabase operation error:", error)
-    throw error
+    console.error("Supabase operation failed:", error)
+    return null
   }
 }
-
-// Type aliases for compatibility
-export type BusinessCardType = BusinessCard
-export type NewsArticleType = NewsArticle
-export type CategoryType = Category
-export type TagType = Tag

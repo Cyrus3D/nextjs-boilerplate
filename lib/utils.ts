@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatDateTime(date: Date | string): string {
+export function formatDateTime(date: string | Date): string {
   const d = new Date(date)
   return d.toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -16,16 +16,7 @@ export function formatDateTime(date: Date | string): string {
   })
 }
 
-export function formatDate(date: Date | string): string {
-  const d = new Date(date)
-  return d.toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-}
-
-export function formatRelativeTime(date: Date | string): string {
+export function formatRelativeTime(date: string | Date): string {
   const now = new Date()
   const target = new Date(date)
   const diffInSeconds = Math.floor((now.getTime() - target.getTime()) / 1000)
@@ -42,58 +33,83 @@ export function formatRelativeTime(date: Date | string): string {
     const days = Math.floor(diffInSeconds / 86400)
     return `${days}일 전`
   } else {
-    return formatDate(date)
+    return formatDateTime(date)
   }
 }
 
-export function getRelativeTime(date: Date | string): string {
-  return formatRelativeTime(date)
-}
-
-export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text
-  return text.slice(0, maxLength) + "..."
-}
-
 export function formatPhoneNumber(phone: string): string {
+  if (!phone) return ""
+
   // Remove all non-digit characters
   const cleaned = phone.replace(/\D/g, "")
 
   // Thai phone number formatting
   if (cleaned.startsWith("66")) {
     // International format: +66 XX XXX XXXX
-    const number = cleaned.slice(2)
+    const number = cleaned.substring(2)
     if (number.length === 9) {
-      return `+66 ${number.slice(0, 2)} ${number.slice(2, 5)} ${number.slice(5)}`
+      return `+66 ${number.substring(0, 2)} ${number.substring(2, 5)} ${number.substring(5)}`
     }
-  } else if (cleaned.startsWith("0") && cleaned.length === 10) {
+  } else if (cleaned.startsWith("0")) {
     // Local format: 0XX XXX XXXX
-    return `${cleaned.slice(0, 3)} ${cleaned.slice(3, 6)} ${cleaned.slice(6)}`
+    if (cleaned.length === 10) {
+      return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 6)} ${cleaned.substring(6)}`
+    }
   }
 
-  return phone // Return original if no pattern matches
+  return phone
 }
 
-export function detectUrlType(url: string): string {
+export function detectUrlType(url: string): "facebook" | "instagram" | "youtube" | "line" | "website" | "unknown" {
   if (!url) return "unknown"
 
   const lowerUrl = url.toLowerCase()
 
-  if (lowerUrl.includes("facebook.com") || lowerUrl.includes("fb.com")) return "facebook"
-  if (lowerUrl.includes("instagram.com")) return "instagram"
-  if (lowerUrl.includes("youtube.com") || lowerUrl.includes("youtu.be")) return "youtube"
-  if (lowerUrl.includes("twitter.com") || lowerUrl.includes("x.com")) return "twitter"
-  if (lowerUrl.includes("tiktok.com")) return "tiktok"
-  if (lowerUrl.includes("line.me")) return "line"
-  if (lowerUrl.includes("t.me") || lowerUrl.includes("telegram.me")) return "telegram"
-  if (lowerUrl.includes("wa.me") || lowerUrl.includes("whatsapp.com")) return "whatsapp"
-  if (lowerUrl.includes("maps.google.com") || lowerUrl.includes("goo.gl/maps")) return "map"
+  if (lowerUrl.includes("facebook.com") || lowerUrl.includes("fb.com")) {
+    return "facebook"
+  } else if (lowerUrl.includes("instagram.com")) {
+    return "instagram"
+  } else if (lowerUrl.includes("youtube.com") || lowerUrl.includes("youtu.be")) {
+    return "youtube"
+  } else if (lowerUrl.includes("line.me")) {
+    return "line"
+  } else if (lowerUrl.startsWith("http")) {
+    return "website"
+  }
 
-  return "website"
+  return "unknown"
 }
 
-export function getUrlType(url: string): string {
-  return detectUrlType(url)
+export function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + "..."
+}
+
+export function generateSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+}
+
+export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null
+
+  return (...args: Parameters<T>) => {
+    if (timeout) {
+      clearTimeout(timeout)
+    }
+
+    timeout = setTimeout(() => {
+      func(...args)
+    }, wait)
+  }
+}
+
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
 }
 
 export function isValidUrl(url: string): boolean {
@@ -105,89 +121,103 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
-export function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
-}
-
 export function extractDomain(url: string): string {
   try {
     const domain = new URL(url).hostname
     return domain.replace("www.", "")
   } catch {
-    return ""
+    return url
   }
 }
 
-export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
-
-  return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout)
-    timeout = setTimeout(() => func(...args), wait)
-  }
+export function calculateReadTime(content: string): number {
+  const wordsPerMinute = 200
+  const words = content.split(/\s+/).length
+  return Math.ceil(words / wordsPerMinute)
 }
 
-export function formatViewCount(count: number): string {
-  if (count < 1000) return count.toString()
-  if (count < 1000000) return `${(count / 1000).toFixed(1)}K`
-  return `${(count / 1000000).toFixed(1)}M`
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 Bytes"
+
+  const k = 1024
+  const sizes = ["Bytes", "KB", "MB", "GB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+
+  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
 }
 
-export function formatNumber(num: number): string {
-  return new Intl.NumberFormat("ko-KR").format(num)
+export function generateRandomId(): string {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
 }
 
-export function generateSlug(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9가-힣]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export function capitalizeFirst(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1)
+export function capitalizeFirst(str: string): string {
+  if (!str) return str
+  return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
 export function removeHtmlTags(html: string): string {
   return html.replace(/<[^>]*>/g, "")
 }
 
-export function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
-    .replace(/javascript:/gi, "")
-    .replace(/on\w+="[^"]*"/gi, "")
+export function formatCurrency(amount: number, currency = "THB"): string {
+  return new Intl.NumberFormat("th-TH", {
+    style: "currency",
+    currency: currency,
+  }).format(amount)
 }
 
-export function calculateReadingTime(text: string): number {
-  const wordsPerMinute = 200
-  const words = text.split(/\s+/).length
-  return Math.ceil(words / wordsPerMinute)
+export function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((word) => word.charAt(0))
+    .join("")
+    .toUpperCase()
+    .substring(0, 2)
 }
 
-export function parseJsonSafely<T>(json: string, fallback: T): T {
-  try {
-    return JSON.parse(json)
-  } catch {
-    return fallback
+export function isEmptyObject(obj: object): boolean {
+  return Object.keys(obj).length === 0
+}
+
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
+
+export function arrayToChunks<T>(array: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = []
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize))
   }
+  return chunks
 }
 
-export function removeEmptyFields<T extends Record<string, any>>(obj: T): Partial<T> {
-  const result: Partial<T> = {}
+export function removeDuplicates<T>(array: T[], key?: keyof T): T[] {
+  if (!key) {
+    return [...new Set(array)]
+  }
 
-  for (const [key, value] of Object.entries(obj)) {
-    if (value !== null && value !== undefined && value !== "") {
-      result[key as keyof T] = value
+  const seen = new Set()
+  return array.filter((item) => {
+    const value = item[key]
+    if (seen.has(value)) {
+      return false
     }
-  }
-
-  return result
+    seen.add(value)
+    return true
+  })
 }
 
-export function generateId(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36)
+export function sortByKey<T>(array: T[], key: keyof T, direction: "asc" | "desc" = "asc"): T[] {
+  return [...array].sort((a, b) => {
+    const aVal = a[key]
+    const bVal = b[key]
+
+    if (aVal < bVal) return direction === "asc" ? -1 : 1
+    if (aVal > bVal) return direction === "asc" ? 1 : -1
+    return 0
+  })
 }
