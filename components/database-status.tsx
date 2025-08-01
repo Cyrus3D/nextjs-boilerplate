@@ -4,27 +4,25 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { RefreshCw, Database, CheckCircle, XCircle, AlertCircle } from "lucide-react"
-import { checkDatabaseConnection } from "@/lib/database-check"
+import { CheckCircle, XCircle, RefreshCw, Database, Table, ActivityIcon as Function } from "lucide-react"
+import { checkDatabaseStatus, type DatabaseStatus } from "@/lib/database-check"
 
-export function DatabaseStatusComponent() {
-  const [status, setStatus] = useState<any | null>(null)
+export default function DatabaseStatusComponent() {
+  const [status, setStatus] = useState<DatabaseStatus | null>(null)
   const [loading, setLoading] = useState(true)
-  const [lastChecked, setLastChecked] = useState<Date | null>(null)
 
   const checkStatus = async () => {
     setLoading(true)
     try {
-      const result = await checkDatabaseConnection()
+      const result = await checkDatabaseStatus()
       setStatus(result)
-      setLastChecked(new Date())
     } catch (error) {
-      console.error("Failed to check database status:", error)
+      console.error("Error checking database status:", error)
       setStatus({
-        connected: false,
+        isConnected: false,
+        tables: [],
+        functions: [],
         error: "Failed to check database status",
-        tables: { business_cards: 0, news_articles: 0, categories: 0, tags: 0 },
-        functions: { increment_view_count: false, increment_exposure_count: false, increment_news_view_count: false },
       })
     } finally {
       setLoading(false)
@@ -35,130 +33,131 @@ export function DatabaseStatusComponent() {
     checkStatus()
   }, [])
 
-  const getStatusIcon = (connected: boolean) => {
-    if (loading) return <RefreshCw className="h-4 w-4 animate-spin" />
-    return connected ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-red-500" />
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            데이터베이스 상태 확인 중...
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
-  const getStatusBadge = (connected: boolean) => {
-    if (loading) return <Badge variant="secondary">확인 중...</Badge>
-    return connected ? (
-      <Badge variant="default" className="bg-green-500">
-        연결됨
-      </Badge>
-    ) : (
-      <Badge variant="destructive">연결 실패</Badge>
+  if (!status) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <XCircle className="h-5 w-5 text-red-500" />
+            데이터베이스 상태 확인 실패
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-red-600">데이터베이스 상태를 확인할 수 없습니다.</p>
+          <Button onClick={checkStatus} className="mt-4">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            다시 확인
+          </Button>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Connection Status */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Database className="h-4 w-4" />
-            데이터베이스 상태
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            데이터베이스 연결 상태
+            <Button onClick={checkStatus} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={checkStatus} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            새로고침
-          </Button>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {getStatusIcon(status?.connected || false)}
-              <span className="text-sm font-medium">
-                {status?.connected ? "Supabase 연결됨" : "Supabase 연결 실패"}
-              </span>
-            </div>
-            {getStatusBadge(status?.connected || false)}
+          <div className="flex items-center gap-2">
+            {status.isConnected ? (
+              <>
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <Badge className="bg-green-100 text-green-800">연결됨</Badge>
+              </>
+            ) : (
+              <>
+                <XCircle className="h-5 w-5 text-red-500" />
+                <Badge className="bg-red-100 text-red-800">연결 실패</Badge>
+              </>
+            )}
           </div>
-
-          {status?.error && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-red-500" />
-                <span className="text-sm text-red-700">오류: {status.error}</span>
-              </div>
-            </div>
-          )}
-
-          {lastChecked && (
-            <div className="mt-2 text-xs text-muted-foreground">마지막 확인: {lastChecked.toLocaleString("ko-KR")}</div>
-          )}
+          {status.error && <p className="text-red-600 mt-2 text-sm">{status.error}</p>}
         </CardContent>
       </Card>
 
-      {status && (
-        <>
-          {/* Tables Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">테이블 상태</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Business Cards</span>
-                    <Badge variant="outline">{status.tables.business_cards}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">News Articles</span>
-                    <Badge variant="outline">{status.tables.news_articles}</Badge>
-                  </div>
+      {/* Tables Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Table className="h-5 w-5" />
+            테이블 상태
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {status.tables.map((table) => (
+              <div key={table.name} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  {table.exists ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                  <span className="font-medium">{table.name}</span>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Categories</span>
-                    <Badge variant="outline">{status.tables.categories}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Tags</span>
-                    <Badge variant="outline">{status.tables.tags}</Badge>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={table.exists ? "default" : "destructive"}>{table.exists ? "존재함" : "없음"}</Badge>
+                  {table.exists && <Badge variant="outline">{table.recordCount}개 레코드</Badge>}
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* Functions Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">함수 상태</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">increment_view_count</span>
-                  {status.functions.increment_view_count ? (
+      {/* Functions Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Function className="h-5 w-5" />
+            함수 상태
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {status.functions.map((func) => (
+              <div key={func.name} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  {func.exists ? (
                     <CheckCircle className="h-4 w-4 text-green-500" />
                   ) : (
                     <XCircle className="h-4 w-4 text-red-500" />
                   )}
+                  <span className="font-medium">{func.name}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">increment_exposure_count</span>
-                  {status.functions.increment_exposure_count ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">increment_news_view_count</span>
-                  {status.functions.increment_news_view_count ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
-                </div>
+                <Badge variant={func.exists ? "default" : "destructive"}>{func.exists ? "존재함" : "없음"}</Badge>
               </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

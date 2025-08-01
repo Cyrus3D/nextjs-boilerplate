@@ -1,103 +1,114 @@
-import { supabase, safeSupabaseOperation } from "./supabase"
+import { supabase } from "./supabase"
 
 export interface DatabaseStatus {
-  connected: boolean
-  error?: string
+  isConnected: boolean
   tables: {
-    business_cards: number
-    news_articles: number
-    categories: number
-    tags: number
-  }
+    name: string
+    exists: boolean
+    recordCount: number
+  }[]
   functions: {
-    increment_view_count: boolean
-    increment_exposure_count: boolean
-    increment_news_view_count: boolean
-  }
+    name: string
+    exists: boolean
+  }[]
+  error?: string
 }
 
-export async function checkDatabaseConnection(): Promise<DatabaseStatus> {
+export async function checkDatabaseStatus(): Promise<DatabaseStatus> {
   const status: DatabaseStatus = {
-    connected: false,
-    tables: {
-      business_cards: 0,
-      news_articles: 0,
-      categories: 0,
-      tags: 0,
-    },
-    functions: {
-      increment_view_count: false,
-      increment_exposure_count: false,
-      increment_news_view_count: false,
-    },
+    isConnected: false,
+    tables: [],
+    functions: [],
   }
 
   try {
     // Test basic connection
-    const { data, error } = await supabase.from("business_cards").select("count", { count: "exact", head: true })
+    const { data: connectionTest, error: connectionError } = await supabase
+      .from("business_cards")
+      .select("count(*)")
+      .limit(1)
 
-    if (error) {
-      status.error = error.message
+    if (connectionError) {
+      status.error = connectionError.message
       return status
     }
 
-    status.connected = true
+    status.isConnected = true
 
-    // Get table counts
-    const businessCardsResult = await safeSupabaseOperation(() =>
-      supabase.from("business_cards").select("*", { count: "exact", head: true }),
-    )
-    if (businessCardsResult.success) {
-      status.tables.business_cards = businessCardsResult.data?.length || 0
+    // Check tables
+    const tablesToCheck = [
+      "business_cards",
+      "news_articles",
+      "categories",
+      "tags",
+      "business_card_tags",
+      "news_article_tags",
+    ]
+
+    for (const tableName of tablesToCheck) {
+      try {
+        const { data, error } = await supabase.from(tableName).select("*", { count: "exact", head: true })
+
+        status.tables.push({
+          name: tableName,
+          exists: !error,
+          recordCount: error ? 0 : data?.length || 0,
+        })
+      } catch {
+        status.tables.push({
+          name: tableName,
+          exists: false,
+          recordCount: 0,
+        })
+      }
     }
 
-    const newsResult = await safeSupabaseOperation(() =>
-      supabase.from("news_articles").select("*", { count: "exact", head: true }),
-    )
-    if (newsResult.success) {
-      status.tables.news_articles = newsResult.data?.length || 0
-    }
+    // Check functions
+    const functionsToCheck = [
+      "increment_view_count",
+      "increment_exposure_count",
+      "get_popular_tags",
+      "search_business_cards",
+    ]
 
-    const categoriesResult = await safeSupabaseOperation(() =>
-      supabase.from("categories").select("*", { count: "exact", head: true }),
-    )
-    if (categoriesResult.success) {
-      status.tables.categories = categoriesResult.data?.length || 0
-    }
+    for (const functionName of functionsToCheck) {
+      try {
+        // Try to call the function to see if it exists
+        const { error } = await supabase.rpc(functionName, {})
 
-    const tagsResult = await safeSupabaseOperation(() =>
-      supabase.from("tags").select("*", { count: "exact", head: true }),
-    )
-    if (tagsResult.success) {
-      status.tables.tags = tagsResult.data?.length || 0
+        status.functions.push({
+          name: functionName,
+          exists: !error || !error.message.includes("does not exist"),
+        })
+      } catch {
+        status.functions.push({
+          name: functionName,
+          exists: false,
+        })
+      }
     }
-
-    // Check functions (simplified - just assume they exist if tables exist)
-    status.functions.increment_view_count = status.tables.business_cards > 0
-    status.functions.increment_exposure_count = status.tables.business_cards > 0
-    status.functions.increment_news_view_count = status.tables.news_articles > 0
-  } catch (err) {
-    status.error = err instanceof Error ? err.message : "Unknown error"
+  } catch (error) {
+    status.error = error instanceof Error ? error.message : "Unknown error"
   }
 
   return status
 }
 
-export async function getTableInfo(tableName: string) {
-  const result = await safeSupabaseOperation(() => supabase.from(tableName).select("*").limit(1))
-
-  return result
-}
-
-export async function getSchemaInfo() {
+export async function getTableSchema(tableName: string) {
   try {
-    const { data, error } = await supabase.rpc("get_schema_info")
-    if (error) throw error
-    return { data, error: null }
-  } catch (err) {
-    return {
-      data: null,
-      error: err instanceof Error ? err.message : "Failed to get schema info",
+    const { data, error } = await supabase
+      .from("information_schema.columns")
+      .select("column_name, data_type, is_nullable")
+      .eq("table_name", tableName)
+
+    if (error) {
+      console.error(`Error getting schema for ${tableName}:`, error)
+      return null
     }
+
+    return data
+  } catch (error) {
+    console.error(`Exception getting schema for ${tableName}:`, error)
+    return null
   }
 }
