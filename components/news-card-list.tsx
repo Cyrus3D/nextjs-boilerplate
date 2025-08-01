@@ -4,152 +4,222 @@ import { useState, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Search, Filter } from "lucide-react"
-import NewsCard from "@/components/news-card"
-import NewsDetailModal from "@/components/news-detail-modal"
-import { incrementNewsViewCount } from "@/lib/api"
+import { Card, CardContent } from "@/components/ui/card"
+import { NewsCard } from "@/components/news-card"
+import { NewsDetailModal } from "@/components/news-detail-modal"
+import { searchNewsArticles } from "@/lib/api"
+import { NEWS_CATEGORIES } from "@/types/news"
 import type { NewsArticle } from "@/types/news"
+import { Search, Filter, X } from "lucide-react"
 
 interface NewsCardListProps {
-  initialArticles: NewsArticle[]
+  initialNews: NewsArticle[]
 }
 
-const categories = [
-  { id: "all", name: "전체", count: 0 },
-  { id: "현지", name: "현지", count: 0 },
-  { id: "업체", name: "업체", count: 0 },
-  { id: "정책", name: "정책", count: 0 },
-  { id: "교통", name: "교통", count: 0 },
-  { id: "비자", name: "비자", count: 0 },
-  { id: "경제", name: "경제", count: 0 },
-  { id: "문화", name: "문화", count: 0 },
-]
-
-export default function NewsCardList({ initialArticles }: NewsCardListProps) {
-  const [articles] = useState<NewsArticle[]>(initialArticles)
-  const [selectedCategory, setSelectedCategory] = useState("all")
-  const [searchTerm, setSearchTerm] = useState("")
+export function NewsCardList({ initialNews }: NewsCardListProps) {
+  const [news, setNews] = useState<NewsArticle[]>(initialNews)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Calculate category counts
-  const categoriesWithCounts = useMemo(() => {
-    const counts = categories.map((cat) => ({
-      ...cat,
-      count: cat.id === "all" ? articles.length : articles.filter((article) => article.category === cat.id).length,
-    }))
-    return counts
-  }, [articles])
+  // Filter news based on search and category
+  const filteredNews = useMemo(() => {
+    let filtered = news
 
-  // Filter articles based on category and search term
-  const filteredArticles = useMemo(() => {
-    let filtered = articles
-
-    // Filter by category
     if (selectedCategory !== "all") {
       filtered = filtered.filter((article) => article.category === selectedCategory)
     }
 
-    // Filter by search term
-    if (searchTerm) {
-      const lowercaseSearch = searchTerm.toLowerCase()
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (article) =>
-          article.title.toLowerCase().includes(lowercaseSearch) ||
-          article.excerpt.toLowerCase().includes(lowercaseSearch) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(lowercaseSearch)),
+          article.title.toLowerCase().includes(query) ||
+          article.excerpt.toLowerCase().includes(query) ||
+          article.content.toLowerCase().includes(query) ||
+          article.tags.some((tag) => tag.toLowerCase().includes(query)),
       )
     }
 
     return filtered
-  }, [articles, selectedCategory, searchTerm])
+  }, [news, searchQuery, selectedCategory])
 
-  const handleArticleClick = (article: NewsArticle) => {
-    setSelectedArticle(article)
-    setIsModalOpen(true)
-    incrementNewsViewCount(article.id)
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) {
+      setNews(initialNews)
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const results = await searchNewsArticles(query, selectedCategory !== "all" ? selectedCategory : undefined)
+      setNews(results)
+    } catch (error) {
+      console.error("Search failed:", error)
+      setNews(initialNews)
+    } finally {
+      setIsLoading(false)
+    }
   }
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category)
+    if (searchQuery.trim()) {
+      handleSearch(searchQuery)
+    }
+  }
+
+  const clearFilters = () => {
+    setSearchQuery("")
+    setSelectedCategory("all")
+    setNews(initialNews)
+  }
+
+  const breakingNews = filteredNews.filter((article) => article.isBreaking)
+  const regularNews = filteredNews.filter((article) => !article.isBreaking)
 
   return (
     <div className="space-y-6">
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-        <Input
-          placeholder="뉴스 제목, 내용, 태그로 검색..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {/* Category Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {categoriesWithCounts.map((category) => (
-          <Button
-            key={category.id}
-            variant={selectedCategory === category.id ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedCategory(category.id)}
-            className="flex items-center gap-2"
-          >
-            {category.name}
-            <Badge variant="secondary" className="text-xs">
-              {category.count}
-            </Badge>
+      {/* Search and Filter Controls */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="뉴스 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSearch(searchQuery)
+                }
+              }}
+              className="pl-10"
+            />
+          </div>
+          <Button onClick={() => handleSearch(searchQuery)} disabled={isLoading}>
+            <Search className="h-4 w-4 mr-2" />
+            검색
           </Button>
-        ))}
+          {(searchQuery || selectedCategory !== "all") && (
+            <Button variant="outline" onClick={clearFilters}>
+              <X className="h-4 w-4 mr-2" />
+              초기화
+            </Button>
+          )}
+        </div>
+
+        {/* Category Filter */}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={selectedCategory === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleCategoryChange("all")}
+          >
+            전체
+          </Button>
+          {NEWS_CATEGORIES.map((category) => (
+            <Button
+              key={category}
+              variant={selectedCategory === category ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleCategoryChange(category)}
+            >
+              {category}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Results Summary */}
-      <div className="flex items-center justify-between text-sm text-gray-600">
-        <span>
-          총 {filteredArticles.length}개의 뉴스
-          {searchTerm && ` (검색: "${searchTerm}")`}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-gray-600">
+          총 {filteredNews.length}개의 뉴스
+          {searchQuery && ` (검색: "${searchQuery}")`}
           {selectedCategory !== "all" && ` (카테고리: ${selectedCategory})`}
-        </span>
-        {(searchTerm || selectedCategory !== "all") && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setSearchTerm("")
-              setSelectedCategory("all")
-            }}
-            className="text-xs"
-          >
-            <Filter className="w-3 h-3 mr-1" />
-            필터 초기화
-          </Button>
+        </div>
+        {breakingNews.length > 0 && (
+          <Badge variant="destructive" className="animate-pulse">
+            속보 {breakingNews.length}건
+          </Badge>
         )}
       </div>
 
-      {/* News Grid */}
-      {filteredArticles.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredArticles.map((article) => (
-            <NewsCard key={article.id} article={article} onClick={() => handleArticleClick(article)} />
-          ))}
+      {/* Breaking News Section */}
+      {breakingNews.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Badge variant="destructive" className="animate-pulse">
+              속보
+            </Badge>
+            <h2 className="text-lg font-semibold">긴급 뉴스</h2>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {breakingNews.map((article) => (
+              <NewsCard
+                key={article.id}
+                article={article}
+                onClick={() => setSelectedArticle(article)}
+                className="border-red-200 bg-red-50"
+              />
+            ))}
+          </div>
         </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-gray-500 mb-4">
-            <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">검색 결과가 없습니다</p>
-            <p className="text-sm">다른 키워드나 카테고리로 검색해보세요</p>
+      )}
+
+      {/* Regular News Section */}
+      {regularNews.length > 0 && (
+        <div className="space-y-4">
+          {breakingNews.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-gray-600" />
+              <h2 className="text-lg font-semibold">일반 뉴스</h2>
+            </div>
+          )}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {regularNews.map((article) => (
+              <NewsCard key={article.id} article={article} onClick={() => setSelectedArticle(article)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* No Results */}
+      {filteredNews.length === 0 && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="text-gray-500">
+              <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">검색 결과가 없습니다</h3>
+              <p className="text-sm">
+                다른 검색어를 시도하거나 필터를 변경해보세요.
+                <br />
+                모든 뉴스를 보려면 초기화 버튼을 클릭하세요.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="text-center py-8">
+          <div className="inline-flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+            <span className="text-sm text-gray-600">검색 중...</span>
           </div>
         </div>
       )}
 
       {/* News Detail Modal */}
-      <NewsDetailModal
-        article={selectedArticle}
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false)
-          setSelectedArticle(null)
-        }}
-      />
+      {selectedArticle && (
+        <NewsDetailModal
+          article={selectedArticle}
+          isOpen={!!selectedArticle}
+          onClose={() => setSelectedArticle(null)}
+        />
+      )}
     </div>
   )
 }

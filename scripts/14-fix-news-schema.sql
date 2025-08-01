@@ -1,7 +1,7 @@
 -- Drop existing news tables if they exist
 DROP TABLE IF EXISTS news_articles CASCADE;
 
--- Create news_articles table
+-- Create news_articles table with snake_case column names to match Supabase conventions
 CREATE TABLE news_articles (
     id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
@@ -10,21 +10,21 @@ CREATE TABLE news_articles (
     author VARCHAR(255) NOT NULL DEFAULT 'HOT THAI',
     category VARCHAR(100) NOT NULL DEFAULT '현지',
     tags TEXT[] DEFAULT '{}',
-    imageUrl TEXT,
-    sourceUrl TEXT,
-    publishedAt TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    isBreaking BOOLEAN DEFAULT FALSE,
-    isPublished BOOLEAN DEFAULT TRUE,
-    viewCount INTEGER DEFAULT 0,
-    readTime INTEGER DEFAULT 5,
+    image_url TEXT,
+    source_url TEXT,
+    published_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    is_breaking BOOLEAN DEFAULT FALSE,
+    is_published BOOLEAN DEFAULT TRUE,
+    view_count INTEGER DEFAULT 0,
+    read_time INTEGER DEFAULT 5,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_news_articles_published ON news_articles(isPublished, publishedAt DESC);
+CREATE INDEX idx_news_articles_published ON news_articles(is_published, published_at DESC);
 CREATE INDEX idx_news_articles_category ON news_articles(category);
-CREATE INDEX idx_news_articles_breaking ON news_articles(isBreaking);
+CREATE INDEX idx_news_articles_breaking ON news_articles(is_breaking);
 CREATE INDEX idx_news_articles_author ON news_articles(author);
 
 -- Create function to increment news view count
@@ -32,46 +32,14 @@ CREATE OR REPLACE FUNCTION increment_news_view_count(article_id INTEGER)
 RETURNS void AS $$
 BEGIN
     UPDATE news_articles 
-    SET viewCount = viewCount + 1,
+    SET view_count = view_count + 1,
         updated_at = NOW()
     WHERE id = article_id;
 END;
 $$ LANGUAGE plpgsql;
 
--- Create function to get published news articles
-CREATE OR REPLACE FUNCTION get_published_news_articles(article_limit INTEGER DEFAULT 50)
-RETURNS TABLE(
-    id INTEGER,
-    title TEXT,
-    excerpt TEXT,
-    content TEXT,
-    author VARCHAR(255),
-    category VARCHAR(100),
-    tags TEXT[],
-    imageUrl TEXT,
-    sourceUrl TEXT,
-    publishedAt TIMESTAMP WITH TIME ZONE,
-    isBreaking BOOLEAN,
-    isPublished BOOLEAN,
-    viewCount INTEGER,
-    readTime INTEGER,
-    created_at TIMESTAMP WITH TIME ZONE,
-    updated_at TIMESTAMP WITH TIME ZONE
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT n.id, n.title, n.excerpt, n.content, n.author, n.category, n.tags,
-           n.imageUrl, n.sourceUrl, n.publishedAt, n.isBreaking, n.isPublished,
-           n.viewCount, n.readTime, n.created_at, n.updated_at
-    FROM news_articles n
-    WHERE n.isPublished = TRUE
-    ORDER BY n.publishedAt DESC
-    LIMIT article_limit;
-END;
-$$ LANGUAGE plpgsql;
-
 -- Insert sample news data
-INSERT INTO news_articles (title, excerpt, content, author, category, tags, imageUrl, isBreaking, readTime) VALUES
+INSERT INTO news_articles (title, excerpt, content, author, category, tags, image_url, is_breaking, read_time, view_count) VALUES
 (
     '태국 비자 연장 절차 간소화, 온라인 신청 가능',
     '태국 이민청이 관광비자 연장 절차를 대폭 간소화하고 온라인 신청 시스템을 도입한다고 발표했습니다.',
@@ -91,7 +59,8 @@ INSERT INTO news_articles (title, excerpt, content, author, category, tags, imag
     ARRAY['비자', '이민청', '온라인신청', '관광비자'],
     '/placeholder.svg?height=300&width=600&text=비자+연장',
     TRUE,
-    4
+    4,
+    1250
 ),
 (
     '방콕 BTS 신규 노선 개통, 교통 체증 완화 기대',
@@ -113,7 +82,8 @@ INSERT INTO news_articles (title, excerpt, content, author, category, tags, imag
     ARRAY['BTS', '스카이트레인', '교통', '방콕'],
     '/placeholder.svg?height=300&width=600&text=BTS+신규노선',
     FALSE,
-    3
+    3,
+    890
 ),
 (
     '태국 중앙은행, 기준금리 2.5% 동결 결정',
@@ -134,7 +104,8 @@ INSERT INTO news_articles (title, excerpt, content, author, category, tags, imag
     ARRAY['중앙은행', '금리', '경제', '통화정책'],
     '/placeholder.svg?height=300&width=600&text=중앙은행',
     FALSE,
-    3
+    3,
+    654
 ),
 (
     '로이크라통 축제 정상 개최, 안전 수칙 준수 당부',
@@ -159,7 +130,8 @@ INSERT INTO news_articles (title, excerpt, content, author, category, tags, imag
     ARRAY['로이크라통', '축제', '문화', '관광'],
     '/placeholder.svg?height=300&width=600&text=로이크라통',
     FALSE,
-    4
+    4,
+    1100
 ),
 (
     '방콕 한인타운에 신규 한식당 오픈, 정통 한국 맛 선보여',
@@ -186,7 +158,8 @@ INSERT INTO news_articles (title, excerpt, content, author, category, tags, imag
     ARRAY['한식당', '한인타운', '맛집', '오픈'],
     '/placeholder.svg?height=300&width=600&text=한식당',
     FALSE,
-    3
+    3,
+    780
 ),
 (
     '태국 정부, 외국인 부동산 투자 규제 완화 검토',
@@ -209,7 +182,8 @@ INSERT INTO news_articles (title, excerpt, content, author, category, tags, imag
     ARRAY['부동산', '투자', '규제완화', '외국인'],
     '/placeholder.svg?height=300&width=600&text=부동산+투자',
     FALSE,
-    5
+    5,
+    920
 );
 
 -- Enable RLS (Row Level Security)
@@ -217,8 +191,8 @@ ALTER TABLE news_articles ENABLE ROW LEVEL SECURITY;
 
 -- Create policy for public read access
 CREATE POLICY "Public can read published news" ON news_articles
-    FOR SELECT USING (isPublished = true);
+    FOR SELECT USING (is_published = true);
 
--- Create policy for admin access (you'll need to adjust this based on your auth setup)
+-- Create policy for admin access
 CREATE POLICY "Admin can do everything" ON news_articles
     FOR ALL USING (true);

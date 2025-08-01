@@ -13,8 +13,8 @@ export interface NewsArticle {
   isPublished: boolean
   viewCount: number
   readTime: number
-  created_at: string
-  updated_at: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface NewsArticleFormData {

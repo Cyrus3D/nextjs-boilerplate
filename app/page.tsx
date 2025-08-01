@@ -1,176 +1,222 @@
+import { Suspense } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Thermometer, DollarSign, Newspaper, Building } from "lucide-react"
-import NewsCardList from "@/components/news-card-list"
-import BusinessCardList from "@/components/business-card-list"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { NewsCardList } from "@/components/news-card-list"
+import { BusinessCardList } from "@/components/business-card-list"
 import { getNewsArticles, getBusinessCards } from "@/lib/api"
+import { Newspaper, Building2, TrendingUp, Users } from "lucide-react"
 
-// Weather and exchange rate interfaces
-interface WeatherData {
-  temperature: number
-  description: string
-  humidity: number
-  timestamp: number
-}
+async function HomePage() {
+  // Fetch data in parallel
+  const [newsArticles, businessCards] = await Promise.all([getNewsArticles(20), getBusinessCards(20)])
 
-interface ExchangeRateData {
-  rate: number
-  timestamp: number
-  source: string
-}
-
-// Client component for interactive features
-function ClientHomePage({
-  initialNewsArticles,
-  initialBusinessCards,
-  weather,
-  exchangeRate,
-}: {
-  initialNewsArticles: any[]
-  initialBusinessCards: any[]
-  weather: WeatherData | null
-  exchangeRate: ExchangeRateData | null
-}) {
-  // Format time for display
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
+  const breakingNews = newsArticles.filter((article) => article.isBreaking)
+  const recentNews = newsArticles.slice(0, 6)
+  const premiumBusinesses = businessCards.filter((card) => card.isPremium)
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Header with Weather and Exchange Rate */}
-      <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">🔥 핫타이 HOT THAI</h1>
-            <p className="text-orange-100">태국에서 필요한 모든 정보를 한 곳에서 찾아보세요</p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 text-sm">
-            {/* Weather Info */}
-            <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
-              <div className="flex items-center gap-2 mb-1">
-                <Thermometer className="w-4 h-4" />
-                <span className="font-medium">방콕 날씨</span>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">HT</span>
               </div>
-              {weather ? (
-                <div className="text-orange-100">
-                  {weather.temperature}°C, {weather.description}
-                </div>
-              ) : (
-                <div className="text-orange-100">32°C, 맑음</div>
-              )}
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">HOT THAI</h1>
+                <p className="text-sm text-gray-600">태국 생활 정보 플랫폼</p>
+              </div>
             </div>
-
-            {/* Exchange Rate Info */}
-            <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
-              <div className="flex items-center gap-2 mb-1">
-                <DollarSign className="w-4 h-4" />
-                <span className="font-medium">환율 (THB→KRW)</span>
+            <div className="hidden md:flex items-center space-x-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">{newsArticles.length}</div>
+                <div className="text-xs text-gray-600">뉴스</div>
               </div>
-              {exchangeRate ? (
-                <div className="text-orange-100">
-                  1 THB = {exchangeRate.rate} KRW
-                  <div className="text-xs opacity-75 mt-1">
-                    {exchangeRate.source} • {formatTime(exchangeRate.timestamp)}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-orange-100">1 THB = 37.5 KRW</div>
-              )}
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{businessCards.length}</div>
+                <div className="text-xs text-gray-600">업체</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{breakingNews.length}</div>
+                <div className="text-xs text-gray-600">속보</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Main Tabs */}
-      <Tabs defaultValue="news" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-white border border-gray-200 p-1">
-          <TabsTrigger
-            value="news"
-            className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-          >
-            <Newspaper className="w-4 h-4" />
-            뉴스
-          </TabsTrigger>
-          <TabsTrigger
-            value="business"
-            className="flex items-center gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
-          >
-            <Building className="w-4 h-4" />
-            업체 정보
-          </TabsTrigger>
-        </TabsList>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Newspaper className="h-5 w-5 text-orange-600" />
+                <div>
+                  <div className="text-2xl font-bold">{newsArticles.length}</div>
+                  <div className="text-xs text-gray-600">최신 뉴스</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Building2 className="h-5 w-5 text-blue-600" />
+                <div>
+                  <div className="text-2xl font-bold">{businessCards.length}</div>
+                  <div className="text-xs text-gray-600">등록 업체</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="h-5 w-5 text-red-600" />
+                <div>
+                  <div className="text-2xl font-bold">{breakingNews.length}</div>
+                  <div className="text-xs text-gray-600">속보</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <Users className="h-5 w-5 text-green-600" />
+                <div>
+                  <div className="text-2xl font-bold">{premiumBusinesses.length}</div>
+                  <div className="text-xs text-gray-600">프리미엄</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        <TabsContent value="news" className="mt-6">
-          <NewsCardList initialArticles={initialNewsArticles} />
-        </TabsContent>
+        {/* Breaking News Banner */}
+        {breakingNews.length > 0 && (
+          <Card className="mb-8 border-red-200 bg-red-50">
+            <CardHeader className="pb-3">
+              <div className="flex items-center space-x-2">
+                <Badge variant="destructive" className="animate-pulse">
+                  속보
+                </Badge>
+                <CardTitle className="text-lg">긴급 뉴스</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {breakingNews.slice(0, 3).map((article) => (
+                  <div key={article.id} className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                    <span className="text-sm font-medium text-red-800">{article.title}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        <TabsContent value="business" className="mt-6">
-          <BusinessCardList initialCards={initialBusinessCards} />
-        </TabsContent>
-      </Tabs>
+        {/* Main Tabs */}
+        <Tabs defaultValue="news" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-8">
+            <TabsTrigger value="news" className="flex items-center space-x-2">
+              <Newspaper className="h-4 w-4" />
+              <span>뉴스</span>
+            </TabsTrigger>
+            <TabsTrigger value="business" className="flex items-center space-x-2">
+              <Building2 className="h-4 w-4" />
+              <span>업체 정보</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="news" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Newspaper className="h-5 w-5" />
+                  <span>최신 뉴스</span>
+                </CardTitle>
+                <CardDescription>태국 현지 소식과 교민 관련 뉴스를 실시간으로 확인하세요</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Suspense fallback={<NewsListSkeleton />}>
+                  <NewsCardList initialNews={newsArticles} />
+                </Suspense>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="business" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Building2 className="h-5 w-5" />
+                  <span>업체 정보</span>
+                </CardTitle>
+                <CardDescription>태국 현지 한국 업체들의 정보를 확인하고 연락하세요</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Suspense fallback={<BusinessListSkeleton />}>
+                  <BusinessCardList initialCards={businessCards} />
+                </Suspense>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t mt-16">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center text-gray-600">
+            <p className="mb-2">© 2024 HOT THAI. All rights reserved.</p>
+            <p className="text-sm">태국 생활 정보 플랫폼</p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
 
-// Server component for data fetching
-export default async function HomePage() {
-  // Fetch data on server
-  const [newsArticles, businessCards] = await Promise.all([
-    getNewsArticles(50), // Get latest 50 news articles
-    getBusinessCards(50), // Get latest 50 business cards
-  ])
-
-  // Fetch weather and exchange rate (with fallbacks)
-  let weather: WeatherData | null = null
-  let exchangeRate: ExchangeRateData | null = null
-
-  try {
-    // Weather API call
-    const weatherResponse = await fetch(
-      `https://api.openweathermap.org/data/2.5/weather?q=Bangkok,TH&appid=0e37172b550acf74ed81a76db7f4c89f&units=metric&lang=ko`,
-      { next: { revalidate: 1800 } }, // Cache for 30 minutes
-    )
-    if (weatherResponse.ok) {
-      const weatherData = await weatherResponse.json()
-      weather = {
-        temperature: Math.round(weatherData.main.temp),
-        description: weatherData.weather[0].description,
-        humidity: weatherData.main.humidity,
-        timestamp: Date.now(),
-      }
-    }
-  } catch (error) {
-    console.error("Weather fetch error:", error)
-  }
-
-  try {
-    // Exchange rate API call
-    const exchangeResponse = await fetch(
-      "https://api.exchangerate-api.com/v4/latest/THB",
-      { next: { revalidate: 3600 } }, // Cache for 1 hour
-    )
-    if (exchangeResponse.ok) {
-      const exchangeData = await exchangeResponse.json()
-      exchangeRate = {
-        rate: Math.round(exchangeData.rates.KRW * 100) / 100,
-        timestamp: Date.now(),
-        source: "ExchangeRate-API",
-      }
-    }
-  } catch (error) {
-    console.error("Exchange rate fetch error:", error)
-  }
-
+function NewsListSkeleton() {
   return (
-    <ClientHomePage
-      initialNewsArticles={newsArticles}
-      initialBusinessCards={businessCards}
-      weather={weather}
-      exchangeRate={exchangeRate}
-    />
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Card key={i}>
+          <CardContent className="p-4">
+            <Skeleton className="h-48 w-full mb-4" />
+            <Skeleton className="h-4 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-1/2 mb-2" />
+            <Skeleton className="h-3 w-full" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   )
 }
+
+function BusinessListSkeleton() {
+  return (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Card key={i}>
+          <CardContent className="p-4">
+            <Skeleton className="h-32 w-full mb-4" />
+            <Skeleton className="h-4 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-1/2 mb-2" />
+            <Skeleton className="h-3 w-full" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+export default HomePage
