@@ -5,8 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import NewsCard from "./news-card"
 import InFeedAd from "./in-feed-ad"
 import { NewsDetailModal } from "./news-detail-modal"
-import type { NewsArticle } from "../types/news"
-import { incrementNewsViewCount } from "../lib/api"
+import type { NewsArticle } from "@/types/news"
+import { incrementNewsViewCount } from "@/lib/api"
 
 interface NewsListProps {
   initialArticles: NewsArticle[]

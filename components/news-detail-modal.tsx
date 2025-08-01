@@ -13,7 +13,7 @@ interface NewsDetailModalProps {
   onClose: () => void
 }
 
-export default function NewsDetailModal({ article, isOpen, onClose }: NewsDetailModalProps) {
+export function NewsDetailModal({ article, isOpen, onClose }: NewsDetailModalProps) {
   if (!article) return null
 
   const formatDate = (dateString: string) => {
@@ -33,6 +33,18 @@ export default function NewsDetailModal({ article, isOpen, onClose }: NewsDetail
         return "bg-blue-100 text-blue-800"
       case "교민 업체":
         return "bg-green-100 text-green-800"
+      case "정책":
+        return "bg-purple-100 text-purple-800"
+      case "교통":
+        return "bg-orange-100 text-orange-800"
+      case "비자":
+        return "bg-red-100 text-red-800"
+      case "경제":
+        return "bg-yellow-100 text-yellow-800"
+      case "문화":
+        return "bg-pink-100 text-pink-800"
+      case "스포츠":
+        return "bg-indigo-100 text-indigo-800"
       default:
         return "bg-gray-100 text-gray-800"
     }
@@ -155,3 +167,6 @@ export default function NewsDetailModal({ article, isOpen, onClose }: NewsDetail
     </Dialog>
   )
 }
+
+// Default export for backward compatibility
+export default NewsDetailModal
