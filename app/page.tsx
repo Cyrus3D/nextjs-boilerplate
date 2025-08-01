@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Newspaper, ArrowRight, Clock, Eye } from "lucide-react"
+import { Newspaper, ArrowRight, Clock, Eye, TrendingUp } from "lucide-react"
 import { sampleNewsArticles } from "@/data/sample-news"
 
 export const metadata: Metadata = {
@@ -43,15 +43,20 @@ function NewsPreviewCard({ article }: { article: any }) {
   }
 
   return (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+    <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-0 shadow-sm bg-white">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between mb-2">
-          <Badge className={getCategoryColor(article.category)} variant="secondary">
-            {article.category}
-          </Badge>
-          {article.isBreaking && <Badge className="bg-red-600 text-white animate-pulse">속보</Badge>}
+          <div className="flex items-center gap-2">
+            <Badge className={getCategoryColor(article.category)} variant="secondary">
+              {article.category}
+            </Badge>
+            {article.isBreaking && <Badge className="bg-red-600 text-white animate-pulse">속보</Badge>}
+          </div>
+          <TrendingUp className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
         </div>
-        <CardTitle className="text-lg line-clamp-2 leading-tight">{article.title}</CardTitle>
+        <CardTitle className="text-lg line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors">
+          {article.title}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-gray-600 text-sm line-clamp-2">{article.excerpt}</p>
@@ -79,29 +84,46 @@ export default function HomePage() {
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
     .slice(0, 3)
 
+  const newsStats = {
+    total: sampleNewsArticles.length,
+    breaking: sampleNewsArticles.filter((article) => article.isBreaking).length,
+    today: sampleNewsArticles.filter((article) => {
+      const today = new Date()
+      const articleDate = new Date(article.publishedAt)
+      return articleDate.toDateString() === today.toDateString()
+    }).length,
+  }
+
   return (
     <main className="min-h-screen bg-gray-50">
       {/* News Preview Section */}
-      <section className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Newspaper className="w-6 h-6 text-blue-600" />
-            <h2 className="text-2xl font-bold text-gray-900">최신 뉴스</h2>
-          </div>
-          <Link href="/news">
-            <Button variant="outline" className="flex items-center gap-2 bg-white">
-              전체 뉴스 보기
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {latestNews.map((article) => (
-            <Link key={article.id} href="/news">
-              <NewsPreviewCard article={article} />
+      <section className="bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Newspaper className="w-6 h-6 text-blue-600" />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">최신 뉴스</h2>
+                <p className="text-sm text-gray-600">
+                  오늘 {newsStats.today}개 · 속보 {newsStats.breaking}개 · 전체 {newsStats.total}개
+                </p>
+              </div>
+            </div>
+            <Link href="/news">
+              <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                전체 뉴스 보기
+                <ArrowRight className="w-4 h-4" />
+              </Button>
             </Link>
-          ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {latestNews.map((article) => (
+              <Link key={article.id} href="/news">
+                <NewsPreviewCard article={article} />
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

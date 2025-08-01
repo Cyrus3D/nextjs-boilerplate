@@ -1,13 +1,12 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, Filter, TrendingUp, Clock, Newspaper, Building2, Globe, ChevronDown } from "lucide-react"
+import { Search, TrendingUp, Clock, Newspaper, Building2, ChevronDown } from "lucide-react"
 import NewsCard from "./news-card"
 import NewsDetailModal from "./news-detail-modal"
 import InFeedAd from "./in-feed-ad"
@@ -18,9 +17,32 @@ export default function NewsCardList() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState("all")
+  const [activeTab, setActiveTab] = useState("local")
   const [isLoading, setIsLoading] = useState(false)
   const [visibleCount, setVisibleCount] = useState(6)
+
+  // 통계 계산
+  const stats = useMemo(() => {
+    const today = new Date()
+    const todayArticles = sampleNewsArticles.filter((article) => {
+      const articleDate = new Date(article.publishedAt)
+      return articleDate.toDateString() === today.toDateString()
+    }).length
+
+    const breakingNews = sampleNewsArticles.filter((article) => article.isBreaking).length
+    const totalViews = sampleNewsArticles.reduce((sum, article) => sum + article.viewCount, 0)
+    const localNews = sampleNewsArticles.filter((article) => article.category === "현지 뉴스").length
+    const businessNews = sampleNewsArticles.filter((article) => article.category === "교민 업체").length
+
+    return {
+      today: todayArticles,
+      breaking: breakingNews,
+      total: sampleNewsArticles.length,
+      totalViews,
+      local: localNews,
+      business: businessNews,
+    }
+  }, [])
 
   // 필터링된 뉴스 기사
   const filteredArticles = useMemo(() => {
@@ -39,12 +61,22 @@ export default function NewsCardList() {
         (article) =>
           article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           article.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
           article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())),
       )
     }
 
-    // 날짜순 정렬 (최신순)
-    return filtered.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    // 정렬: 속보 > 최신순 > 조회수순
+    return filtered.sort((a, b) => {
+      if (a.isBreaking && !b.isBreaking) return -1
+      if (!a.isBreaking && b.isBreaking) return 1
+
+      const dateA = new Date(a.publishedAt).getTime()
+      const dateB = new Date(b.publishedAt).getTime()
+      if (dateA !== dateB) return dateB - dateA
+
+      return b.viewCount - a.viewCount
+    })
   }, [searchTerm, activeTab])
 
   const handleReadMore = (article: NewsArticle) => {
@@ -60,52 +92,34 @@ export default function NewsCardList() {
     }, 1000)
   }
 
-  const getTabIcon = (tabId: string) => {
-    switch (tabId) {
-      case "all":
-        return <Globe className="w-4 h-4" />
+  const getSearchPlaceholder = (tab: string) => {
+    switch (tab) {
       case "local":
-        return <Newspaper className="w-4 h-4" />
+        return "현지 뉴스 검색... (정책, 교통, 비자 등)"
       case "business":
-        return <Building2 className="w-4 h-4" />
+        return "교민 업체 검색... (업체명, 서비스, 지역 등)"
       default:
-        return null
+        return "뉴스 검색..."
     }
   }
-
-  const getTabCount = (tabId: string) => {
-    switch (tabId) {
-      case "all":
-        return sampleNewsArticles.length
-      case "local":
-        return sampleNewsArticles.filter((article) => article.category === "현지 뉴스").length
-      case "business":
-        return sampleNewsArticles.filter((article) => article.category === "교민 업체").length
-      default:
-        return 0
-    }
-  }
-
-  const todayNewsCount = sampleNewsArticles.filter((article) => {
-    const today = new Date()
-    const articleDate = new Date(article.publishedAt)
-    return articleDate.toDateString() === today.toDateString()
-  }).length
-
-  const breakingNewsCount = sampleNewsArticles.filter((article) => article.isBreaking).length
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 헤더 통계 */}
-      <div className="bg-white border-b border-gray-200">
+      {/* 상시 표시 헤더 통계 */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">📰 태국 뉴스</h1>
+            <p className="text-gray-600">최신 현지 소식과 교민 업체 정보를 한 곳에서 확인하세요</p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="border-0 shadow-sm bg-gradient-to-r from-blue-50 to-blue-100">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-blue-600">오늘의 뉴스</p>
-                    <p className="text-2xl font-bold text-blue-900">{todayNewsCount}</p>
+                    <p className="text-2xl font-bold text-blue-900">{stats.today}</p>
                   </div>
                   <Clock className="w-8 h-8 text-blue-600" />
                 </div>
@@ -117,7 +131,7 @@ export default function NewsCardList() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-red-600">속보</p>
-                    <p className="text-2xl font-bold text-red-900">{breakingNewsCount}</p>
+                    <p className="text-2xl font-bold text-red-900">{stats.breaking}</p>
                   </div>
                   <TrendingUp className="w-8 h-8 text-red-600" />
                 </div>
@@ -128,8 +142,8 @@ export default function NewsCardList() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-green-600">전체 기사</p>
-                    <p className="text-2xl font-bold text-green-900">{sampleNewsArticles.length}</p>
+                    <p className="text-sm font-medium text-green-600">현지 뉴스</p>
+                    <p className="text-2xl font-bold text-green-900">{stats.local}</p>
                   </div>
                   <Newspaper className="w-8 h-8 text-green-600" />
                 </div>
@@ -140,12 +154,10 @@ export default function NewsCardList() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-purple-600">이번 주 조회수</p>
-                    <p className="text-2xl font-bold text-purple-900">
-                      {sampleNewsArticles.reduce((sum, article) => sum + article.viewCount, 0).toLocaleString()}
-                    </p>
+                    <p className="text-sm font-medium text-purple-600">교민 업체</p>
+                    <p className="text-2xl font-bold text-purple-900">{stats.business}</p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-purple-600" />
+                  <Building2 className="w-8 h-8 text-purple-600" />
                 </div>
               </CardContent>
             </Card>
@@ -154,94 +166,96 @@ export default function NewsCardList() {
       </div>
 
       <div className="container mx-auto px-4 py-8">
-        {/* 검색 및 필터 */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="뉴스 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white border-gray-200 focus:border-blue-300 focus:ring-blue-200"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="bg-white">
-                <Filter className="w-4 h-4 mr-2" />
-                필터
-              </Button>
-            </div>
-          </div>
-        </div>
-
         {/* 탭 네비게이션 */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-          <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200 p-1">
-            <TabsTrigger
-              value="all"
-              className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-            >
-              {getTabIcon("all")}
-              전체
-              <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600">
-                {getTabCount("all")}
-              </Badge>
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-white border border-gray-200 p-1">
             <TabsTrigger
               value="local"
               className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
             >
-              {getTabIcon("local")}
+              <Newspaper className="w-4 h-4" />
               현지 뉴스
-              <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600">
-                {getTabCount("local")}
-              </Badge>
+              <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                {stats.local}
+              </span>
             </TabsTrigger>
             <TabsTrigger
               value="business"
-              className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+              className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white"
             >
-              {getTabIcon("business")}
+              <Building2 className="w-4 h-4" />
               교민 업체
-              <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600">
-                {getTabCount("business")}
-              </Badge>
+              <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                {stats.business}
+              </span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all" className="mt-6">
-            <div className="mb-4">
-              <p className="text-gray-600">
-                총 <span className="font-semibold text-gray-900">{filteredArticles.length}</span>개의 뉴스가 있습니다.
-              </p>
-            </div>
-          </TabsContent>
-
           <TabsContent value="local" className="mt-6">
-            <div className="mb-4">
-              <p className="text-gray-600">
-                현지 뉴스 <span className="font-semibold text-gray-900">{filteredArticles.length}</span>개
+            {/* 현지 뉴스 전용 검색 */}
+            <div className="mb-6">
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder={getSearchPlaceholder("local")}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white border-gray-200 focus:border-blue-300 focus:ring-blue-200"
+                />
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                태국 정부 정책, 교통, 비자, 사회 이슈 등 현지 소식을 확인하세요
               </p>
             </div>
           </TabsContent>
 
           <TabsContent value="business" className="mt-6">
-            <div className="mb-4">
-              <p className="text-gray-600">
-                교민 업체 소식 <span className="font-semibold text-gray-900">{filteredArticles.length}</span>개
+            {/* 교민 업체 전용 검색 */}
+            <div className="mb-6">
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder={getSearchPlaceholder("business")}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white border-gray-200 focus:border-green-300 focus:ring-green-200"
+                />
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                한인 업체 소식, 신규 서비스, 성공 사례, 이벤트 정보를 확인하세요
               </p>
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* 검색 결과 요약 */}
+        <div className="mb-6">
+          <p className="text-gray-600">
+            총 <span className="font-semibold text-gray-900">{filteredArticles.length}</span>개의 뉴스
+            {searchTerm && (
+              <>
+                {" "}
+                (검색: "<span className="font-medium">{searchTerm}</span>")
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchTerm("")}
+                  className="ml-2 text-xs text-blue-600 hover:text-blue-800"
+                >
+                  검색 초기화
+                </Button>
+              </>
+            )}
+          </p>
+        </div>
 
         {/* 뉴스 카드 그리드 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {filteredArticles.slice(0, visibleCount).map((article, index) => (
             <div key={article.id}>
               <NewsCard article={article} onReadMore={handleReadMore} />
-              {/* 3번째마다 광고 삽입 */}
-              {(index + 1) % 3 === 0 && index < visibleCount - 1 && (
+              {/* 6번째마다 광고 삽입 */}
+              {(index + 1) % 6 === 0 && index < visibleCount - 1 && (
                 <div className="col-span-full my-6">
                   <InFeedAd />
                 </div>
@@ -255,20 +269,25 @@ export default function NewsCardList() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {Array.from({ length: 6 }).map((_, index) => (
               <Card key={index} className="border-0 shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center gap-2 mb-2">
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center gap-2">
                     <Skeleton className="h-5 w-20" />
                     <Skeleton className="h-5 w-12" />
                   </div>
                   <Skeleton className="h-6 w-full" />
                   <Skeleton className="h-6 w-3/4" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-40 w-full mb-4" />
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-2/3" />
-                </CardContent>
+                  <Skeleton className="h-40 w-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                  <Skeleton className="h-9 w-full" />
+                </div>
               </Card>
             ))}
           </div>
@@ -281,6 +300,7 @@ export default function NewsCardList() {
               onClick={handleLoadMore}
               disabled={isLoading}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
+              size="lg"
             >
               {isLoading ? (
                 <>
@@ -289,7 +309,7 @@ export default function NewsCardList() {
                 </>
               ) : (
                 <>
-                  더 많은 뉴스 보기
+                  더 많은 뉴스 보기 ({visibleCount}/{filteredArticles.length})
                   <ChevronDown className="w-4 h-4 ml-2" />
                 </>
               )}
@@ -302,7 +322,9 @@ export default function NewsCardList() {
           <div className="text-center py-12">
             <Newspaper className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">검색 결과가 없습니다</h3>
-            <p className="text-gray-600 mb-4">다른 검색어를 시도해보세요.</p>
+            <p className="text-gray-600 mb-4">
+              {activeTab === "local" ? "다른 현지 뉴스 키워드를 시도해보세요" : "다른 교민 업체 키워드를 시도해보세요"}
+            </p>
             <Button variant="outline" onClick={() => setSearchTerm("")} className="bg-white">
               전체 뉴스 보기
             </Button>
