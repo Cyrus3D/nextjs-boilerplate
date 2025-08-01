@@ -1,24 +1,13 @@
 "use client"
 
 import { useState, useEffect, useMemo, Suspense, lazy } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Search,
-  TrendingUp,
-  Thermometer,
-  DollarSign,
-  Loader2,
-  Newspaper,
-  Building,
-  Clock,
-  Eye,
-  ArrowRight,
-} from "lucide-react"
+import { Search, TrendingUp, Thermometer, DollarSign, Loader2, Newspaper, Building } from "lucide-react"
 import BusinessCard from "@/components/business-card"
 import NewsCardList from "@/components/news-card-list"
 import type { BusinessCard as BusinessCardType, Category } from "@/types/business-card"
@@ -29,10 +18,6 @@ import {
   getCachedData,
   setCachedData,
 } from "@/lib/optimized-api"
-import InfoCardList from "../info-card-list"
-import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import { sampleNewsArticles } from "@/data/sample-news"
 
 // Lazy load components for better performance
 const BusinessDetailModal = lazy(() => import("@/components/business-detail-modal"))
@@ -102,64 +87,6 @@ function CardSkeleton() {
         </div>
         <Skeleton className="h-9 w-full" />
       </div>
-    </Card>
-  )
-}
-
-function NewsPreviewCard({ article }: { article: any }) {
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
-
-    if (diffInHours < 1) return "방금 전"
-    if (diffInHours < 24) return `${diffInHours}시간 전`
-    return date.toLocaleDateString("ko-KR", { month: "short", day: "numeric" })
-  }
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "현지 뉴스":
-        return "bg-blue-100 text-blue-800"
-      case "교민 업체":
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  return (
-    <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer group border-0 shadow-sm bg-white">
-      <div className="pb-3">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Badge className={getCategoryColor(article.category)} variant="secondary">
-              {article.category}
-            </Badge>
-            {article.isBreaking && <Badge className="bg-red-600 text-white animate-pulse">속보</Badge>}
-          </div>
-          <TrendingUp className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
-        </div>
-        <div className="text-lg line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors">
-          {article.title}
-        </div>
-      </div>
-      <CardContent className="space-y-3">
-        <p className="text-gray-600 text-sm line-clamp-2">{article.excerpt}</p>
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-1">
-              <Clock className="w-3 h-3" />
-              <span>{article.readTime}분</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Eye className="w-3 h-3" />
-              <span>{article.viewCount.toLocaleString()}</span>
-            </div>
-          </div>
-          <span>{formatDate(article.publishedAt)}</span>
-        </div>
-      </CardContent>
     </Card>
   )
 }
@@ -606,49 +533,6 @@ export default function HomePage() {
           }}
         />
       </Suspense>
-
-      {/* News Preview Section */}
-      <section className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <Newspaper className="w-6 h-6 text-blue-600" />
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">최신 뉴스</h2>
-                <p className="text-sm text-gray-600">
-                  오늘{" "}
-                  {
-                    sampleNewsArticles.filter((article) => {
-                      const today = new Date()
-                      const articleDate = new Date(article.publishedAt)
-                      return articleDate.toDateString() === today.toDateString()
-                    }).length
-                  }
-                  개 · 속보 {sampleNewsArticles.filter((article) => article.isBreaking).length}개 · 전체{" "}
-                  {sampleNewsArticles.length}개
-                </p>
-              </div>
-            </div>
-            <Link href="/news">
-              <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                전체 뉴스 보기
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {sampleNewsArticles.slice(0, 3).map((article) => (
-              <Link key={article.id} href="/news">
-                <NewsPreviewCard article={article} />
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Main Business Cards Section */}
-      <InfoCardList />
     </div>
   )
 }
