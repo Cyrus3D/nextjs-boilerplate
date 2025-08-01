@@ -4,7 +4,8 @@ export const sampleNews: NewsArticle[] = [
   {
     id: "1",
     title: "태국 정부, 한국인 관광객 대상 비자 면제 기간 연장 발표",
-    excerpt: "태국 정부가 한국인 관광객에 대한 비자 면제 기간을 기존 30일에서 60일로 연장한다고 발표했습니다. 이번 조치는 코로나19 이후 관광업 회복을 위한 것으로...",
+    excerpt:
+      "태국 정부가 한국인 관광객에 대한 비자 면제 기간을 기존 30일에서 60일로 연장한다고 발표했습니다. 이번 조치는 코로나19 이후 관광업 회복을 위한 것으로...",
     content: `태국 정부가 한국인 관광객에 대한 비자 면제 기간을 기존 30일에서 60일로 연장한다고 발표했습니다.
 
 이번 조치는 코로나19 이후 관광업 회복을 위한 것으로, 2024년 3월 1일부터 시행될 예정입니다. 태국 관광청에 따르면, 한국은 태국의 주요 관광객 송출국 중 하나로, 연간 약 150만 명의 한국인이 태국을 방문하고 있습니다.
@@ -23,17 +24,18 @@ export const sampleNews: NewsArticle[] = [
     isBreaking: true,
     author: {
       name: "김태국",
-      avatar: "/placeholder.svg?height=40&width=40&text=KT"
+      avatar: "/placeholder.svg?height=40&width=40&text=KT",
     },
     source: {
       name: "태국 한인 뉴스",
-      url: "https://example.com"
-    }
+      url: "https://example.com",
+    },
   },
   {
-    id: "2", 
+    id: "2",
     title: "방콕 지하철 새 노선 개통, 한인 거주 지역 접근성 크게 개선",
-    excerpt: "방콕 대중교통공사(BMTA)가 새로운 지하철 노선을 개통하면서 한인들이 많이 거주하는 수쿰빗, 실롬 지역의 교통 접근성이 크게 개선될 전망입니다...",
+    excerpt:
+      "방콕 대중교통공사(BMTA)가 새로운 지하철 노선을 개통하면서 한인들이 많이 거주하는 수쿰빗, 실롬 지역의 교통 접근성이 크게 개선될 전망입니다...",
     content: `방콕 대중교통공사(BMTA)가 새로운 지하철 노선을 개통하면서 한인들이 많이 거주하는 수쿰빗, 실롬 지역의 교통 접근성이 크게 개선될 전망입니다.
 
 새로 개통된 '골드 라인'은 총 3개 역으로 구성되어 있으며, 기존 BTS 스카이트레인과 연결되어 환승이 가능합니다. 특히 한인 밀집 거주지인 프롬퐁, 통로, 에까마이 지역에서 수완나품 공항까지의 이동 시간이 기존 1시간에서 40분으로 단축됩니다.
@@ -52,17 +54,18 @@ export const sampleNews: NewsArticle[] = [
     isBreaking: false,
     author: {
       name: "이방콕",
-      avatar: "/placeholder.svg?height=40&width=40&text=LB"
+      avatar: "/placeholder.svg?height=40&width=40&text=LB",
     },
     source: {
       name: "방콕 교통 뉴스",
-      url: "https://example.com"
-    }
+      url: "https://example.com",
+    },
   },
   {
     id: "3",
     title: "태국 바트화 강세 지속, 한국 원화 대비 환율 변동 주목",
-    excerpt: "최근 태국 바트화가 강세를 보이면서 한국 원화 대비 환율이 주목받고 있습니다. 전문가들은 태국 경제 회복과 관광업 부활이 주요 원인이라고 분석했습니다...",
+    excerpt:
+      "최근 태국 바트화가 강세를 보이면서 한국 원화 대비 환율이 주목받고 있습니다. 전문가들은 태국 경제 회복과 관광업 부활이 주요 원인이라고 분석했습니다...",
     content: `최근 태국 바트화가 강세를 보이면서 한국 원화 대비 환율이 주목받고 있습니다. 전문가들은 태국 경제 회복과 관광업 부활이 주요 원인이라고 분석했습니다.
 
 현재 1바트당 37.5원 수준을 유지하고 있는 원-바트 환율은 지난 3개월간 약 5% 상승했습니다. 이는 태국 중앙은행의 안정적인 통화정책과 외국인 투자 증가가 주요 요인으로 작용했습니다.
@@ -81,17 +84,18 @@ export const sampleNews: NewsArticle[] = [
     isBreaking: false,
     author: {
       name: "박경제",
-      avatar: "/placeholder.svg?height=40&width=40&text=PK"
+      avatar: "/placeholder.svg?height=40&width=40&text=PK",
     },
     source: {
       name: "태국 경제 리포트",
-      url: "https://example.com"
-    }
+      url: "https://example.com",
+    },
   },
   {
     id: "4",
     title: "치앙마이 한인 문화축제 성황리 개최, 3만 명 참가",
-    excerpt: "치앙마이에서 열린 제5회 한인 문화축제가 성황리에 마무리되었습니다. 이번 축제에는 현지 한국인뿐만 아니라 태국인들도 대거 참여하여 한태 문화 교류의 장이 되었습니다...",
+    excerpt:
+      "치앙마이에서 열린 제5회 한인 문화축제가 성황리에 마무리되었습니다. 이번 축제에는 현지 한국인뿐만 아니라 태국인들도 대거 참여하여 한태 문화 교류의 장이 되었습니다...",
     content: `치앙마이에서 열린 제5회 한인 문화축제가 성황리에 마무리되었습니다. 이번 축제에는 현지 한국인뿐만 아니라 태국인들도 대거 참여하여 한태 문화 교류의 장이 되었습니다.
 
 3일간 진행된 이번 축제에는 총 3만여 명이 참가했으며, 한국 전통 음식 체험, K-pop 공연, 태권도 시연, 한복 체험 등 다양한 프로그램이 진행되었습니다.
@@ -112,17 +116,18 @@ export const sampleNews: NewsArticle[] = [
     isBreaking: false,
     author: {
       name: "최문화",
-      avatar: "/placeholder.svg?height=40&width=40&text=CM"
+      avatar: "/placeholder.svg?height=40&width=40&text=CM",
     },
     source: {
       name: "치앙마이 한인 소식",
-      url: "https://example.com"
-    }
+      url: "https://example.com",
+    },
   },
   {
     id: "5",
     title: "태국 의료관광 한국인 이용객 급증, 전년 대비 40% 증가",
-    excerpt: "태국의 의료관광 산업이 코로나19 이후 빠른 회복세를 보이는 가운데, 한국인 의료관광객이 전년 대비 40% 증가한 것으로 나타났습니다...",
+    excerpt:
+      "태국의 의료관광 산업이 코로나19 이후 빠른 회복세를 보이는 가운데, 한국인 의료관광객이 전년 대비 40% 증가한 것으로 나타났습니다...",
     content: `태국의 의료관광 산업이 코로나19 이후 빠른 회복세를 보이는 가운데, 한국인 의료관광객이 전년 대비 40% 증가한 것으로 나타났습니다.
 
 태국 의료관광청에 따르면, 2023년 태국을 방문한 한국인 의료관광객은 약 15만 명으로 집계되었습니다. 이는 전년 대비 40% 증가한 수치로, 코로나19 이전 수준을 거의 회복한 것으로 평가됩니다.
@@ -143,17 +148,18 @@ export const sampleNews: NewsArticle[] = [
     isBreaking: false,
     author: {
       name: "정의료",
-      avatar: "/placeholder.svg?height=40&width=40&text=JM"
+      avatar: "/placeholder.svg?height=40&width=40&text=JM",
     },
     source: {
       name: "태국 의료 뉴스",
-      url: "https://example.com"
-    }
+      url: "https://example.com",
+    },
   },
   {
     id: "6",
     title: "파타야 한인 상권 활성화, 새로운 복합쇼핑몰 오픈 예정",
-    excerpt: "파타야 지역 한인 상권이 활기를 되찾고 있는 가운데, 한국인 관광객과 거주민을 타겟으로 한 대형 복합쇼핑몰이 올해 하반기 오픈할 예정입니다...",
+    excerpt:
+      "파타야 지역 한인 상권이 활기를 되찾고 있는 가운데, 한국인 관광객과 거주민을 타겟으로 한 대형 복합쇼핑몰이 올해 하반기 오픈할 예정입니다...",
     content: `파타야 지역 한인 상권이 활기를 되찾고 있는 가운데, 한국인 관광객과 거주민을 타겟으로 한 대형 복합쇼핑몰이 올해 하반기 오픈할 예정입니다.
 
 '코리아 플라자 파타야'라는 이름의 이 쇼핑몰은 총 5층 규모로 건설되며, 한국 음식점, 한국 상품 전문점, 노래방, 찜질방, 한국 서적 및 문구점 등이 입점할 예정입니다.
@@ -164,4 +170,23 @@ export const sampleNews: NewsArticle[] = [
 
 또한 3층에는 한국 문화센터가 설치되어 한국어 교육, 태권도 교실, K-pop 댄스 클래스 등의 프로그램이 운영될 예정입니다.
 
-파타야 한인회는 "이번 쇼핑몰 오픈으로 한인 커뮤니티가 더욱 활성화되고,
+파타야 한인회는 "이번 쇼핑몰 오픈으로 한인 커뮤니티가 더욱 활성화되고, 태국 현지인들과의 문화 교류도 더욱 활발해질 것으로 기대한다"고 밝혔습니다.
+
+쇼핑몰은 올해 9월 오픈을 목표로 하고 있으며, 오픈 기념 이벤트로 다양한 할인 혜택과 문화 공연이 준비될 예정입니다.`,
+    imageUrl: "/placeholder.svg?height=400&width=600&text=Pattaya+Korea+Plaza",
+    category: "비즈니스",
+    tags: ["쇼핑몰", "파타야", "한인상권", "복합문화공간"],
+    publishedAt: "2024-01-10T10:30:00Z",
+    readTime: 4,
+    views: 650,
+    isBreaking: false,
+    author: {
+      name: "김파타야",
+      avatar: "/placeholder.svg?height=40&width=40&text=KP",
+    },
+    source: {
+      name: "파타야 비즈니스 뉴스",
+      url: "https://example.com",
+    },
+  },
+]
