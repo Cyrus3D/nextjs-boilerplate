@@ -125,7 +125,6 @@ export async function getNewsArticles(limit?: number): Promise<NewsArticle[]> {
       .from("news_articles")
       .select("*")
       .eq("is_published", true)
-      .eq("status", "published")
       .order("published_at", { ascending: false })
 
     if (limit) {
@@ -155,7 +154,7 @@ export async function getNewsArticles(limit?: number): Promise<NewsArticle[]> {
         readTime: article.read_time || 5,
         isBreaking: article.is_breaking || false,
         isPremium: false,
-        status: article.status,
+        status: "published",
       })) || []
     )
   } catch (error) {
@@ -175,7 +174,6 @@ export async function getNewsArticlesByCategory(category: string, limit?: number
       .select("*")
       .eq("category", category)
       .eq("is_published", true)
-      .eq("status", "published")
       .order("published_at", { ascending: false })
 
     if (limit) {
@@ -205,7 +203,7 @@ export async function getNewsArticlesByCategory(category: string, limit?: number
         readTime: article.read_time || 5,
         isBreaking: article.is_breaking || false,
         isPremium: false,
-        status: article.status,
+        status: "published",
       })) || []
     )
   } catch (error) {
@@ -309,7 +307,6 @@ export async function searchNewsArticles(query: string): Promise<NewsArticle[]> 
       .select("*")
       .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%,content.ilike.%${query}%`)
       .eq("is_published", true)
-      .eq("status", "published")
       .order("published_at", { ascending: false })
 
     if (error) {
@@ -333,7 +330,7 @@ export async function searchNewsArticles(query: string): Promise<NewsArticle[]> 
         readTime: article.read_time || 5,
         isBreaking: article.is_breaking || false,
         isPremium: false,
-        status: article.status,
+        status: "published",
       })) || []
     )
   } catch (error) {
