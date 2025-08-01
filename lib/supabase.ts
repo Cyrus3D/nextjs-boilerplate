@@ -6,12 +6,11 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
 
 export function isSupabaseConfigured(): boolean {
-  return !!(supabaseUrl && supabaseAnonKey && supabase)
+  return !!(supabaseUrl && supabaseAnonKey)
 }
 
 export async function safeSupabaseOperation<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
-  if (!isSupabaseConfigured()) {
-    console.log("Supabase not configured, using fallback data")
+  if (!supabase) {
     return fallback
   }
 

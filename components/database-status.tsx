@@ -5,14 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
-import { RefreshCw, Database, CheckCircle, XCircle, AlertTriangle, Table, Settings } from "lucide-react"
-import { checkDatabaseStatus, getSchemaInfo } from "@/lib/database-check"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { RefreshCw, CheckCircle, XCircle, AlertCircle, Database, Settings, FileText } from "lucide-react"
+import { checkDatabaseStatus, getSchemaInfo, type DatabaseStatus, type SchemaInfo } from "@/lib/database-check"
 
-export function DatabaseStatusComponent() {
-  const [status, setStatus] = useState<any | null>(null)
-  const [schemaInfo, setSchemaInfo] = useState<any[]>([])
+export default function DatabaseStatusComponent() {
+  const [status, setStatus] = useState<DatabaseStatus | null>(null)
+  const [schemaInfo, setSchemaInfo] = useState<SchemaInfo[]>([])
   const [loading, setLoading] = useState(true)
 
   const checkStatus = async () => {
@@ -22,7 +21,7 @@ export function DatabaseStatusComponent() {
       setStatus(dbStatus)
       setSchemaInfo(schema)
     } catch (error) {
-      console.error("Failed to check database status:", error)
+      console.error("Error checking database status:", error)
     } finally {
       setLoading(false)
     }
@@ -32,219 +31,248 @@ export function DatabaseStatusComponent() {
     checkStatus()
   }, [])
 
+  const getStatusIcon = (exists: boolean, error?: string) => {
+    if (error) return <XCircle className="h-4 w-4 text-red-500" />
+    if (exists) return <CheckCircle className="h-4 w-4 text-green-500" />
+    return <AlertCircle className="h-4 w-4 text-yellow-500" />
+  }
+
+  const getStatusBadge = (exists: boolean, error?: string) => {
+    if (error) return <Badge variant="destructive">오류</Badge>
+    if (exists)
+      return (
+        <Badge variant="default" className="bg-green-500">
+          정상
+        </Badge>
+      )
+    return <Badge variant="secondary">없음</Badge>
+  }
+
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Database className="h-5 w-5" />
-            <span>데이터베이스 상태 확인 중...</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-2">
-            <RefreshCw className="h-4 w-4 animate-spin" />
-            <span>상태를 확인하고 있습니다...</span>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center p-8">
+        <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+        <span>데이터베이스 상태 확인 중...</span>
+      </div>
     )
   }
 
   if (!status) {
     return (
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>데이터베이스 상태를 확인할 수 없습니다.</AlertDescription>
-      </Alert>
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-red-500">데이터베이스 상태를 확인할 수 없습니다.</div>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Status Overview */}
+      {/* Overall Status */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
-              <CardTitle>데이터베이스 연결 상태</CardTitle>
-            </div>
-            <Button onClick={checkStatus} size="sm" variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              새로고침
-            </Button>
+              데이터베이스 연결 상태
+            </CardTitle>
+            <CardDescription>마지막 확인: {status.lastChecked.toLocaleString("ko-KR")}</CardDescription>
           </div>
-          <CardDescription>마지막 확인: {status.lastChecked.toLocaleString("ko-KR")}</CardDescription>
+          <Button onClick={checkStatus} disabled={loading} size="sm">
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            새로고침
+          </Button>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-2">
+              {getStatusIcon(status.isConfigured)}
               <span className="font-medium">환경변수 설정:</span>
-              {status.isConfigured ? (
-                <Badge variant="default" className="bg-green-100 text-green-800">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  설정됨
-                </Badge>
-              ) : (
-                <Badge variant="destructive">
-                  <XCircle className="h-3 w-3 mr-1" />
-                  미설정
-                </Badge>
-              )}
+              {getStatusBadge(status.isConfigured)}
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
+              {getStatusIcon(status.isConnected)}
               <span className="font-medium">데이터베이스 연결:</span>
-              {status.isConnected ? (
-                <Badge variant="default" className="bg-green-100 text-green-800">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  연결됨
+              {getStatusBadge(status.isConnected)}
+            </div>
+            <div className="flex items-center gap-2">
+              {getStatusIcon(status.tables.every((t) => t.exists))}
+              <span className="font-medium">전체 상태:</span>
+              {status.isConnected && status.tables.every((t) => t.exists) ? (
+                <Badge variant="default" className="bg-green-500">
+                  정상
                 </Badge>
               ) : (
-                <Badge variant="destructive">
-                  <XCircle className="h-3 w-3 mr-1" />
-                  연결 실패
-                </Badge>
+                <Badge variant="destructive">문제있음</Badge>
               )}
             </div>
           </div>
-
           {status.error && (
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{status.error}</AlertDescription>
-            </Alert>
-          )}
-
-          {!status.isConfigured && (
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                환경변수를 설정해주세요:
-                <br />• NEXT_PUBLIC_SUPABASE_URL
-                <br />• NEXT_PUBLIC_SUPABASE_ANON_KEY
-              </AlertDescription>
-            </Alert>
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-700 text-sm">{status.error}</p>
+            </div>
           )}
         </CardContent>
       </Card>
 
       {/* Detailed Information */}
-      <Tabs defaultValue="tables" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="tables">테이블 상태</TabsTrigger>
-          <TabsTrigger value="functions">함수 상태</TabsTrigger>
-          <TabsTrigger value="schema">스키마 정보</TabsTrigger>
+      <Tabs defaultValue="tables" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="tables">테이블</TabsTrigger>
+          <TabsTrigger value="functions">함수</TabsTrigger>
+          <TabsTrigger value="schema">스키마</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="tables" className="space-y-4">
+        <TabsContent value="tables">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Table className="h-5 w-5" />
-                <span>테이블 상태</span>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                테이블 상태
               </CardTitle>
+              <CardDescription>필수 테이블들의 존재 여부와 레코드 수를 확인합니다.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {status.tables.map((table) => (
-                  <div key={table.name} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="font-medium">{table.name}</div>
-                      {table.exists ? (
-                        <Badge variant="default" className="bg-green-100 text-green-800">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          존재함
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive">
-                          <XCircle className="h-3 w-3 mr-1" />
-                          없음
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {table.exists ? `${table.recordCount}개 레코드` : table.error}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="functions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Settings className="h-5 w-5" />
-                <span>함수 상태</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {status.functions.map((func) => (
-                  <div key={func.name} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="font-medium">{func.name}</div>
-                      {func.exists ? (
-                        <Badge variant="default" className="bg-green-100 text-green-800">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          존재함
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive">
-                          <XCircle className="h-3 w-3 mr-1" />
-                          없음
-                        </Badge>
-                      )}
-                    </div>
-                    {func.error && <div className="text-sm text-red-600">{func.error}</div>}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="schema" className="space-y-4">
-          {schemaInfo.length > 0 ? (
-            schemaInfo.map((schema) => (
-              <Card key={schema.tableName}>
-                <CardHeader>
-                  <CardTitle>{schema.tableName}</CardTitle>
-                  <CardDescription>{schema.columns.length}개 컬럼</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {schema.columns.map((column, index) => (
-                      <div key={column.name}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium">{column.name}</span>
-                            <Badge variant="outline">{column.type}</Badge>
-                            {!column.nullable && <Badge variant="secondary">NOT NULL</Badge>}
-                          </div>
-                          {column.defaultValue && (
-                            <span className="text-sm text-gray-600">기본값: {column.defaultValue}</span>
-                          )}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>테이블명</TableHead>
+                    <TableHead>상태</TableHead>
+                    <TableHead>레코드 수</TableHead>
+                    <TableHead>오류</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {status.tables.map((table) => (
+                    <TableRow key={table.name}>
+                      <TableCell className="font-medium">{table.name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(table.exists, table.error)}
+                          {getStatusBadge(table.exists, table.error)}
                         </div>
-                        {index < schema.columns.length - 1 && <Separator className="mt-2" />}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <Card>
-              <CardContent className="text-center py-8">
-                <p className="text-gray-600">스키마 정보를 가져올 수 없습니다.</p>
-              </CardContent>
-            </Card>
-          )}
+                      </TableCell>
+                      <TableCell>{table.exists ? table.recordCount.toLocaleString() : "-"}</TableCell>
+                      <TableCell className="text-red-500 text-sm">{table.error || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="functions">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                함수 상태
+              </CardTitle>
+              <CardDescription>필수 데이터베이스 함수들의 존재 여부를 확인합니다.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>함수명</TableHead>
+                    <TableHead>상태</TableHead>
+                    <TableHead>오류</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {status.functions.map((func) => (
+                    <TableRow key={func.name}>
+                      <TableCell className="font-medium">{func.name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(func.exists, func.error)}
+                          {getStatusBadge(func.exists, func.error)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-red-500 text-sm">{func.error || "-"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="schema">
+          <Card>
+            <CardHeader>
+              <CardTitle>스키마 정보</CardTitle>
+              <CardDescription>테이블 구조와 컬럼 정보를 확인합니다.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {schemaInfo.length === 0 ? (
+                <p className="text-muted-foreground">스키마 정보를 가져올 수 없습니다.</p>
+              ) : (
+                <div className="space-y-6">
+                  {schemaInfo.map((table) => (
+                    <div key={table.tableName}>
+                      <h4 className="font-semibold mb-2">{table.tableName}</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>컬럼명</TableHead>
+                            <TableHead>데이터 타입</TableHead>
+                            <TableHead>NULL 허용</TableHead>
+                            <TableHead>기본값</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {table.columns.map((column) => (
+                            <TableRow key={column.columnName}>
+                              <TableCell className="font-medium">{column.columnName}</TableCell>
+                              <TableCell>{column.dataType}</TableCell>
+                              <TableCell>
+                                <Badge variant={column.isNullable ? "secondary" : "outline"}>
+                                  {column.isNullable ? "YES" : "NO"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {column.defaultValue || "-"}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Recommendations */}
+      {(!status.isConfigured || !status.isConnected || status.tables.some((t) => !t.exists)) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-orange-600">권장사항</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              {!status.isConfigured && (
+                <li>• 환경변수 NEXT_PUBLIC_SUPABASE_URL과 NEXT_PUBLIC_SUPABASE_ANON_KEY를 설정하세요.</li>
+              )}
+              {status.isConfigured && !status.isConnected && (
+                <li>• Supabase 프로젝트 설정과 네트워크 연결을 확인하세요.</li>
+              )}
+              {status.tables.some((t) => !t.exists) && (
+                <li>• scripts/ 폴더의 SQL 스크립트를 실행하여 데이터베이스 스키마를 생성하세요.</li>
+              )}
+              {status.functions.some((f) => !f.exists) && (
+                <li>• 필수 함수들을 생성하기 위해 관련 SQL 스크립트를 실행하세요.</li>
+              )}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
