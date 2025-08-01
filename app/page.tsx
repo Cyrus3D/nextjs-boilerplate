@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { TrendingUp, Thermometer, DollarSign, Newspaper, Building, MapPin, Search, Loader2 } from "lucide-react"
+import { Search, TrendingUp, Thermometer, DollarSign, Loader2, Newspaper, Building } from "lucide-react"
 import BusinessCard from "@/components/business-card"
 import NewsCardList from "@/components/news-card-list"
 import type { BusinessCard as BusinessCardType, Category } from "@/types/business-card"
@@ -102,8 +103,8 @@ export default function HomePage() {
 
   // Loading states
   const [isLoading, setIsLoading] = useState(true)
-  const [isCategoriesLoading, setIsLoadingCategoriesLoading] = useState(true)
-  const [isCardsLoading, setIsLoadingCardsLoading] = useState(true)
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(true)
+  const [isCardsLoading, setIsCardsLoading] = useState(true)
 
   // Weather and exchange rate states
   const [weather, setWeather] = useState<WeatherData | null>(null)
@@ -199,7 +200,7 @@ export default function HomePage() {
   // Fetch categories
   const fetchCategories = async () => {
     try {
-      setIsLoadingCategoriesLoading(true)
+      setIsCategoriesLoading(true)
       const fetchedCategories = await getCategories()
       setCategories(fetchedCategories)
     } catch (error) {
@@ -211,7 +212,7 @@ export default function HomePage() {
         { id: 3, name: "쇼핑", color_class: "bg-green-100 text-green-800" },
       ])
     } finally {
-      setIsLoadingCategoriesLoading(false)
+      setIsCategoriesLoading(false)
     }
   }
 
@@ -219,7 +220,7 @@ export default function HomePage() {
   const fetchCards = async (page = 1, reset = false) => {
     try {
       if (reset) {
-        setIsLoadingCardsLoading(true)
+        setIsCardsLoading(true)
       }
 
       // 카테고리 필터링을 위해 카테고리 ID를 찾습니다
@@ -246,7 +247,7 @@ export default function HomePage() {
         setCards([])
       }
     } finally {
-      setIsLoadingCardsLoading(false)
+      setIsCardsLoading(false)
       setIsLoading(false)
     }
   }
@@ -272,13 +273,15 @@ export default function HomePage() {
 
   // Handle category and search changes
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setCurrentPage(1) // 페이지를 1로 리셋
-      fetchCards(1, true)
-    }, 300) // Debounce search
+    if (activeTab === "business") {
+      const timeoutId = setTimeout(() => {
+        setCurrentPage(1) // 페이지를 1로 리셋
+        fetchCards(1, true)
+      }, 300) // Debounce search
 
-    return () => clearTimeout(timeoutId)
-  }, [selectedCategory, searchTerm, categories]) // categories 의존성 추가
+      return () => clearTimeout(timeoutId)
+    }
+  }, [selectedCategory, searchTerm, categories, activeTab]) // categories 의존성 추가
 
   // Handle card detail click
   const handleDetailClick = (card: BusinessCardType) => {
@@ -324,213 +327,212 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 헤더 정보 */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold text-gray-900">🇹🇭 태국 한인 정보</h1>
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      {/* Header with Weather and Exchange Rate */}
+      {isLoading ? (
+        <HeaderSkeleton />
+      ) : (
+        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">🔥 핫타이 HOT THAI</h1>
+              <p className="text-orange-100">태국에서 필요한 모든 정보를 한 곳에서 찾아보세요</p>
             </div>
 
-            {/* 날씨 및 환율 정보 */}
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <div className="flex items-center gap-1">
-                <Thermometer className="w-4 h-4" />
+            <div className="flex flex-col sm:flex-row gap-4 text-sm">
+              {/* Weather Info */}
+              <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
+                <div className="flex items-center gap-2 mb-1">
+                  <Thermometer className="w-4 h-4" />
+                  <span className="font-medium">방콕 날씨</span>
+                </div>
                 {isWeatherLoading ? (
-                  <span>로딩 중...</span>
+                  <div className="text-orange-100">로딩 중...</div>
                 ) : weather ? (
-                  <span>
+                  <div className="text-orange-100">
                     {weather.temperature}°C, {weather.description}
-                  </span>
+                  </div>
                 ) : (
-                  <span>정보 없음</span>
+                  <div className="text-orange-100">정보 없음</div>
                 )}
               </div>
-              <div className="flex items-center gap-1">
-                <TrendingUp className="w-4 h-4" />
+
+              {/* Exchange Rate Info */}
+              <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
+                <div className="flex items-center gap-2 mb-1">
+                  <DollarSign className="w-4 h-4" />
+                  <span className="font-medium">환율 (THB→KRW)</span>
+                </div>
                 {isExchangeLoading ? (
-                  <span>로딩 중...</span>
+                  <div className="text-orange-100">로딩 중...</div>
                 ) : exchangeRate ? (
-                  <span>1 THB = {exchangeRate.rate} KRW</span>
+                  <div className="text-orange-100">
+                    1 THB = {exchangeRate.rate} KRW
+                    <div className="text-xs opacity-75 mt-1">
+                      {exchangeRate.source} • {formatTime(exchangeRate.timestamp)}
+                    </div>
+                  </div>
                 ) : (
-                  <span>정보 없음</span>
+                  <div className="text-orange-100">정보 없음</div>
                 )}
-              </div>
-              <div className="flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
-                <span>태국 시간: {new Date().toLocaleTimeString("ko-KR", { timeZone: "Asia/Bangkok" })}</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* 메인 콘텐츠 */}
-      <div className="container mx-auto px-4 py-6">
-        {/* Main Tabs */}
-        <div className="grid w-full grid-cols-2 bg-white border border-gray-200 p-1">
-          <div
-            className="flex items-center gap-2 py-3 px-4 cursor-pointer hover:bg-blue-600 hover:text-white"
-            onClick={() => setActiveTab("news")}
-            style={{
-              backgroundColor: activeTab === "news" ? "#3b82f6" : "white",
-              color: activeTab === "news" ? "white" : "#333",
-            }}
+      {/* Main Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2 bg-white border border-gray-200 p-1">
+          <TabsTrigger
+            value="news"
+            className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
           >
             <Newspaper className="w-4 h-4" />
             뉴스
-          </div>
-          <div
-            className="flex items-center gap-2 py-3 px-4 cursor-pointer hover:bg-orange-600 hover:text-white"
-            onClick={() => setActiveTab("business")}
-            style={{
-              backgroundColor: activeTab === "business" ? "#f59e0b" : "white",
-              color: activeTab === "business" ? "white" : "#333",
-            }}
+          </TabsTrigger>
+          <TabsTrigger
+            value="business"
+            className="flex items-center gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
           >
             <Building className="w-4 h-4" />
             업체 정보
-          </div>
-        </div>
+          </TabsTrigger>
+        </TabsList>
 
-        {activeTab === "news" && (
-          <div className="mt-6">
-            <NewsCardList />
-          </div>
-        )}
+        <TabsContent value="news" className="mt-6">
+          <NewsCardList />
+        </TabsContent>
 
-        {activeTab === "business" && (
-          <div className="mt-6">
-            {/* Search and Filter Controls */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="업체명, 설명으로 검색..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+        <TabsContent value="business" className="mt-6">
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="업체명, 설명으로 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
 
-              <Select
-                value={selectedCategory}
-                onValueChange={(value) => {
-                  setSelectedCategory(value)
-                  setCurrentPage(1) // 페이지 리셋
-                }}
-              >
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="카테고리 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체 카테고리</SelectItem>
-                  {isCategoriesLoading ? (
-                    <SelectItem value="loading" disabled>
-                      로딩 중...
+            <Select
+              value={selectedCategory}
+              onValueChange={(value) => {
+                setSelectedCategory(value)
+                setCurrentPage(1) // 페이지 리셋
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="카테고리 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 카테고리</SelectItem>
+                {isCategoriesLoading ? (
+                  <SelectItem value="loading" disabled>
+                    로딩 중...
+                  </SelectItem>
+                ) : (
+                  categories.map((category) => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
                     </SelectItem>
-                  ) : (
-                    categories.map((category) => (
-                      <SelectItem key={category.id} value={category.name}>
-                        {category.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* Results Summary */}
-            {!isLoading && (
-              <div className="flex items-center justify-between text-sm text-gray-600 mb-6">
-                <span>
-                  총 {total}개의 업체 정보
-                  {searchTerm && ` (검색: "${searchTerm}")`}
-                  {selectedCategory !== "all" && ` (카테고리: ${selectedCategory})`}
-                </span>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>인기순 정렬</span>
-                  {(searchTerm || selectedCategory !== "all") && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSearchTerm("")
-                        setSelectedCategory("all")
-                      }}
-                      className="text-xs"
-                    >
-                      필터 초기화
-                    </Button>
+          {/* Results Summary */}
+          {!isLoading && (
+            <div className="flex items-center justify-between text-sm text-gray-600 mb-6">
+              <span>
+                총 {total}개의 업체 정보
+                {searchTerm && ` (검색: "${searchTerm}")`}
+                {selectedCategory !== "all" && ` (카테고리: ${selectedCategory})`}
+              </span>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                <span>인기순 정렬</span>
+                {(searchTerm || selectedCategory !== "all") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearchTerm("")
+                      setSelectedCategory("all")
+                    }}
+                    className="text-xs"
+                  >
+                    필터 초기화
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Business Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {isCardsLoading && cards.length === 0 ? (
+              // Initial loading skeletons
+              Array.from({ length: 8 }).map((_, index) => <CardSkeleton key={index} />)
+            ) : sortedCards.length > 0 ? (
+              sortedCards.map((card, index) => (
+                <div key={card.id} className="h-full">
+                  <BusinessCard card={card} onDetailClick={handleDetailClick} />
+                  {/* Insert ads every 8 cards */}
+                  {(index + 1) % 8 === 0 && (
+                    <div className="col-span-full my-4">
+                      <Card className="p-4 bg-gray-50 border-dashed">
+                        <div className="text-center text-gray-500 text-sm">광고 영역</div>
+                      </Card>
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
-
-            {/* Business Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {isCardsLoading && cards.length === 0 ? (
-                // Initial loading skeletons
-                Array.from({ length: 8 }).map((_, index) => <CardSkeleton key={index} />)
-              ) : sortedCards.length > 0 ? (
-                sortedCards.map((card, index) => (
-                  <div key={card.id} className="h-full">
-                    <BusinessCard card={card} onDetailClick={handleDetailClick} />
-                    {/* Insert ads every 8 cards */}
-                    {(index + 1) % 8 === 0 && (
-                      <div className="col-span-full my-4">
-                        <Card className="p-4 bg-gray-50 border-dashed">
-                          <div className="text-center text-gray-500 text-sm">광고 영역</div>
-                        </Card>
-                      </div>
-                    )}
-                  </div>
-                ))
-              ) : (
-                // No results
-                <div className="col-span-full text-center py-12">
-                  <div className="text-gray-500 mb-4">
-                    <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium">검색 결과가 없습니다</p>
-                    <p className="text-sm">다른 키워드나 카테고리로 검색해보세요</p>
-                  </div>
+              ))
+            ) : (
+              // No results
+              <div className="col-span-full text-center py-12">
+                <div className="text-gray-500 mb-4">
+                  <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">검색 결과가 없습니다</p>
+                  <p className="text-sm">다른 키워드나 카테고리로 검색해보세요</p>
                 </div>
-              )}
-            </div>
-
-            {/* Load More Button */}
-            {hasMore && !isCardsLoading && sortedCards.length > 0 && (
-              <div className="text-center mt-8">
-                <Button onClick={handleLoadMore} variant="outline" size="lg" className="min-w-[200px] bg-white">
-                  더 보기 ({sortedCards.length}/{total})
-                </Button>
-              </div>
-            )}
-
-            {/* Loading indicator for pagination */}
-            {isCardsLoading && cards.length > 0 && (
-              <div className="text-center py-4">
-                <Loader2 className="w-6 h-6 animate-spin mx-auto" />
-                <p className="text-sm text-gray-500 mt-2">로딩 중...</p>
               </div>
             )}
           </div>
-        )}
 
-        {/* Business Detail Modal */}
-        <Suspense fallback={<div>Loading modal...</div>}>
-          <BusinessDetailModal
-            card={selectedCard}
-            isOpen={isModalOpen}
-            onClose={() => {
-              setIsModalOpen(false)
-              setSelectedCard(null)
-            }}
-          />
-        </Suspense>
-      </div>
+          {/* Load More Button */}
+          {hasMore && !isCardsLoading && sortedCards.length > 0 && (
+            <div className="text-center mt-8">
+              <Button onClick={handleLoadMore} variant="outline" size="lg" className="min-w-[200px] bg-white">
+                더 보기 ({sortedCards.length}/{total})
+              </Button>
+            </div>
+          )}
+
+          {/* Loading indicator for pagination */}
+          {isCardsLoading && cards.length > 0 && (
+            <div className="text-center py-4">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+              <p className="text-sm text-gray-500 mt-2">로딩 중...</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Business Detail Modal */}
+      <Suspense fallback={<div>Loading modal...</div>}>
+        <BusinessDetailModal
+          card={selectedCard}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false)
+            setSelectedCard(null)
+          }}
+        />
+      </Suspense>
     </div>
   )
 }
