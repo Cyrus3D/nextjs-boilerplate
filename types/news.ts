@@ -1,35 +1,44 @@
 export interface NewsArticle {
   id: number
   title: string
-  excerpt: string
   content: string
-  author: string
+  summary?: string
   category: string
-  tags: string[]
-  imageUrl?: string
-  sourceUrl?: string
-  publishedAt: string
-  isBreaking: boolean
-  isPublished: boolean
-  viewCount: number
-  readTime: number
-  createdAt: string
-  updatedAt: string
+  author?: string
+  source_url?: string
+  image_url?: string
+  is_published: boolean
+  is_breaking: boolean
+  view_count: number
+  created_at: string
+  updated_at: string
+  published_at?: string
+  tags?: string[]
+  language: string
+  translated_title?: string
+  translated_content?: string
+  translated_summary?: string
 }
 
 export interface NewsArticleFormData {
   title: string
-  excerpt: string
   content: string
-  author: string
+  summary?: string
   category: string
-  tags: string[]
-  imageUrl?: string
-  sourceUrl?: string
-  publishedAt?: string
-  isBreaking?: boolean
-  isPublished?: boolean
-  readTime?: number
+  author?: string
+  source_url?: string
+  image_url?: string
+  is_published?: boolean
+  is_breaking?: boolean
+  view_count?: number
+  created_at?: string
+  updated_at?: string
+  published_at?: string
+  tags?: string[]
+  language?: string
+  translated_title?: string
+  translated_content?: string
+  translated_summary?: string
 }
 
 export interface NewsFilters {
@@ -42,27 +51,48 @@ export interface NewsFilters {
 }
 
 export const NEWS_CATEGORIES = [
-  "현지",
-  "업체",
-  "정책",
-  "교통",
-  "비자",
-  "경제",
-  "문화",
-  "사회",
-  "스포츠",
-  "연예",
-  "기술",
-  "건강",
+  { id: 1, name: "현지", description: "Local news", type: "news", created_at: "2023-01-01T00:00:00Z" },
+  { id: 2, name: "업체", description: "Company news", type: "news", created_at: "2023-01-01T00:00:00Z" },
+  { id: 3, name: "정책", description: "Policy news", type: "news", created_at: "2023-01-01T00:00:00Z" },
+  { id: 4, name: "교통", description: "Traffic news", type: "news", created_at: "2023-01-01T00:00:00Z" },
+  { id: 5, name: "비자", description: "Visa news", type: "news", created_at: "2023-01-01T00:00:00Z" },
+  { id: 6, name: "경제", description: "Economic news", type: "news", created_at: "2023-01-01T00:00:00Z" },
+  { id: 7, name: "문화", description: "Cultural news", type: "news", created_at: "2023-01-01T00:00:00Z" },
+  { id: 8, name: "사회", description: "Social news", type: "news", created_at: "2023-01-01T00:00:00Z" },
+  { id: 9, name: "스포츠", description: "Sports news", type: "news", created_at: "2023-01-01T00:00:00Z" },
+  { id: 10, name: "연예", description: "Entertainment news", type: "news", created_at: "2023-01-01T00:00:00Z" },
+  { id: 11, name: "기술", description: "Technology news", type: "news", created_at: "2023-01-01T00:00:00Z" },
+  { id: 12, name: "건강", description: "Health news", type: "news", created_at: "2023-01-01T00:00:00Z" },
 ] as const
 
-export type NewsCategory = (typeof NEWS_CATEGORIES)[number]
+export type NewsCategoryType = (typeof NEWS_CATEGORIES)[number]
+
+export interface NewsCategory {
+  id: number
+  name: string
+  description?: string
+  type: "news"
+  created_at: string
+}
+
+export interface NewsTag {
+  id: number
+  name: string
+  type: "news"
+  created_at: string
+}
+
+export interface NewsSearchParams {
+  category?: string
+  searchTerm?: string
+  limit?: number
+  offset?: number
+  isBreaking?: boolean
+}
 
 export interface NewsStats {
   totalArticles: number
-  publishedArticles: number
-  breakingNews: number
+  totalBreaking: number
+  totalPublished: number
   totalViews: number
-  categoryCounts: Record<string, number>
-  recentArticles: NewsArticle[]
 }
