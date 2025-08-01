@@ -2,22 +2,23 @@ export interface NewsArticle {
   id: number
   title: string
   content: string
-  summary: string | null
+  summary?: string | null
   category: string
   tags: string[]
-  imageUrl: string | null
-  sourceUrl: string | null
-  author: string | null
+  imageUrl?: string | null
+  sourceUrl?: string | null
+  author?: string | null
   isPublished: boolean
   isBreaking: boolean
   viewCount: number
-  language: string
-  translatedTitle: string | null
-  translatedContent: string | null
-  translatedSummary: string | null
+  readTime?: number
+  language?: string
+  translatedTitle?: string | null
+  translatedContent?: string | null
+  translatedSummary?: string | null
   createdAt: string
   updatedAt: string
-  publishedAt: string | null
+  publishedAt?: string | null
 }
 
 export interface NewsArticleFormData {
@@ -70,15 +71,14 @@ export type NewsCategoryType = (typeof NEWS_CATEGORIES)[number]
 export interface NewsCategory {
   id: number
   name: string
-  description?: string
-  type: "news"
+  description?: string | null
+  color_class?: string | null
   created_at: string
 }
 
 export interface NewsTag {
   id: number
   name: string
-  type: "news"
   created_at: string
 }
 

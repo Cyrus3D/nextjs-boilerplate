@@ -2,144 +2,141 @@ import type { NewsArticle } from "@/types/news"
 
 export const sampleNewsArticles: NewsArticle[] = [
   {
-    id: "1",
-    title: "태국 정부, 2025년 관광비자 연장 정책 발표",
-    excerpt: "태국 정부가 한국인을 포함한 주요국 관광객 대상으로 비자 면제 기간을 60일로 연장한다고 발표했습니다.",
-    content: `태국 정부가 관광 산업 활성화를 위해 2025년부터 한국인을 포함한 주요국 관광객에 대한 비자 면제 기간을 기존 30일에서 60일로 연장한다고 발표했습니다.
-
-이번 정책은 코로나19 이후 회복세를 보이고 있는 태국 관광 산업을 더욱 활성화하기 위한 조치로, 한국, 일본, 중국, 싱가포르 등 주요 관광객 송출국을 대상으로 합니다.
-
-태국 관광청에 따르면, 이 정책으로 인해 연간 관광객 수가 15% 이상 증가할 것으로 예상된다고 밝혔습니다. 특히 한국인 관광객의 경우 장기 체류가 가능해져 더 많은 지역을 여행할 수 있게 될 것으로 기대됩니다.
-
-새로운 정책은 2025년 3월 1일부터 시행될 예정이며, 기존 관광비자 신청 절차는 그대로 유지됩니다.`,
-    category: "현지 뉴스",
+    id: 1,
+    title: "태국 정부, 한국인 관광객 대상 비자 면제 기간 연장 발표",
+    content:
+      "태국 정부가 한국인 관광객을 대상으로 한 비자 면제 기간을 기존 30일에서 60일로 연장한다고 발표했습니다. 이번 조치는 코로나19 이후 관광업 회복을 위한 정책의 일환으로, 2024년 3월부터 시행될 예정입니다.",
+    summary: "태국 정부가 한국인 관광객 비자 면제 기간을 30일에서 60일로 연장한다고 발표했습니다.",
+    category: "정책",
     tags: ["비자", "관광", "정책", "한국인"],
-    author: "태국 뉴스팀",
-    publishedAt: "2025-01-08T09:00:00Z",
-    readTime: 3,
-    viewCount: 1250,
+    imageUrl: "/placeholder.svg?height=200&width=400&text=Thailand+Visa+Policy",
+    sourceUrl: "https://example.com/news/1",
+    author: "편집부",
+    isPublished: true,
     isBreaking: true,
-    imageUrl: "/placeholder.svg?height=200&width=400&text=태국+비자+정책",
-    sourceUrl: "https://example.com/visa-policy",
+    viewCount: 1250,
+    readTime: 3,
+    language: "ko",
+    translatedTitle: null,
+    translatedContent: null,
+    translatedSummary: null,
+    createdAt: "2024-01-15T10:00:00Z",
+    updatedAt: "2024-01-15T10:00:00Z",
+    publishedAt: "2024-01-15T10:00:00Z",
   },
   {
-    id: "2",
-    title: "방콕 BTS 신규 노선 개통, 교통 체증 완화 기대",
-    excerpt: "방콕 대중교통공사가 BTS 골드라인 연장 구간을 이달 말 개통한다고 발표했습니다.",
-    content: `방콕 대중교통공사(BTSC)가 BTS 스카이트레인 골드라인의 연장 구간을 이달 말 개통한다고 발표했습니다.
-
-새로 개통되는 구간은 크룽톤부리(Krung Thon Buri)역에서 클롱산(Khlong San)역까지 총 3개 역으로, 기존 골드라인과 연결되어 차오프라야강 서안 지역의 교통 접근성이 크게 개선될 예정입니다.
-
-이번 연장 개통으로 방콕 시내 주요 관광지와 비즈니스 지구로의 접근이 더욱 편리해질 것으로 예상됩니다. 특히 아시아티크 더 리버프론트, 왓 아룬 등 주요 관광명소로의 이동 시간이 단축될 것으로 기대됩니다.
-
-BTSC 관계자는 "새로운 노선 개통으로 일일 승객 수가 20% 증가할 것으로 예상되며, 방콕 시내 교통 체증 완화에도 크게 기여할 것"이라고 밝혔습니다.
-
-요금은 기존 BTS와 동일하게 적용되며, 첫 운행은 오전 6시부터 시작됩니다.`,
-    category: "현지 뉴스",
-    tags: ["BTS", "교통", "방콕", "개통"],
-    author: "교통 전문 기자",
-    publishedAt: "2025-01-08T07:30:00Z",
-    readTime: 4,
+    id: 2,
+    title: "방콕 BTS 스카이트레인 새 노선 개통, 한인 거주지역 접근성 향상",
+    content:
+      "방콕 대중교통공사(BMCL)가 BTS 스카이트레인의 새로운 노선을 개통했다고 발표했습니다. 새 노선은 한인들이 많이 거주하는 수쿰빗 지역과 시내 중심가를 연결하여 교통 편의성이 크게 향상될 것으로 예상됩니다.",
+    summary: "BTS 스카이트레인 새 노선이 개통되어 한인 거주지역의 교통 접근성이 향상되었습니다.",
+    category: "교통",
+    tags: ["BTS", "교통", "방콕", "한인"],
+    imageUrl: "/placeholder.svg?height=200&width=400&text=BTS+Skytrain",
+    sourceUrl: "https://example.com/news/2",
+    author: "김태국",
+    isPublished: true,
+    isBreaking: false,
     viewCount: 890,
-    isBreaking: false,
-    imageUrl: "/placeholder.svg?height=200&width=400&text=BTS+신규+노선",
-    sourceUrl: "https://example.com/bts-extension",
-  },
-  {
-    id: "3",
-    title: "태국 중앙은행, 기준금리 동결 결정",
-    excerpt: "태국 중앙은행이 경제 안정성을 고려해 기준금리를 현행 2.50%로 유지하기로 결정했습니다.",
-    content: `태국 중앙은행(BOT)이 통화정책위원회 회의에서 기준금리를 현행 2.50%로 유지하기로 결정했다고 발표했습니다.
-
-이번 결정은 국내 경제 회복세와 인플레이션 압력을 종합적으로 고려한 결과로, 대부분의 경제 전문가들의 예상과 일치합니다.
-
-중앙은행은 "현재 태국 경제는 점진적인 회복세를 보이고 있으나, 글로벌 경제 불확실성과 국내 소비 회복 속도를 감안할 때 통화정책의 안정성을 유지하는 것이 적절하다"고 설명했습니다.
-
-특히 관광업 회복과 수출 증가가 경제 성장을 견인하고 있지만, 가계부채 문제와 부동산 시장 조정 등의 리스크 요인도 여전히 존재한다고 분석했습니다.
-
-이번 금리 동결로 태국 바트화는 안정세를 유지할 것으로 예상되며, 한국인 거주자들의 환전 및 금융 거래에는 큰 변화가 없을 것으로 보입니다.`,
-    category: "현지 뉴스",
-    tags: ["금리", "경제", "중앙은행", "바트화"],
-    author: "경제 전문 기자",
-    publishedAt: "2025-01-07T14:20:00Z",
-    readTime: 3,
-    viewCount: 654,
-    isBreaking: false,
-    imageUrl: "/placeholder.svg?height=200&width=400&text=태국+중앙은행",
-    sourceUrl: "https://example.com/interest-rate",
-  },
-  {
-    id: "4",
-    title: "방콕 한인타운 '코리아타운' 신규 복합쇼핑몰 오픈",
-    excerpt: "방콕 후이쾅 지역에 한인 업체들이 입점한 대형 복합쇼핑몰이 새롭게 문을 열었습니다.",
-    content: `방콕 후이쾅(Huai Khwang) 지역에 한인 업체들이 대거 입점한 'K-Plaza' 복합쇼핑몰이 성대한 개장식과 함께 문을 열었습니다.
-
-총 7층 규모의 이 쇼핑몰에는 한식당, 카페, 미용실, 의류매장, 한국 식품점 등 50여 개의 한인 업체가 입점했습니다. 특히 지하 1층에는 한국 전통시장을 모티브로 한 푸드코트가 조성되어 현지인들에게도 큰 인기를 끌고 있습니다.
-
-쇼핑몰 관계자는 "태국 내 한류 열풍과 함께 한국 문화에 대한 관심이 높아지면서 현지인 방문객도 전체의 40%를 차지하고 있다"고 밝혔습니다.
-
-또한 쇼핑몰 내에는 한국 문화센터도 함께 운영되어 한국어 교실, K-POP 댄스 클래스, 한국 요리 체험 등 다양한 문화 프로그램을 제공할 예정입니다.
-
-MRT 후이쾅역에서 도보 5분 거리에 위치해 접근성이 뛰어나며, 주차장도 300대 규모로 충분히 확보되어 있습니다.`,
-    category: "교민 업체",
-    tags: ["쇼핑몰", "한인업체", "후이쾅", "K-Plaza"],
-    author: "교민 업체 담당 기자",
-    publishedAt: "2025-01-07T11:15:00Z",
     readTime: 4,
-    viewCount: 1120,
-    isBreaking: false,
-    imageUrl: "/placeholder.svg?height=200&width=400&text=K-Plaza+쇼핑몰",
-    sourceUrl: "https://example.com/k-plaza-opening",
+    language: "ko",
+    translatedTitle: null,
+    translatedContent: null,
+    translatedSummary: null,
+    createdAt: "2024-01-14T14:30:00Z",
+    updatedAt: "2024-01-14T14:30:00Z",
+    publishedAt: "2024-01-14T14:30:00Z",
   },
   {
-    id: "5",
-    title: "파타야 한인 펜션 '오션뷰 리조트' 리뉴얼 오픈",
-    excerpt: "파타야 해변가에 위치한 한인 운영 펜션이 대대적인 리모델링을 거쳐 새롭게 단장했습니다.",
-    content: `파타야 중심가 해변에서 도보 3분 거리에 위치한 '오션뷰 리조트'가 6개월간의 대대적인 리모델링을 마치고 새롭게 문을 열었습니다.
-
-한국인 사장 김모씨가 운영하는 이 펜션은 총 24개 객실을 보유하고 있으며, 이번 리뉴얼을 통해 모든 객실에 최신 에어컨과 냉장고, 스마트 TV를 설치했습니다.
-
-특히 옥상에 새로 조성된 루프탑 바에서는 파타야 해변의 석양을 감상하며 한국 음식과 음료를 즐길 수 있어 투숙객들에게 큰 호응을 얻고 있습니다.
-
-김 사장은 "코로나19로 어려웠던 시기를 극복하고 더 나은 서비스를 제공하기 위해 과감한 투자를 결정했다"며 "한국인 관광객뿐만 아니라 현지 거주 교민들에게도 편안한 휴식 공간을 제공하고 싶다"고 말했습니다.
-
-리뉴얼 기념으로 이달 말까지 숙박료 30% 할인 이벤트를 진행하며, 장기 투숙객을 위한 특별 요금제도 새롭게 도입했습니다.
-
-예약은 한국어로 가능하며, 공항 픽업 서비스도 제공합니다.`,
-    category: "교민 업체",
-    tags: ["펜션", "파타야", "리뉴얼", "숙박"],
-    author: "파타야 지역 기자",
-    publishedAt: "2025-01-06T16:45:00Z",
+    id: 3,
+    title: "태국 경제 성장률 3.2% 기록, 관광업 회복이 주요 동력",
+    content:
+      "태국 국가경제사회개발위원회(NESDC)가 발표한 자료에 따르면, 2023년 4분기 태국의 경제 성장률이 전년 동기 대비 3.2%를 기록했습니다. 특히 관광업의 회복이 경제 성장의 주요 동력으로 작용했다고 분석했습니다.",
+    summary: "태국 경제가 3.2% 성장하며 관광업 회복이 주요 성장 동력으로 작용했습니다.",
+    category: "경제",
+    tags: ["경제", "성장률", "관광업", "통계"],
+    imageUrl: "/placeholder.svg?height=200&width=400&text=Thailand+Economy",
+    sourceUrl: "https://example.com/news/3",
+    author: "이방콕",
+    isPublished: true,
+    isBreaking: false,
+    viewCount: 567,
+    readTime: 5,
+    language: "ko",
+    translatedTitle: null,
+    translatedContent: null,
+    translatedSummary: null,
+    createdAt: "2024-01-13T09:15:00Z",
+    updatedAt: "2024-01-13T09:15:00Z",
+    publishedAt: "2024-01-13T09:15:00Z",
+  },
+  {
+    id: 4,
+    title: "한국 문화원, 태국 대학생 대상 한국어 교육 프로그램 확대",
+    content:
+      "주태국 한국문화원이 태국 현지 대학생들을 대상으로 한 한국어 교육 프로그램을 대폭 확대한다고 발표했습니다. 새로운 프로그램에는 온라인 수업과 문화 체험 활동이 포함되어 있어 더욱 체계적인 한국어 학습이 가능할 것으로 기대됩니다.",
+    summary: "한국문화원이 태국 대학생 대상 한국어 교육 프로그램을 확대 운영합니다.",
+    category: "문화",
+    tags: ["한국문화원", "교육", "한국어", "대학생"],
+    imageUrl: "/placeholder.svg?height=200&width=400&text=Korean+Culture+Center",
+    sourceUrl: "https://example.com/news/4",
+    author: "박한류",
+    isPublished: true,
+    isBreaking: false,
+    viewCount: 423,
     readTime: 3,
-    viewCount: 876,
-    isBreaking: false,
-    imageUrl: "/placeholder.svg?height=200&width=400&text=오션뷰+리조트",
-    sourceUrl: "https://example.com/oceanview-resort",
+    language: "ko",
+    translatedTitle: null,
+    translatedContent: null,
+    translatedSummary: null,
+    createdAt: "2024-01-12T16:45:00Z",
+    updatedAt: "2024-01-12T16:45:00Z",
+    publishedAt: "2024-01-12T16:45:00Z",
   },
   {
-    id: "6",
-    title: "치앙마이 한인 카페 '커피스토리' 현지인들 사이에서 화제",
-    excerpt:
-      "치앙마이 구시가지에 위치한 한인 운영 카페가 독특한 인테리어와 맛있는 커피로 현지인들 사이에서 입소문을 타고 있습니다.",
-    content: `치앙마이 구시가지 중심부에 위치한 한인 운영 카페 '커피스토리'가 현지인들과 관광객들 사이에서 큰 인기를 끌고 있습니다.
-
-한국인 바리스타 박모씨가 운영하는 이 카페는 태국 전통 가옥을 개조한 독특한 인테리어와 직접 로스팅한 원두로 만든 커피로 유명합니다.
-
-특히 태국 북부 지역에서 재배한 아라비카 원두를 사용한 '치앙마이 블렌드'는 현지인들에게도 큰 호평을 받고 있으며, 한국식 디저트인 붕어빵과 호떡도 함께 판매해 이색적인 조합을 선보이고 있습니다.
-
-박 사장은 "처음에는 한국인 관광객들을 대상으로 시작했지만, 입소문을 타면서 현지인 고객이 전체의 60%를 차지하게 되었다"며 "태국 전통과 한국 문화가 어우러진 공간을 만들고 싶었다"고 설명했습니다.
-
-카페는 매일 오전 8시부터 오후 8시까지 운영되며, 와이파이와 콘센트가 충분히 구비되어 있어 디지털 노마드들에게도 인기가 높습니다.
-
-현재 치앙마이 관광청에서도 이 카페를 추천 관광지로 소개하고 있으며, 각종 여행 가이드북에도 소개되고 있습니다.`,
-    category: "교민 업체",
-    tags: ["카페", "치앙마이", "커피", "한인업체"],
-    author: "치앙마이 지역 기자",
-    publishedAt: "2025-01-06T09:30:00Z",
+    id: 5,
+    title: "태국 보건부, 코로나19 백신 부스터샷 접종 권고",
+    content:
+      "태국 보건부가 65세 이상 고령자와 기저질환자를 대상으로 코로나19 백신 부스터샷 접종을 권고한다고 발표했습니다. 접종은 전국 보건소와 지정 병원에서 무료로 받을 수 있으며, 한국인도 접종 대상에 포함됩니다.",
+    summary: "태국 보건부가 고령자와 기저질환자 대상 코로나19 부스터샷 접종을 권고했습니다.",
+    category: "건강",
+    tags: ["코로나19", "백신", "보건부", "접종"],
+    imageUrl: "/placeholder.svg?height=200&width=400&text=COVID+Vaccine",
+    sourceUrl: "https://example.com/news/5",
+    author: "최의료",
+    isPublished: true,
+    isBreaking: true,
+    viewCount: 789,
     readTime: 4,
-    viewCount: 743,
+    language: "ko",
+    translatedTitle: null,
+    translatedContent: null,
+    translatedSummary: null,
+    createdAt: "2024-01-11T11:20:00Z",
+    updatedAt: "2024-01-11T11:20:00Z",
+    publishedAt: "2024-01-11T11:20:00Z",
+  },
+  {
+    id: 6,
+    title: "파타야 해변 정화 작업 완료, 관광객 안전 확보",
+    content:
+      "파타야시가 진행한 대규모 해변 정화 작업이 성공적으로 완료되었다고 발표했습니다. 이번 작업을 통해 해변의 수질이 크게 개선되었으며, 관광객들이 안전하게 해양 레저 활동을 즐길 수 있게 되었습니다.",
+    summary: "파타야 해변 정화 작업이 완료되어 관광객 안전이 확보되었습니다.",
+    category: "사회",
+    tags: ["파타야", "해변", "정화", "관광"],
+    imageUrl: "/placeholder.svg?height=200&width=400&text=Pattaya+Beach",
+    sourceUrl: "https://example.com/news/6",
+    author: "정환경",
+    isPublished: true,
     isBreaking: false,
-    imageUrl: "/placeholder.svg?height=200&width=400&text=커피스토리+카페",
-    sourceUrl: "https://example.com/coffee-story",
+    viewCount: 345,
+    readTime: 3,
+    language: "ko",
+    translatedTitle: null,
+    translatedContent: null,
+    translatedSummary: null,
+    createdAt: "2024-01-10T13:30:00Z",
+    updatedAt: "2024-01-10T13:30:00Z",
+    publishedAt: "2024-01-10T13:30:00Z",
   },
 ]

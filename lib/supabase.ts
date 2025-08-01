@@ -5,6 +5,11 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+// Check if Supabase is properly configured
+export function isSupabaseConfigured(): boolean {
+  return !!(supabaseUrl && supabaseAnonKey && supabaseUrl !== "your-project-url" && supabaseAnonKey !== "your-anon-key")
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -29,6 +34,7 @@ export type Database = {
           tiktok_url: string | null
           is_premium: boolean
           is_promoted: boolean
+          is_published: boolean
           exposure_count: number | null
           view_count: number
           created_at: string
@@ -54,6 +60,7 @@ export type Database = {
           tiktok_url?: string | null
           is_premium?: boolean
           is_promoted?: boolean
+          is_published?: boolean
           exposure_count?: number | null
           view_count?: number
           created_at?: string
@@ -79,6 +86,7 @@ export type Database = {
           tiktok_url?: string | null
           is_premium?: boolean
           is_promoted?: boolean
+          is_published?: boolean
           exposure_count?: number | null
           view_count?: number
           created_at?: string
@@ -91,6 +99,7 @@ export type Database = {
           title: string
           content: string
           summary: string | null
+          excerpt: string | null
           category: string
           tags: string[]
           image_url: string | null
@@ -99,6 +108,7 @@ export type Database = {
           is_published: boolean
           is_breaking: boolean
           view_count: number
+          read_time: number | null
           language: string
           translated_title: string | null
           translated_content: string | null
@@ -112,6 +122,7 @@ export type Database = {
           title: string
           content: string
           summary?: string | null
+          excerpt?: string | null
           category: string
           tags?: string[]
           image_url?: string | null
@@ -120,6 +131,7 @@ export type Database = {
           is_published?: boolean
           is_breaking?: boolean
           view_count?: number
+          read_time?: number | null
           language?: string
           translated_title?: string | null
           translated_content?: string | null
@@ -133,6 +145,7 @@ export type Database = {
           title?: string
           content?: string
           summary?: string | null
+          excerpt?: string | null
           category?: string
           tags?: string[]
           image_url?: string | null
@@ -141,6 +154,7 @@ export type Database = {
           is_published?: boolean
           is_breaking?: boolean
           view_count?: number
+          read_time?: number | null
           language?: string
           translated_title?: string | null
           translated_content?: string | null
@@ -155,18 +169,21 @@ export type Database = {
           id: number
           name: string
           description: string | null
+          color_class: string | null
           created_at: string
         }
         Insert: {
           id?: number
           name: string
           description?: string | null
+          color_class?: string | null
           created_at?: string
         }
         Update: {
           id?: number
           name?: string
           description?: string | null
+          color_class?: string | null
           created_at?: string
         }
       }
