@@ -5,7 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Format relative time (e.g., "3시간 전", "2일 전")
 export function formatRelativeTime(date: string | Date): string {
   const now = new Date()
   const targetDate = new Date(date)
@@ -44,170 +43,124 @@ export function formatRelativeTime(date: string | Date): string {
   return `${diffInYears}년 전`
 }
 
-// Determine URL type (Google Maps, Website, etc.)
-export function getUrlType(url: string): "maps" | "website" | "unknown" {
+export function formatDate(date: string | Date): string {
+  const targetDate = new Date(date)
+  return targetDate.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  })
+}
+
+export function formatDateTime(date: string | Date): string {
+  const targetDate = new Date(date)
+  return targetDate.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
+export function getUrlType(url?: string): "website" | "map" | "unknown" {
   if (!url) return "unknown"
 
   const lowerUrl = url.toLowerCase()
 
   if (lowerUrl.includes("maps.google") || lowerUrl.includes("goo.gl/maps") || lowerUrl.includes("maps.app.goo.gl")) {
-    return "maps"
+    return "map"
   }
 
-  if (lowerUrl.startsWith("http://") || lowerUrl.startsWith("https://")) {
-    return "website"
-  }
-
-  return "unknown"
+  return "website"
 }
 
-// Format Thai phone numbers
 export function formatPhoneNumber(phone: string): string {
-  if (!phone) return ""
-
   // Remove all non-digit characters
   const digits = phone.replace(/\D/g, "")
 
-  // Thai mobile numbers (10 digits starting with 0)
+  // Thai phone number formatting
   if (digits.length === 10 && digits.startsWith("0")) {
     return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
   }
 
-  // Thai landline numbers (9 digits starting with 0)
-  if (digits.length === 9 && digits.startsWith("0")) {
+  if (digits.length === 9) {
     return `${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5)}`
-  }
-
-  // International format
-  if (digits.length > 10) {
-    return `+${digits.slice(0, 2)} ${digits.slice(2, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`
   }
 
   return phone
 }
 
-// Debounce function for search
-export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
-
-  return (...args: Parameters<T>) => {
-    if (timeout) {
-      clearTimeout(timeout)
-    }
-
-    timeout = setTimeout(() => {
-      func(...args)
-    }, wait)
-  }
-}
-
-// Truncate text with ellipsis
 export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text
-  return text.slice(0, maxLength).trim() + "..."
+  return text.slice(0, maxLength) + "..."
 }
 
-// Create URL-friendly slug
 export function createSlug(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^\w\s-]/g, "") // Remove special characters
-    .replace(/[\s_-]+/g, "-") // Replace spaces and underscores with hyphens
-    .replace(/^-+|-+$/g, "") // Remove leading/trailing hyphens
+    .replace(/[^a-z0-9가-힣]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
 }
 
-// Format currency (Thai Baht)
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("th-TH", {
-    style: "currency",
-    currency: "THB",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
-// Validate email address
 export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
 }
 
-// Validate Thai phone number
-export function isValidThaiPhone(phone: string): boolean {
-  const digits = phone.replace(/\D/g, "")
-
-  // Thai mobile: 10 digits starting with 0
-  // Thai landline: 9 digits starting with 0
-  return (digits.length === 10 && digits.startsWith("0")) || (digits.length === 9 && digits.startsWith("0"))
+export function isValidPhoneNumber(phone: string): boolean {
+  const phoneRegex = /^[0-9+\-\s()]+$/
+  return phoneRegex.test(phone) && phone.replace(/\D/g, "").length >= 9
 }
 
-// Generate random ID
-export function generateId(): string {
-  return Math.random().toString(36).substr(2, 9)
-}
-
-// Format file size
-export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 Bytes"
-
-  const k = 1024
-  const sizes = ["Bytes", "KB", "MB", "GB"]
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-
-  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-}
-
-// Check if string is URL
-export function isUrl(string: string): boolean {
+export function isValidUrl(url: string): boolean {
   try {
-    new URL(string)
+    new URL(url)
     return true
   } catch {
     return false
   }
 }
 
-// Extract domain from URL
-export function extractDomain(url: string): string {
-  try {
-    const domain = new URL(url).hostname
-    return domain.replace(/^www\./, "")
-  } catch {
-    return ""
+export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null
+
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
   }
 }
 
-// Calculate reading time (words per minute)
-export function calculateReadingTime(text: string, wpm = 200): number {
-  const words = text.trim().split(/\s+/).length
-  const minutes = Math.ceil(words / wpm)
-  return Math.max(1, minutes) // Minimum 1 minute
+export function throttle<T extends (...args: any[]) => any>(func: T, limit: number): (...args: Parameters<T>) => void {
+  let inThrottle: boolean
+
+  return (...args: Parameters<T>) => {
+    if (!inThrottle) {
+      func(...args)
+      inThrottle = true
+      setTimeout(() => (inThrottle = false), limit)
+    }
+  }
 }
 
-// Format date for display
-export function formatDisplayDate(date: string | Date): string {
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date))
+export function generateId(): string {
+  return Math.random().toString(36).substr(2, 9)
 }
 
-// Check if date is today
-export function isToday(date: string | Date): boolean {
-  const today = new Date()
-  const targetDate = new Date(date)
-
-  return today.toDateString() === targetDate.toDateString()
+export function capitalizeFirst(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-// Check if date is this week
-export function isThisWeek(date: string | Date): boolean {
-  const today = new Date()
-  const targetDate = new Date(date)
-  const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+export function removeHtmlTags(html: string): string {
+  return html.replace(/<[^>]*>/g, "")
+}
 
-  return targetDate >= weekAgo && targetDate <= today
+export function extractDomain(url: string): string {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return url
+  }
 }
