@@ -1,384 +1,324 @@
 "use client"
 
-import { useState, useEffect, useMemo, Suspense, lazy } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, TrendingUp, Newspaper, Building2, Loader2 } from "lucide-react"
-import NewsCard from "@/components/news-card"
-import InFeedAd from "@/components/in-feed-ad"
-import type { NewsArticle } from "@/types/news"
+import { Search, Filter, TrendingUp, Clock, Newspaper, Building2, Globe, ChevronDown } from "lucide-react"
+import NewsCard from "./news-card"
+import NewsDetailModal from "./news-detail-modal"
+import InFeedAd from "./in-feed-ad"
 import { sampleNewsArticles } from "@/data/sample-news"
-
-// Lazy load components for better performance
-const NewsDetailModal = lazy(() =>
-  import("@/components/news-detail-modal").then((module) => ({ default: module.NewsDetailModal })),
-)
-
-// Skeleton components for loading states
-function HeaderSkeleton() {
-  return (
-    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg mb-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <Skeleton className="h-8 w-64 mb-2 bg-white/20" />
-          <Skeleton className="h-4 w-96 bg-white/20" />
-        </div>
-        <div className="flex flex-col sm:flex-row gap-4 text-sm">
-          <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
-            <div className="flex items-center gap-2 mb-1">
-              <Newspaper className="w-4 h-4" />
-              <Skeleton className="h-4 w-16 bg-white/20" />
-            </div>
-            <Skeleton className="h-3 w-20 bg-white/20" />
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="w-4 h-4" />
-              <Skeleton className="h-4 w-20 bg-white/20" />
-            </div>
-            <Skeleton className="h-3 w-24 bg-white/20" />
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function CardSkeleton() {
-  return (
-    <Card className="h-full">
-      <div className="aspect-video relative overflow-hidden rounded-t-lg">
-        <Skeleton className="h-full w-full" />
-      </div>
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start mb-2">
-          <Skeleton className="h-6 w-3/4" />
-          <Skeleton className="h-5 w-16" />
-        </div>
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-2/3" />
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-        </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-6 w-16" />
-          <Skeleton className="h-6 w-20" />
-        </div>
-        <Skeleton className="h-9 w-full" />
-      </CardContent>
-    </Card>
-  )
-}
+import type { NewsArticle } from "@/types/news"
 
 export default function NewsCardList() {
-  // State management
-  const [articles, setArticles] = useState<NewsArticle[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState<string>("")
-  const [activeTab, setActiveTab] = useState<string>("local")
+  const [activeTab, setActiveTab] = useState("all")
+  const [isLoading, setIsLoading] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(6)
 
-  // Loading states
-  const [isLoading, setIsLoading] = useState(true)
-  const [isArticlesLoading, setIsArticlesLoading] = useState(true)
+  // 필터링된 뉴스 기사
+  const filteredArticles = useMemo(() => {
+    let filtered = sampleNewsArticles
 
-  // Statistics
-  const [stats, setStats] = useState({
-    totalArticles: 0,
-    todayArticles: 0,
-  })
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1)
-  const [hasMore, setHasMore] = useState(true)
-  const [total, setTotal] = useState(0)
-
-  // Fetch articles (simulated)
-  const fetchArticles = async (page = 1, reset = false) => {
-    try {
-      if (reset) {
-        setIsArticlesLoading(true)
-      }
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Filter articles based on active tab and search term
-      let filteredArticles = sampleNewsArticles
-
-      // Filter by category
-      if (activeTab === "local") {
-        filteredArticles = filteredArticles.filter((article) => article.category === "현지 뉴스")
-      } else if (activeTab === "business") {
-        filteredArticles = filteredArticles.filter((article) => article.category === "교민 업체")
-      }
-
-      // Filter by search term
-      if (searchTerm) {
-        filteredArticles = filteredArticles.filter(
-          (article) =>
-            article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            article.excerpt.toLowerCase().includes(searchTerm.toLowerCase()),
-        )
-      }
-
-      if (reset) {
-        setArticles(filteredArticles)
-      } else {
-        setArticles((prev) => [...prev, ...filteredArticles])
-      }
-
-      setTotal(filteredArticles.length)
-      setHasMore(false) // For demo, we don't have pagination
-      setCurrentPage(page)
-
-      // Update stats
-      setStats({
-        totalArticles: sampleNewsArticles.length,
-        todayArticles: sampleNewsArticles.filter((article) => {
-          const today = new Date()
-          const articleDate = new Date(article.publishedAt)
-          return articleDate.toDateString() === today.toDateString()
-        }).length,
-      })
-    } catch (error) {
-      console.error("Error fetching articles:", error)
-      if (reset) {
-        setArticles([])
-      }
-    } finally {
-      setIsArticlesLoading(false)
-      setIsLoading(false)
-    }
-  }
-
-  // Initial data loading
-  useEffect(() => {
-    const loadInitialData = async () => {
-      await fetchArticles(1, true)
+    // 탭 필터링
+    if (activeTab === "local") {
+      filtered = filtered.filter((article) => article.category === "현지 뉴스")
+    } else if (activeTab === "business") {
+      filtered = filtered.filter((article) => article.category === "교민 업체")
     }
 
-    loadInitialData()
-  }, [])
+    // 검색 필터링
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (article) =>
+          article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          article.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())),
+      )
+    }
 
-  // Handle tab and search changes
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setCurrentPage(1)
-      fetchArticles(1, true)
-    }, 300) // Debounce search
+    // 날짜순 정렬 (최신순)
+    return filtered.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+  }, [searchTerm, activeTab])
 
-    return () => clearTimeout(timeoutId)
-  }, [activeTab, searchTerm])
-
-  // Handle article detail click
-  const handleDetailClick = (article: NewsArticle) => {
+  const handleReadMore = (article: NewsArticle) => {
     setSelectedArticle(article)
     setIsModalOpen(true)
-    // Increment view count (실제 구현시 API 호출)
-    console.log(`Incrementing view count for article: ${article.id}`)
   }
 
-  // Handle load more
   const handleLoadMore = () => {
-    if (hasMore && !isArticlesLoading) {
-      fetchArticles(currentPage + 1, false)
+    setIsLoading(true)
+    setTimeout(() => {
+      setVisibleCount((prev) => prev + 6)
+      setIsLoading(false)
+    }, 1000)
+  }
+
+  const getTabIcon = (tabId: string) => {
+    switch (tabId) {
+      case "all":
+        return <Globe className="w-4 h-4" />
+      case "local":
+        return <Newspaper className="w-4 h-4" />
+      case "business":
+        return <Building2 className="w-4 h-4" />
+      default:
+        return null
     }
   }
 
-  // Memoized filtered and sorted articles
-  const sortedArticles = useMemo(() => {
-    return [...articles].sort((a, b) => {
-      // Breaking news first
-      if (a.isBreaking && !b.isBreaking) return -1
-      if (!a.isBreaking && b.isBreaking) return 1
-
-      // Then by view count
-      if (a.viewCount !== b.viewCount) {
-        return b.viewCount - a.viewCount
-      }
-
-      // Finally by publication date
-      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-    })
-  }, [articles])
-
-  // Get category counts
-  const getCategoryCount = (category: string) => {
-    if (category === "local") {
-      return sampleNewsArticles.filter((article) => article.category === "현지 뉴스").length
-    } else if (category === "business") {
-      return sampleNewsArticles.filter((article) => article.category === "교민 업체").length
+  const getTabCount = (tabId: string) => {
+    switch (tabId) {
+      case "all":
+        return sampleNewsArticles.length
+      case "local":
+        return sampleNewsArticles.filter((article) => article.category === "현지 뉴스").length
+      case "business":
+        return sampleNewsArticles.filter((article) => article.category === "교민 업체").length
+      default:
+        return 0
     }
-    return sampleNewsArticles.length
   }
 
-  // Format time for display
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
+  const todayNewsCount = sampleNewsArticles.filter((article) => {
+    const today = new Date()
+    const articleDate = new Date(article.publishedAt)
+    return articleDate.toDateString() === today.toDateString()
+  }).length
+
+  const breakingNewsCount = sampleNewsArticles.filter((article) => article.isBreaking).length
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Header with News Statistics */}
-      {isLoading ? (
-        <HeaderSkeleton />
-      ) : (
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">📰 태국 뉴스</h1>
-              <p className="text-blue-100">최신 현지 소식과 교민 업체 정보를 한 곳에서 확인하세요</p>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* 헤더 통계 */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="border-0 shadow-sm bg-gradient-to-r from-blue-50 to-blue-100">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-600">오늘의 뉴스</p>
+                    <p className="text-2xl font-bold text-blue-900">{todayNewsCount}</p>
+                  </div>
+                  <Clock className="w-8 h-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="flex flex-col sm:flex-row gap-4 text-sm">
-              {/* Today's Articles */}
-              <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
-                <div className="flex items-center gap-2 mb-1">
-                  <Newspaper className="w-4 h-4" />
-                  <span className="font-medium">오늘의 뉴스</span>
+            <Card className="border-0 shadow-sm bg-gradient-to-r from-red-50 to-red-100">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-red-600">속보</p>
+                    <p className="text-2xl font-bold text-red-900">{breakingNewsCount}</p>
+                  </div>
+                  <TrendingUp className="w-8 h-8 text-red-600" />
                 </div>
-                <div className="text-blue-100">{stats.todayArticles}개 기사</div>
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* Total Articles */}
-              <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
-                <div className="flex items-center gap-2 mb-1">
-                  <Building2 className="w-4 h-4" />
-                  <span className="font-medium">전체 기사</span>
+            <Card className="border-0 shadow-sm bg-gradient-to-r from-green-50 to-green-100">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-green-600">전체 기사</p>
+                    <p className="text-2xl font-bold text-green-900">{sampleNewsArticles.length}</p>
+                  </div>
+                  <Newspaper className="w-8 h-8 text-green-600" />
                 </div>
-                <div className="text-blue-100">
-                  {stats.totalArticles}개 기사
-                  <div className="text-xs opacity-75 mt-1">업데이트: {formatTime(Date.now())}</div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm bg-gradient-to-r from-purple-50 to-purple-100">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-purple-600">이번 주 조회수</p>
+                    <p className="text-2xl font-bold text-purple-900">
+                      {sampleNewsArticles.reduce((sum, article) => sum + article.viewCount, 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <TrendingUp className="w-8 h-8 text-purple-600" />
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      )}
-
-      {/* Search Controls */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="기사 제목, 내용으로 검색..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
         </div>
       </div>
 
-      {/* News Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="local" className="flex items-center gap-2">
-            현지 뉴스
-            <span className="bg-blue-200 text-blue-700 px-2 py-0.5 rounded-full text-xs">
-              {getCategoryCount("local")}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="business" className="flex items-center gap-2">
-            교민 업체
-            <span className="bg-green-200 text-green-700 px-2 py-0.5 rounded-full text-xs">
-              {getCategoryCount("business")}
-            </span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={activeTab} className="mt-6">
-          {/* Results Summary */}
-          {!isLoading && (
-            <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-              <span>
-                총 {total}개의 기사
-                {searchTerm && ` (검색: "${searchTerm}")`}
-              </span>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                <span>인기순 정렬</span>
-                {searchTerm && (
-                  <Button variant="ghost" size="sm" onClick={() => setSearchTerm("")} className="text-xs">
-                    검색 초기화
-                  </Button>
-                )}
-              </div>
+      <div className="container mx-auto px-4 py-8">
+        {/* 검색 및 필터 */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="뉴스 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-white border-gray-200 focus:border-blue-300 focus:ring-blue-200"
+              />
             </div>
-          )}
-
-          {/* News Articles Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {isArticlesLoading && articles.length === 0 ? (
-              // Initial loading skeletons
-              Array.from({ length: 8 }).map((_, index) => <CardSkeleton key={index} />)
-            ) : sortedArticles.length > 0 ? (
-              sortedArticles.map((article, index) => (
-                <div key={article.id} className="h-full">
-                  <NewsCard article={article} onDetailClick={handleDetailClick} />
-                  {/* Insert ads every 8 articles */}
-                  {(index + 1) % 8 === 0 && (
-                    <div className="col-span-full my-4">
-                      <InFeedAd
-                        adSlot={process.env.NEXT_PUBLIC_ADSENSE_INFEED_SLOT || "1234567890"}
-                        className="rounded-lg"
-                      />
-                    </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              // No results
-              <div className="col-span-full text-center py-12">
-                <div className="text-gray-500 mb-4">
-                  <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">검색 결과가 없습니다</p>
-                  <p className="text-sm">다른 키워드로 검색해보세요</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Load More Button */}
-          {hasMore && !isArticlesLoading && sortedArticles.length > 0 && (
-            <div className="text-center mt-8">
-              <Button onClick={handleLoadMore} variant="outline" size="lg" className="min-w-[200px] bg-transparent">
-                더 보기 ({sortedArticles.length}/{total})
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="bg-white">
+                <Filter className="w-4 h-4 mr-2" />
+                필터
               </Button>
             </div>
-          )}
+          </div>
+        </div>
 
-          {/* Loading indicator for pagination */}
-          {isArticlesLoading && articles.length > 0 && (
-            <div className="text-center py-4">
-              <Loader2 className="w-6 h-6 animate-spin mx-auto" />
-              <p className="text-sm text-gray-500 mt-2">로딩 중...</p>
+        {/* 탭 네비게이션 */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+          <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200 p-1">
+            <TabsTrigger
+              value="all"
+              className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            >
+              {getTabIcon("all")}
+              전체
+              <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600">
+                {getTabCount("all")}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger
+              value="local"
+              className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            >
+              {getTabIcon("local")}
+              현지 뉴스
+              <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600">
+                {getTabCount("local")}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger
+              value="business"
+              className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            >
+              {getTabIcon("business")}
+              교민 업체
+              <Badge variant="secondary" className="ml-1 bg-gray-100 text-gray-600">
+                {getTabCount("business")}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all" className="mt-6">
+            <div className="mb-4">
+              <p className="text-gray-600">
+                총 <span className="font-semibold text-gray-900">{filteredArticles.length}</span>개의 뉴스가 있습니다.
+              </p>
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
 
-      {/* News Detail Modal */}
-      <Suspense fallback={<div>Loading modal...</div>}>
-        <NewsDetailModal
-          article={selectedArticle}
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false)
-            setSelectedArticle(null)
-          }}
-        />
-      </Suspense>
+          <TabsContent value="local" className="mt-6">
+            <div className="mb-4">
+              <p className="text-gray-600">
+                현지 뉴스 <span className="font-semibold text-gray-900">{filteredArticles.length}</span>개
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="business" className="mt-6">
+            <div className="mb-4">
+              <p className="text-gray-600">
+                교민 업체 소식 <span className="font-semibold text-gray-900">{filteredArticles.length}</span>개
+              </p>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {/* 뉴스 카드 그리드 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {filteredArticles.slice(0, visibleCount).map((article, index) => (
+            <div key={article.id}>
+              <NewsCard article={article} onReadMore={handleReadMore} />
+              {/* 3번째마다 광고 삽입 */}
+              {(index + 1) % 3 === 0 && index < visibleCount - 1 && (
+                <div className="col-span-full my-6">
+                  <InFeedAd />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* 로딩 스켈레톤 */}
+        {isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Card key={index} className="border-0 shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Skeleton className="h-5 w-20" />
+                    <Skeleton className="h-5 w-12" />
+                  </div>
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-3/4" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-40 w-full mb-4" />
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-2/3" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* 더 보기 버튼 */}
+        {visibleCount < filteredArticles.length && (
+          <div className="text-center">
+            <Button
+              onClick={handleLoadMore}
+              disabled={isLoading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  로딩 중...
+                </>
+              ) : (
+                <>
+                  더 많은 뉴스 보기
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* 검색 결과 없음 */}
+        {filteredArticles.length === 0 && (
+          <div className="text-center py-12">
+            <Newspaper className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">검색 결과가 없습니다</h3>
+            <p className="text-gray-600 mb-4">다른 검색어를 시도해보세요.</p>
+            <Button variant="outline" onClick={() => setSearchTerm("")} className="bg-white">
+              전체 뉴스 보기
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* 뉴스 상세 모달 */}
+      <NewsDetailModal
+        article={selectedArticle}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedArticle(null)
+        }}
+      />
     </div>
   )
 }

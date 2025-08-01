@@ -1,22 +1,22 @@
 export interface NewsArticle {
   id: string
   title: string
-  content: string
   excerpt: string
-  imageUrl: string
-  category: string
+  content: string
+  category: "현지 뉴스" | "교민 업체"
   author: string
   publishedAt: string
   readTime: number
   viewCount: number
-  isBreaking?: boolean
+  isBreaking: boolean
+  imageUrl?: string
   tags: string[]
-  sourceUrl?: string
+  source?: string
+  externalUrl?: string
 }
 
 export interface NewsCategory {
   id: string
   name: string
-  description: string
-  color: string
+  count: number
 }

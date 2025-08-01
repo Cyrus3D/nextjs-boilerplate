@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import InfoCardList from "@/components/info-card-list"
+import InfoCardList from "../info-card-list"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -89,7 +89,7 @@ export default function HomePage() {
             <h2 className="text-2xl font-bold text-gray-900">최신 뉴스</h2>
           </div>
           <Link href="/news">
-            <Button variant="outline" className="flex items-center gap-2 bg-transparent">
+            <Button variant="outline" className="flex items-center gap-2 bg-white">
               전체 뉴스 보기
               <ArrowRight className="w-4 h-4" />
             </Button>
