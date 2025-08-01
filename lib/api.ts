@@ -139,13 +139,18 @@ export async function getBusinessCards(): Promise<BusinessCard[]> {
       .from("business_cards")
       .select(`
         *,
+        categories (
+          id,
+          name,
+          color_class
+        ),
         business_card_tags (
           tags (
             name
           )
         )
       `)
-      .eq("is_published", true)
+      .eq("is_active", true)
       .order("is_premium", { ascending: false })
       .order("is_promoted", { ascending: false })
       .order("created_at", { ascending: false })
@@ -163,20 +168,25 @@ export async function searchBusinessCards(query: string, category?: string): Pro
         .from("business_cards")
         .select(`
         *,
+        categories (
+          id,
+          name,
+          color_class
+        ),
         business_card_tags (
           tags (
             name
           )
         )
       `)
-        .eq("is_published", true)
+        .eq("is_active", true)
 
       if (query) {
         queryBuilder = queryBuilder.or(`title.ilike.%${query}%,description.ilike.%${query}%,location.ilike.%${query}%`)
       }
 
       if (category && category !== "all") {
-        queryBuilder = queryBuilder.eq("category", category)
+        queryBuilder = queryBuilder.eq("categories.name", category)
       }
 
       const { data, error } = await queryBuilder
@@ -299,17 +309,13 @@ export async function getStatistics() {
     async () => {
       const [newsCount, businessCount, breakingCount, premiumCount] = await Promise.all([
         supabase!.from("news_articles").select("id", { count: "exact" }).eq("is_published", true),
-        supabase!.from("business_cards").select("id", { count: "exact" }).eq("is_published", true),
+        supabase!.from("business_cards").select("id", { count: "exact" }).eq("is_active", true),
         supabase!
           .from("news_articles")
           .select("id", { count: "exact" })
           .eq("is_published", true)
           .eq("is_breaking", true),
-        supabase!
-          .from("business_cards")
-          .select("id", { count: "exact" })
-          .eq("is_published", true)
-          .eq("is_premium", true),
+        supabase!.from("business_cards").select("id", { count: "exact" }).eq("is_active", true).eq("is_premium", true),
       ])
 
       return {
@@ -334,11 +340,11 @@ function mapBusinessCardFromDB(dbCard: any): BusinessCard {
     id: dbCard.id,
     title: dbCard.title,
     description: dbCard.description,
-    category: dbCard.category,
+    category: dbCard.categories?.name || "기타",
     location: dbCard.location,
     phone: dbCard.phone,
     website: dbCard.website,
-    image: dbCard.image,
+    image: dbCard.image_url,
     hours: dbCard.hours,
     price: dbCard.price,
     promotion: dbCard.promotion,
@@ -348,9 +354,13 @@ function mapBusinessCardFromDB(dbCard: any): BusinessCard {
     instagramUrl: dbCard.instagram_url,
     youtubeUrl: dbCard.youtube_url,
     tiktokUrl: dbCard.tiktok_url,
+    threadsUrl: dbCard.threads_url,
     isPremium: dbCard.is_premium,
     isPromoted: dbCard.is_promoted,
+    premiumExpiresAt: dbCard.premium_expires_at,
     exposureCount: dbCard.exposure_count,
+    lastExposedAt: dbCard.last_exposed_at,
+    exposureWeight: dbCard.exposure_weight,
     viewCount: dbCard.view_count,
     tags: dbCard.business_card_tags?.map((bct: any) => bct.tags.name) || [],
     created_at: dbCard.created_at,
@@ -372,6 +382,7 @@ function mapNewsArticleFromDB(dbArticle: any): NewsArticle {
     isPublished: dbArticle.is_published,
     isBreaking: dbArticle.is_breaking,
     viewCount: dbArticle.view_count,
+    readTime: dbArticle.read_time,
     language: dbArticle.language || "ko",
     translatedTitle: dbArticle.translated_title,
     translatedContent: dbArticle.translated_content,

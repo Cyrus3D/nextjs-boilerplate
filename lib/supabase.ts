@@ -31,11 +31,11 @@ export type Database = {
           id: number
           title: string
           description: string
-          category: string
+          category_id: number | null
           location: string | null
           phone: string | null
           website: string | null
-          image: string | null
+          image_url: string | null
           hours: string | null
           price: string | null
           promotion: string | null
@@ -45,10 +45,14 @@ export type Database = {
           instagram_url: string | null
           youtube_url: string | null
           tiktok_url: string | null
+          threads_url: string | null
           is_premium: boolean
           is_promoted: boolean
-          is_published: boolean
+          is_active: boolean
+          premium_expires_at: string | null
           exposure_count: number | null
+          last_exposed_at: string | null
+          exposure_weight: number | null
           view_count: number
           created_at: string
           updated_at: string
@@ -57,11 +61,11 @@ export type Database = {
           id?: number
           title: string
           description: string
-          category: string
+          category_id?: number | null
           location?: string | null
           phone?: string | null
           website?: string | null
-          image?: string | null
+          image_url?: string | null
           hours?: string | null
           price?: string | null
           promotion?: string | null
@@ -71,10 +75,14 @@ export type Database = {
           instagram_url?: string | null
           youtube_url?: string | null
           tiktok_url?: string | null
+          threads_url?: string | null
           is_premium?: boolean
           is_promoted?: boolean
-          is_published?: boolean
+          is_active?: boolean
+          premium_expires_at?: string | null
           exposure_count?: number | null
+          last_exposed_at?: string | null
+          exposure_weight?: number | null
           view_count?: number
           created_at?: string
           updated_at?: string
@@ -83,11 +91,11 @@ export type Database = {
           id?: number
           title?: string
           description?: string
-          category?: string
+          category_id?: number | null
           location?: string | null
           phone?: string | null
           website?: string | null
-          image?: string | null
+          image_url?: string | null
           hours?: string | null
           price?: string | null
           promotion?: string | null
@@ -97,10 +105,14 @@ export type Database = {
           instagram_url?: string | null
           youtube_url?: string | null
           tiktok_url?: string | null
+          threads_url?: string | null
           is_premium?: boolean
           is_promoted?: boolean
-          is_published?: boolean
+          is_active?: boolean
+          premium_expires_at?: string | null
           exposure_count?: number | null
+          last_exposed_at?: string | null
+          exposure_weight?: number | null
           view_count?: number
           created_at?: string
           updated_at?: string
