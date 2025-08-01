@@ -98,7 +98,7 @@ const sampleNewsArticles: NewsArticle[] = [
 // Business Cards API
 export async function getBusinessCards(limit = 20, offset = 0): Promise<BusinessCard[]> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase
+    return await supabase!
       .from("business_cards")
       .select("*")
       .eq("is_active", true)
@@ -111,7 +111,7 @@ export async function getBusinessCards(limit = 20, offset = 0): Promise<Business
 
 export async function searchBusinessCards(query: string, category?: string): Promise<BusinessCard[]> {
   const result = await safeSupabaseOperation(async () => {
-    let queryBuilder = supabase.from("business_cards").select("*").eq("is_active", true)
+    let queryBuilder = supabase!.from("business_cards").select("*").eq("is_active", true)
 
     if (query) {
       queryBuilder = queryBuilder.or(`title.ilike.%${query}%,description.ilike.%${query}%`)
@@ -143,7 +143,7 @@ export async function searchBusinessCards(query: string, category?: string): Pro
 
 export async function getBusinessCardById(id: string): Promise<BusinessCard | null> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase.from("business_cards").select("*").eq("id", id).single()
+    return await supabase!.from("business_cards").select("*").eq("id", id).single()
   })
 
   return result || sampleBusinessCards.find((card) => card.id === id) || null
@@ -151,20 +151,20 @@ export async function getBusinessCardById(id: string): Promise<BusinessCard | nu
 
 export async function incrementViewCount(id: string): Promise<void> {
   await safeSupabaseOperation(async () => {
-    return await supabase.rpc("increment_view_count", { card_id: id })
+    return await supabase!.rpc("increment_view_count", { card_id: id })
   })
 }
 
 export async function incrementExposureCount(id: string): Promise<void> {
   await safeSupabaseOperation(async () => {
-    return await supabase.rpc("increment_exposure_count", { card_id: id })
+    return await supabase!.rpc("increment_exposure_count", { card_id: id })
   })
 }
 
 // News Articles API
 export async function getNewsArticles(limit = 20, offset = 0): Promise<NewsArticle[]> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase
+    return await supabase!
       .from("news_articles")
       .select("*")
       .eq("is_published", true)
@@ -177,7 +177,7 @@ export async function getNewsArticles(limit = 20, offset = 0): Promise<NewsArtic
 
 export async function searchNewsArticles(query: string, category?: string): Promise<NewsArticle[]> {
   const result = await safeSupabaseOperation(async () => {
-    let queryBuilder = supabase.from("news_articles").select("*").eq("is_published", true)
+    let queryBuilder = supabase!.from("news_articles").select("*").eq("is_published", true)
 
     if (query) {
       queryBuilder = queryBuilder.or(`title.ilike.%${query}%,content.ilike.%${query}%`)
@@ -209,20 +209,44 @@ export async function searchNewsArticles(query: string, category?: string): Prom
 
 export async function getNewsArticleById(id: string): Promise<NewsArticle | null> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase.from("news_articles").select("*").eq("id", id).single()
+    return await supabase!.from("news_articles").select("*").eq("id", id).single()
   })
 
   return result || sampleNewsArticles.find((article) => article.id === id) || null
 }
 
-// Categories and Tags
-export async function getCategories(): Promise<string[]> {
+export async function getBreakingNews(): Promise<NewsArticle[]> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase.from("categories").select("name").eq("is_active", true).order("name")
+    return await supabase!
+      .from("news_articles")
+      .select("*")
+      .eq("is_published", true)
+      .eq("is_breaking", true)
+      .order("published_at", { ascending: false })
+      .limit(3)
   })
 
   if (result) {
-    return result.map((cat) => cat.name)
+    return result
+  }
+
+  return sampleNewsArticles.filter((article) => article.is_breaking).slice(0, 3)
+}
+
+export async function incrementNewsViewCount(articleId: number): Promise<void> {
+  await safeSupabaseOperation(async () => {
+    return await supabase!.rpc("increment_news_view_count", { article_id: articleId })
+  })
+}
+
+// Categories and Tags
+export async function getCategories(): Promise<string[]> {
+  const result = await safeSupabaseOperation(async () => {
+    return await supabase!.from("categories").select("name").eq("is_active", true).order("name")
+  })
+
+  if (result) {
+    return result.map((cat: any) => cat.name)
   }
 
   return [
@@ -241,11 +265,11 @@ export async function getCategories(): Promise<string[]> {
 
 export async function getTags(): Promise<string[]> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase.from("tags").select("name").eq("is_active", true).order("name")
+    return await supabase!.from("tags").select("name").eq("is_active", true).order("name")
   })
 
   if (result) {
-    return result.map((tag) => tag.name)
+    return result.map((tag: any) => tag.name)
   }
 
   return ["한식", "배송", "여행", "특송", "택배", "음식", "서비스", "이벤트", "방송", "전자제품"]
@@ -254,7 +278,7 @@ export async function getTags(): Promise<string[]> {
 // Statistics
 export async function getStatistics() {
   const businessCardsCount = await safeSupabaseOperation(async () => {
-    const { count } = await supabase
+    const { count } = await supabase!
       .from("business_cards")
       .select("*", { count: "exact", head: true })
       .eq("is_active", true)
@@ -262,15 +286,35 @@ export async function getStatistics() {
   })
 
   const newsArticlesCount = await safeSupabaseOperation(async () => {
-    const { count } = await supabase
+    const { count } = await supabase!
       .from("news_articles")
       .select("*", { count: "exact", head: true })
       .eq("is_published", true)
     return { count }
   })
 
+  const breakingNewsCount = await safeSupabaseOperation(async () => {
+    const { count } = await supabase!
+      .from("news_articles")
+      .select("*", { count: "exact", head: true })
+      .eq("is_published", true)
+      .eq("is_breaking", true)
+    return { count }
+  })
+
+  const premiumCardsCount = await safeSupabaseOperation(async () => {
+    const { count } = await supabase!
+      .from("business_cards")
+      .select("*", { count: "exact", head: true })
+      .eq("is_active", true)
+      .eq("is_premium", true)
+    return { count }
+  })
+
   return {
-    businessCards: businessCardsCount?.count || sampleBusinessCards.length,
-    newsArticles: newsArticlesCount?.count || sampleNewsArticles.length,
+    newsCount: newsArticlesCount?.count || sampleNewsArticles.length,
+    businessCount: businessCardsCount?.count || sampleBusinessCards.length,
+    breakingCount: breakingNewsCount?.count || sampleNewsArticles.filter((article) => article.is_breaking).length,
+    premiumCount: premiumCardsCount?.count || sampleBusinessCards.filter((card) => card.is_premium).length,
   }
 }

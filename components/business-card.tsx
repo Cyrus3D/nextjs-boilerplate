@@ -1,30 +1,27 @@
 "use client"
 
-import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Phone, MapPin, Globe, Facebook, Instagram, Youtube, MessageCircle, Eye, Crown, Zap } from "lucide-react"
-import type { BusinessCard } from "@/lib/supabase"
-import { formatPhoneNumber, detectUrlType, formatViewCount } from "@/lib/utils"
-import { incrementExposureCount } from "@/lib/api"
+import { formatPhoneNumber, detectUrlType, truncateText } from "@/lib/utils"
+import { incrementViewCount, incrementExposureCount } from "@/lib/api"
+import type { BusinessCardType } from "@/lib/supabase"
+import { Phone, MapPin, Globe, Facebook, Instagram, Youtube, MessageCircle, Eye, Star, TrendingUp } from "lucide-react"
 
 interface BusinessCardProps {
-  card: BusinessCard
-  onCardClick?: (card: BusinessCard) => void
-  showViewCount?: boolean
+  card: BusinessCardType
+  onClick: (card: BusinessCardType) => void
 }
 
-export default function BusinessCardComponent({ card, onCardClick, showViewCount = false }: BusinessCardProps) {
-  const [imageError, setImageError] = useState(false)
-
-  const handleCardClick = async () => {
-    // Increment exposure count when card is clicked
-    await incrementExposureCount(card.id)
-    onCardClick?.(card)
+export function BusinessCardComponent({ card, onClick }: BusinessCardProps) {
+  const handleClick = () => {
+    incrementViewCount(card.id)
+    incrementExposureCount(card.id)
+    onClick(card)
   }
 
-  const getSocialIcon = (type: string) => {
+  const getSocialIcon = (url: string) => {
+    const type = detectUrlType(url)
     switch (type) {
       case "facebook":
         return <Facebook className="h-4 w-4" />
@@ -39,114 +36,117 @@ export default function BusinessCardComponent({ card, onCardClick, showViewCount
     }
   }
 
-  const socialLinks = [
-    { url: card.website, type: "website" },
-    { url: card.facebook, type: "facebook" },
-    { url: card.instagram, type: "instagram" },
-    { url: card.youtube, type: "youtube" },
-    { url: card.line, type: "line" },
-    { url: card.kakao, type: "kakao" },
-    { url: card.whatsapp, type: "whatsapp" },
-    { url: card.telegram, type: "telegram" },
-    { url: card.twitter, type: "twitter" },
-    { url: card.tiktok, type: "tiktok" },
-  ].filter((link) => link.url)
-
   return (
     <Card
-      className={`h-full transition-all duration-200 hover:shadow-lg cursor-pointer relative overflow-hidden ${
+      className={`overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer ${
         card.is_premium ? "ring-2 ring-yellow-400 bg-gradient-to-br from-yellow-50 to-white" : ""
       } ${card.is_promoted ? "ring-2 ring-blue-400 bg-gradient-to-br from-blue-50 to-white" : ""}`}
-      onClick={handleCardClick}
+      onClick={handleClick}
     >
-      {/* Premium/Promoted badges */}
-      <div className="absolute top-2 right-2 z-10 flex gap-1">
-        {card.is_premium && (
-          <Badge className="bg-yellow-500 text-white">
-            <Crown className="h-3 w-3 mr-1" />
-            프리미엄
-          </Badge>
+      <div className="relative">
+        {card.image_url && (
+          <img
+            src={card.image_url || "/placeholder.svg"}
+            alt={card.title}
+            className="w-full h-48 object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement
+              target.src = "/placeholder.svg?height=200&width=400&text=" + encodeURIComponent(card.title)
+            }}
+          />
         )}
-        {card.is_promoted && (
-          <Badge className="bg-blue-500 text-white">
-            <Zap className="h-3 w-3 mr-1" />
-            추천
+        <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
+          {card.is_premium && (
+            <Badge variant="default" className="bg-yellow-500 text-white">
+              <Star className="h-3 w-3 mr-1" />
+              프리미엄
+            </Badge>
+          )}
+          {card.is_promoted && (
+            <Badge variant="default" className="bg-blue-500 text-white">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              추천
+            </Badge>
+          )}
+          <Badge variant="secondary">{card.category}</Badge>
+        </div>
+        <div className="absolute top-3 right-3">
+          <Badge variant="outline" className="bg-white/80">
+            <Eye className="h-3 w-3 mr-1" />
+            {card.view_count}
           </Badge>
-        )}
+        </div>
       </div>
 
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 pr-2">
-            <CardTitle className="text-lg font-bold text-gray-900 line-clamp-2 mb-2">{card.title}</CardTitle>
-            <Badge variant="secondary" className="mb-2">
-              {card.category}
-            </Badge>
-          </div>
-          {card.image_url && !imageError && (
-            <div className="flex-shrink-0">
-              <img
-                src={card.image_url || "/placeholder.svg"}
-                alt={card.title}
-                className="w-16 h-16 rounded-lg object-cover"
-                onError={() => setImageError(true)}
-              />
-            </div>
-          )}
-        </div>
+        <CardTitle className="text-lg mb-1 line-clamp-2">{card.title}</CardTitle>
+        <p className="text-sm text-gray-600 line-clamp-3">{truncateText(card.description, 120)}</p>
       </CardHeader>
 
-      <CardContent className="pt-0">
-        <p className="text-sm text-gray-600 mb-4 line-clamp-3">{card.description}</p>
-
+      <CardContent className="pt-0 space-y-3">
         {/* Contact Information */}
-        <div className="space-y-2 mb-4">
+        <div className="space-y-2">
           {card.phone && (
-            <div className="flex items-center text-sm text-gray-700">
-              <Phone className="h-4 w-4 mr-2 text-green-600 flex-shrink-0" />
+            <div className="flex items-center space-x-2 text-sm">
+              <Phone className="h-4 w-4 text-gray-500" />
               <span>{formatPhoneNumber(card.phone)}</span>
             </div>
           )}
-
           {card.address && (
-            <div className="flex items-center text-sm text-gray-700">
-              <MapPin className="h-4 w-4 mr-2 text-red-600 flex-shrink-0" />
+            <div className="flex items-center space-x-2 text-sm">
+              <MapPin className="h-4 w-4 text-gray-500" />
               <span className="line-clamp-1">{card.address}</span>
             </div>
           )}
         </div>
 
-        {/* Social Links */}
-        {socialLinks.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {socialLinks.slice(0, 4).map((link, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                size="sm"
-                className="h-8 px-2 bg-transparent"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  window.open(link.url, "_blank")
-                }}
-              >
-                {getSocialIcon(detectUrlType(link.url))}
+        {/* Social Media Links */}
+        {(card.website || card.facebook || card.instagram || card.youtube || card.line) && (
+          <div className="flex flex-wrap gap-2">
+            {card.website && (
+              <Button size="sm" variant="outline" className="h-8 px-2 bg-transparent" asChild>
+                <a href={card.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                  {getSocialIcon(card.website)}
+                </a>
               </Button>
-            ))}
-            {socialLinks.length > 4 && (
-              <Badge variant="outline" className="text-xs">
-                +{socialLinks.length - 4}
-              </Badge>
+            )}
+            {card.facebook && (
+              <Button size="sm" variant="outline" className="h-8 px-2 bg-transparent" asChild>
+                <a href={card.facebook} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                  <Facebook className="h-4 w-4" />
+                </a>
+              </Button>
+            )}
+            {card.instagram && (
+              <Button size="sm" variant="outline" className="h-8 px-2 bg-transparent" asChild>
+                <a href={card.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                  <Instagram className="h-4 w-4" />
+                </a>
+              </Button>
+            )}
+            {card.youtube && (
+              <Button size="sm" variant="outline" className="h-8 px-2 bg-transparent" asChild>
+                <a href={card.youtube} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                  <Youtube className="h-4 w-4" />
+                </a>
+              </Button>
+            )}
+            {card.line && (
+              <Button size="sm" variant="outline" className="h-8 px-2 bg-transparent" asChild>
+                <a href={card.line} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                  <MessageCircle className="h-4 w-4" />
+                </a>
+              </Button>
             )}
           </div>
         )}
 
         {/* Tags */}
         {card.tags && card.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-4">
+          <div className="flex flex-wrap gap-1">
             {card.tags.slice(0, 3).map((tag, index) => (
               <Badge key={index} variant="outline" className="text-xs">
-                #{tag}
+                {tag}
               </Badge>
             ))}
             {card.tags.length > 3 && (
@@ -157,18 +157,19 @@ export default function BusinessCardComponent({ card, onCardClick, showViewCount
           </div>
         )}
 
-        {/* View Count */}
-        {showViewCount && card.view_count > 0 && (
-          <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
-            <div className="flex items-center">
-              <Eye className="h-3 w-3 mr-1" />
-              <span>{formatViewCount(card.view_count)} 조회</span>
-            </div>
-            <div>
-              <span>노출 {formatViewCount(card.exposure_count)}</span>
-            </div>
-          </div>
-        )}
+        <div className="pt-2 border-t">
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full bg-transparent"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleClick()
+            }}
+          >
+            자세히 보기
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )
