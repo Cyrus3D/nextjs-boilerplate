@@ -1,10 +1,15 @@
-import NewsList from "../../components/news-list"
 import type { Metadata } from "next"
+import NewsList from "@/components/news-list"
 
 export const metadata: Metadata = {
-  title: "태국 뉴스 - 현지 소식과 교민 업체 정보",
-  description: "태국 현지 뉴스와 교민 업체 소식을 실시간으로 확인하세요. 최신 정보와 유용한 소식을 제공합니다.",
-  keywords: ["태국 뉴스", "현지 소식", "교민 업체", "태국 정보", "한국인 커뮤니티"],
+  title: "태국 뉴스 | 현지 소식과 교민 업체 정보",
+  description: "태국 현지 뉴스와 교민 업체 소식을 실시간으로 확인하세요. 관광, 정책, 비즈니스 정보를 한눈에!",
+  keywords: ["태국뉴스", "교민소식", "현지뉴스", "태국정보", "한국인"],
+  openGraph: {
+    title: "태국 뉴스 | 현지 소식과 교민 업체 정보",
+    description: "태국 현지 뉴스와 교민 업체 소식을 실시간으로 확인하세요.",
+    type: "website",
+  },
 }
 
 export default function NewsPage() {

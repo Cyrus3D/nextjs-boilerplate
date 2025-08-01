@@ -3,8 +3,8 @@
 import { useState, useMemo } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import NewsCard from "./news-card"
+import InFeedAd from "./in-feed-ad"
 import { NewsDetailModal } from "./news-detail-modal"
-import { InFeedAd } from "./in-feed-ad"
 import type { NewsArticle } from "../types/news"
 import { sampleNewsArticles } from "../data/sample-news"
 
@@ -91,7 +91,9 @@ export default function NewsList({ initialArticles = sampleNewsArticles }: NewsL
                 <div key={article.id} className="w-full">
                   <NewsCard article={article} onDetailClick={handleDetailClick} />
                   {/* 광고 삽입 (매 6개 기사마다) */}
-                  {(index + 1) % 6 === 0 && <InFeedAd />}
+                  {(index + 1) % 6 === 0 && (
+                    <InFeedAd adSlot={process.env.NEXT_PUBLIC_ADSENSE_INFEED_SLOT || "1234567890"} className="my-4" />
+                  )}
                 </div>
               ))}
             </div>
