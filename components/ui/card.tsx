@@ -23,7 +23,15 @@ CardHeader.displayName = "CardHeader"
 
 const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn("text-2xl font-semibold leading-none tracking-tight", className)} {...props} />
+    <h3
+      ref={ref}
+      className={cn(
+        "text-2xl font-semibold leading-none tracking-tight",
+        "line-clamp-2 min-h-[3rem] leading-6", // 2줄 제한, 2줄 높이 고정, 줄간격 설정
+        className,
+      )}
+      {...props}
+    />
   ),
 )
 CardTitle.displayName = "CardTitle"
