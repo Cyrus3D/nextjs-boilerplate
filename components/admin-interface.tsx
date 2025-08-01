@@ -42,11 +42,14 @@ import {
   User,
   Tag,
   Globe,
+  Link,
+  Languages,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import {
   // 뉴스 관련 함수들
   createNewsArticle,
+  createNewsFromUrl,
   updateNewsArticle,
   deleteNewsArticle,
   deleteMultipleNewsArticles,
@@ -113,6 +116,8 @@ export default function AdminInterface() {
   const [updatingNews, setUpdatingNews] = useState(false)
   const [analyzingNewsText, setAnalyzingNewsText] = useState(false)
   const [newsAnalysisText, setNewsAnalysisText] = useState("")
+  const [creatingFromUrl, setCreatingFromUrl] = useState(false)
+  const [newsUrl, setNewsUrl] = useState("")
 
   // 비즈니스 카드 관련 상태
   const [cards, setCards] = useState<BusinessCard[]>([])
@@ -245,6 +250,56 @@ export default function AdminInterface() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  // URL에서 뉴스 생성 핸들러
+  const handleCreateNewsFromUrl = async () => {
+    if (!newsUrl.trim()) {
+      toast({
+        title: "오류",
+        description: "뉴스 URL을 입력해주세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!newsUrl.startsWith("http")) {
+      toast({
+        title: "오류",
+        description: "유효한 URL을 입력해주세요. (http:// 또는 https://로 시작)",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!aiStatus?.isActive) {
+      toast({
+        title: "AI 기능 비활성화",
+        description: "AI 기능이 비활성화되어 있습니다. 관리자에게 문의하세요.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setCreatingFromUrl(true)
+    try {
+      const result = await createNewsFromUrl(newsUrl)
+      toast({
+        title: "성공",
+        description: `뉴스가 성공적으로 생성되었습니다: ${result.title}`,
+      })
+
+      setNewsUrl("")
+      await loadData()
+    } catch (error) {
+      toast({
+        title: "URL 뉴스 생성 실패",
+        description: error instanceof Error ? error.message : "URL에서 뉴스 생성 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setCreatingFromUrl(false)
     }
   }
 
@@ -879,6 +934,63 @@ export default function AdminInterface() {
         </CardContent>
       </Card>
 
+      {/* URL에서 뉴스 생성 카드 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Link className="h-5 w-5" />
+            URL에서 뉴스 생성
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              <Languages className="h-3 w-3 mr-1" />
+              자동 번역
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="text-sm text-gray-600">
+              뉴스 기사 URL을 입력하면 AI가 자동으로 내용을 분석하고, 한글이 아닌 경우 번역하여 뉴스를 생성합니다.
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="https://example.com/news-article"
+                value={newsUrl}
+                onChange={(e) => setNewsUrl(e.target.value)}
+                disabled={creatingFromUrl || !aiStatus?.isActive}
+                className="flex-1"
+              />
+              <Button
+                onClick={handleCreateNewsFromUrl}
+                disabled={!newsUrl.trim() || creatingFromUrl || !aiStatus?.isActive}
+                className="flex items-center gap-2"
+              >
+                {creatingFromUrl ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    생성 중...
+                  </>
+                ) : (
+                  <>
+                    <Globe className="h-4 w-4" />
+                    URL에서 뉴스 생성
+                  </>
+                )}
+              </Button>
+            </div>
+            {!aiStatus?.isActive && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  AI 기능이 비활성화되어 있습니다. URL에서 뉴스를 생성하려면 AI 기능을 활성화해주세요.
+                </AlertDescription>
+              </Alert>
+            )}
+            <div className="text-xs text-gray-500">
+              <strong>지원 사이트:</strong> 대부분의 뉴스 사이트 (방콕포스트, 타이라트, 마티촌, 카오솟 등)
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* 메인 탭 */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -965,6 +1077,12 @@ export default function AdminInterface() {
                               <Badge className="bg-red-600 text-white animate-pulse">
                                 <AlertTriangle className="h-3 w-3 mr-1" />
                                 속보
+                              </Badge>
+                            )}
+                            {news.translated && (
+                              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                <Languages className="h-3 w-3 mr-1" />
+                                번역됨
                               </Badge>
                             )}
                             {!news.is_published && (
@@ -2176,7 +2294,9 @@ export default function AdminInterface() {
                   <Switch
                     id="edit-is_promoted"
                     checked={editingCard.is_promoted || false}
-                    onChange={(checked) => setEditingCard((prev) => (prev ? { ...prev, is_promoted: checked } : null))}
+                    onCheckedChange={(checked) =>
+                      setEditingCard((prev) => (prev ? { ...prev, is_promoted: checked } : null))
+                    }
                   />
                   <Label htmlFor="edit-is_promoted">추천 카드</Label>
                 </div>
@@ -2185,7 +2305,9 @@ export default function AdminInterface() {
                   <Switch
                     id="edit-is_active"
                     checked={editingCard.is_active !== false}
-                    onChange={(checked) => setEditingCard((prev) => (prev ? { ...prev, is_active: checked } : null))}
+                    onCheckedChange={(checked) =>
+                      setEditingCard((prev) => (prev ? { ...prev, is_active: checked } : null))
+                    }
                   />
                   <Label htmlFor="edit-is_active">활성화</Label>
                 </div>
@@ -2194,7 +2316,9 @@ export default function AdminInterface() {
                   <Switch
                     id="edit-is_premium"
                     checked={editingCard.is_premium || false}
-                    onChange={(checked) => setEditingCard((prev) => (prev ? { ...prev, is_premium: checked } : null))}
+                    onCheckedChange={(checked) =>
+                      setEditingCard((prev) => (prev ? { ...prev, is_premium: checked } : null))
+                    }
                   />
                   <Label htmlFor="edit-is_premium">프리미엄</Label>
                 </div>

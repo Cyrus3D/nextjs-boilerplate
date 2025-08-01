@@ -4,6 +4,7 @@ import { supabase } from "./supabase"
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { revalidatePath } from "next/cache"
+import { scrapeNewsFromUrl, analyzeNewsContent } from "./news-scraper"
 
 // 기존 비즈니스 카드 인터페이스
 export interface BusinessCardData {
@@ -48,6 +49,8 @@ export interface NewsArticleData {
   is_published?: boolean
   image_url?: string
   source_url?: string
+  original_language?: string
+  translated?: boolean
 }
 
 export interface NewsCategory {
@@ -119,6 +122,56 @@ export async function checkAIStatus(): Promise<AIStatusResult> {
   }
 }
 
+// URL에서 뉴스 생성 함수
+export async function createNewsFromUrl(url: string): Promise<NewsArticle> {
+  if (!supabase) {
+    throw new Error("Supabase가 설정되지 않았습니다.")
+  }
+
+  if (!url || !url.startsWith("http")) {
+    throw new Error("유효한 URL을 입력해주세요.")
+  }
+
+  try {
+    console.log("URL에서 뉴스 생성 시작:", url)
+
+    // URL에서 뉴스 내용 스크래핑
+    const scrapedData = await scrapeNewsFromUrl(url)
+    console.log("스크래핑 완료:", scrapedData.title)
+
+    // AI로 카테고리 및 태그 분석
+    const analysisResult = await analyzeNewsContent(scrapedData)
+    console.log("분석 완료:", analysisResult)
+
+    // 데이터베이스에 삽입할 데이터 준비
+    const newsData: NewsArticleData = {
+      title: scrapedData.title,
+      excerpt: scrapedData.excerpt || scrapedData.content.substring(0, 200) + "...",
+      content: scrapedData.content,
+      category: analysisResult.category,
+      tags: analysisResult.tags,
+      author: scrapedData.author || "Admin",
+      published_at: scrapedData.publishedAt || new Date().toISOString(),
+      read_time: analysisResult.readTime,
+      is_breaking: false,
+      is_published: true,
+      image_url: scrapedData.imageUrl || null,
+      source_url: url,
+      original_language: scrapedData.language,
+      translated: scrapedData.isTranslated,
+    }
+
+    // 뉴스 생성
+    const result = await createNewsArticle(newsData)
+    console.log("뉴스 생성 완료:", result.id)
+
+    return result
+  } catch (error) {
+    console.error("URL에서 뉴스 생성 오류:", error)
+    throw new Error(`URL에서 뉴스 생성 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`)
+  }
+}
+
 // 뉴스 관련 함수들
 export async function createNewsArticle(data: NewsArticleData) {
   if (!supabase) {
@@ -143,6 +196,8 @@ export async function createNewsArticle(data: NewsArticleData) {
       is_published: data.is_published !== false,
       image_url: data.image_url || null,
       source_url: data.source_url || null,
+      original_language: data.original_language || "ko",
+      translated: data.translated || false,
       view_count: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -191,6 +246,8 @@ export async function updateNewsArticle(id: number, data: Partial<NewsArticleDat
     if (data.is_published !== undefined) updateData.is_published = data.is_published
     if (data.image_url !== undefined) updateData.image_url = data.image_url || null
     if (data.source_url !== undefined) updateData.source_url = data.source_url || null
+    if (data.original_language !== undefined) updateData.original_language = data.original_language
+    if (data.translated !== undefined) updateData.translated = data.translated
 
     const { data: result, error } = await supabase
       .from("news_articles")
@@ -340,7 +397,7 @@ export async function parseNewsData(text: string): Promise<Partial<NewsArticleDa
         "title": "뉴스 제목",
         "excerpt": "요약 (150자 이내)",
         "content": "본문 내용",
-        "category": "카테고리 (현지 뉴스, 교민 업체, 정책, 교통, 비자, 일반 중 하나)",
+        "category": "카테고리 (현지 뉴스, 교민 업체, 정책, 교통, 비자, 경제, 문화, 스포츠, 일반 중 하나)",
         "tags": ["태그1", "태그2", "태그3"],
         "author": "작성자",
         "is_breaking": false,
