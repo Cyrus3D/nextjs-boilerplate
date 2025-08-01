@@ -3,19 +3,26 @@ export interface NewsArticle {
   title: string
   excerpt: string
   content: string
-  category: "local" | "business"
+  imageUrl: string
+  category: string
   tags: string[]
-  author: string
   publishedAt: string
   readTime: number
-  viewCount: number
+  views: number
   isBreaking: boolean
-  imageUrl?: string
-  sourceUrl?: string
+  author: {
+    name: string
+    avatar: string
+  }
+  source: {
+    name: string
+    url: string
+  }
 }
 
 export interface NewsCategory {
   id: string
   name: string
   count: number
+  color: string
 }
