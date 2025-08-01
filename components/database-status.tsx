@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { checkDatabaseConnection, testTableQueries, getTableSchemas } from "@/lib/database-check"
+import type { DatabaseStatus, TableTestResults, TableSchema } from "@/lib/database-check"
 import {
   Database,
   CheckCircle,
@@ -20,9 +21,9 @@ import {
 } from "lucide-react"
 
 export function DatabaseComponent() {
-  const [status, setStatus] = useState<any | null>(null)
-  const [tableTests, setTableTests] = useState<any>(null)
-  const [schemas, setSchemas] = useState<any>(null)
+  const [status, setStatus] = useState<DatabaseStatus | null>(null)
+  const [tableTests, setTableTests] = useState<TableTestResults | null>(null)
+  const [schemas, setSchemas] = useState<TableSchema | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -256,7 +257,7 @@ export function DatabaseComponent() {
 
         <TabsContent value="schemas" className="space-y-4">
           {schemas &&
-            Object.entries(schemas).map(([tableName, schema]: [string, any]) => (
+            Object.entries(schemas).map(([tableName, schema]) => (
               <Card key={tableName}>
                 <CardHeader>
                   <CardTitle className="text-lg">{tableName}</CardTitle>
@@ -276,7 +277,7 @@ export function DatabaseComponent() {
                           </tr>
                         </thead>
                         <tbody>
-                          {schema.columns.map((column: any, index: number) => (
+                          {schema.columns.map((column, index) => (
                             <tr key={index} className="border-b">
                               <td className="p-2 font-medium">{column.column_name}</td>
                               <td className="p-2">{column.data_type}</td>

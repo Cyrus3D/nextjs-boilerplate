@@ -1,4 +1,4 @@
-import { supabase } from "./supabase"
+import { supabase, isSupabaseConfigured } from "./supabase"
 
 export interface DatabaseStatus {
   isConfigured: boolean
@@ -51,26 +51,20 @@ export interface TableSchema {
 
 export async function checkDatabaseConnection(): Promise<DatabaseStatus> {
   const status: DatabaseStatus = {
-    isConfigured: false,
+    isConfigured: isSupabaseConfigured(),
     isConnected: false,
     lastChecked: new Date().toISOString(),
     tables: {},
     functions: {},
   }
 
-  // Check if Supabase is configured
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!supabaseUrl || !supabaseKey) {
+  if (!status.isConfigured) {
     return status
   }
 
-  status.isConfigured = true
-
   try {
     // Test basic connection
-    const { data, error } = await supabase.from("business_cards").select("count", { count: "exact", head: true })
+    const { data, error } = await supabase!.from("business_cards").select("count", { count: "exact", head: true })
 
     if (error && !error.message.includes('relation "business_cards" does not exist')) {
       throw error
@@ -83,7 +77,7 @@ export async function checkDatabaseConnection(): Promise<DatabaseStatus> {
 
     for (const tableName of tables) {
       try {
-        const { count, error: tableError } = await supabase.from(tableName).select("*", { count: "exact", head: true })
+        const { count, error: tableError } = await supabase!.from(tableName).select("*", { count: "exact", head: true })
 
         if (tableError) {
           status.tables[tableName] = {
@@ -109,7 +103,9 @@ export async function checkDatabaseConnection(): Promise<DatabaseStatus> {
 
     for (const functionName of functions) {
       try {
-        const { data, error: funcError } = await supabase.rpc(functionName, { card_id: 1 })
+        const { error: funcError } = await supabase!.rpc(functionName, {
+          [functionName === "increment_view_count" ? "card_id" : "article_id"]: -1,
+        })
 
         if (funcError && funcError.message.includes("function") && funcError.message.includes("does not exist")) {
           status.functions[functionName] = {
@@ -143,13 +139,20 @@ export async function testTableQueries(): Promise<TableTestResults> {
     categories: { success: false },
   }
 
+  if (!isSupabaseConfigured()) {
+    return {
+      businessCards: { success: false, error: "Supabase not configured" },
+      newsArticles: { success: false, error: "Supabase not configured" },
+      categories: { success: false, error: "Supabase not configured" },
+    }
+  }
+
   try {
     // Test business_cards query
-    const {
-      data: businessData,
-      error: businessError,
-      count: businessCount,
-    } = await supabase.from("business_cards").select("*", { count: "exact" }).limit(1)
+    const { error: businessError, count: businessCount } = await supabase!
+      .from("business_cards")
+      .select("*", { count: "exact" })
+      .limit(1)
 
     if (businessError) {
       results.businessCards = {
@@ -171,11 +174,10 @@ export async function testTableQueries(): Promise<TableTestResults> {
 
   try {
     // Test news_articles query
-    const {
-      data: newsData,
-      error: newsError,
-      count: newsCount,
-    } = await supabase.from("news_articles").select("*", { count: "exact" }).limit(1)
+    const { error: newsError, count: newsCount } = await supabase!
+      .from("news_articles")
+      .select("*", { count: "exact" })
+      .limit(1)
 
     if (newsError) {
       results.newsArticles = {
@@ -197,11 +199,10 @@ export async function testTableQueries(): Promise<TableTestResults> {
 
   try {
     // Test categories query
-    const {
-      data: categoriesData,
-      error: categoriesError,
-      count: categoriesCount,
-    } = await supabase.from("categories").select("*", { count: "exact" }).limit(1)
+    const { error: categoriesError, count: categoriesCount } = await supabase!
+      .from("categories")
+      .select("*", { count: "exact" })
+      .limit(1)
 
     if (categoriesError) {
       results.categories = {
@@ -228,12 +229,23 @@ export async function getTableSchemas(): Promise<TableSchema> {
   const schemas: TableSchema = {}
   const tables = ["business_cards", "news_articles", "categories", "tags", "business_card_tags"]
 
+  if (!isSupabaseConfigured()) {
+    for (const tableName of tables) {
+      schemas[tableName] = {
+        columns: [],
+        error: "Supabase not configured",
+      }
+    }
+    return schemas
+  }
+
   for (const tableName of tables) {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabase!
         .from("information_schema.columns")
         .select("column_name, data_type, is_nullable, column_default")
         .eq("table_name", tableName)
+        .eq("table_schema", "public")
         .order("ordinal_position")
 
       if (error) {
