@@ -1,141 +1,153 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, ChevronDown, Newspaper } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Search, TrendingUp, Zap } from "lucide-react"
 import NewsCard from "./news-card"
 import NewsDetailModal from "./news-detail-modal"
-import InFeedAd from "./in-feed-ad"
-import { sampleNewsArticles } from "@/data/sample-news"
+import { sampleNews } from "@/data/sample-news"
 import type { NewsArticle } from "@/types/news"
 
 export default function NewsCardList() {
-  const [searchTerm, setSearchTerm] = useState("")
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [visibleCount, setVisibleCount] = useState(6)
+  const [searchQuery, setSearchQuery] = useState("")
 
-  // 필터링된 뉴스 기사
-  const filteredArticles = useMemo(() => {
-    let filtered = sampleNewsArticles
+  // 뉴스 필터링 및 정렬
+  const filteredAndSortedNews = useMemo(() => {
+    let filtered = sampleNews
 
     // 검색 필터링
-    if (searchTerm) {
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (article) =>
-          article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          article.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())),
+          article.title.toLowerCase().includes(query) ||
+          article.excerpt.toLowerCase().includes(query) ||
+          article.content.toLowerCase().includes(query) ||
+          article.tags.some((tag) => tag.toLowerCase().includes(query)) ||
+          article.author.toLowerCase().includes(query),
       )
     }
 
-    // 정렬: 속보 > 최신순 > 조회수순
+    // 정렬: 속보 우선 → 최신순 → 조회수순
     return filtered.sort((a, b) => {
+      // 속보 우선
       if (a.isBreaking && !b.isBreaking) return -1
       if (!a.isBreaking && b.isBreaking) return 1
 
+      // 최신순
       const dateA = new Date(a.publishedAt).getTime()
       const dateB = new Date(b.publishedAt).getTime()
       if (dateA !== dateB) return dateB - dateA
 
+      // 조회수순
       return b.viewCount - a.viewCount
     })
-  }, [searchTerm])
+  }, [searchQuery])
 
-  const handleReadMore = (article: NewsArticle) => {
+  const handleCardClick = (article: NewsArticle) => {
     setSelectedArticle(article)
     setIsModalOpen(true)
   }
 
-  const handleLoadMore = () => {
-    setVisibleCount((prev) => prev + 6)
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedArticle(null)
   }
+
+  // 통계 계산
+  const stats = useMemo(() => {
+    const totalNews = sampleNews.length
+    const breakingNews = sampleNews.filter((article) => article.isBreaking).length
+    const localNews = sampleNews.filter((article) => article.category === "현지 뉴스").length
+    const businessNews = sampleNews.filter((article) => article.category === "교민 업체").length
+
+    return { totalNews, breakingNews, localNews, businessNews }
+  }, [])
 
   return (
     <div className="space-y-6">
-      {/* 검색 */}
-      <div className="mb-6">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="뉴스 검색... (제목, 내용, 태그)"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-white border-gray-200 focus:border-blue-300 focus:ring-blue-200"
-          />
-        </div>
-        <p className="text-sm text-gray-600 mt-2">태국 현지 소식과 교민 업체 정보를 확인하세요</p>
-      </div>
+      {/* 헤더 섹션 */}
+      <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-xl border border-gray-200">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">📰 최신 뉴스</h2>
+            <p className="text-gray-600">태국 현지 소식과 교민 업체 정보를 한눈에 확인하세요</p>
+          </div>
 
-      {/* 검색 결과 요약 */}
-      <div className="mb-6">
-        <p className="text-gray-600">
-          총 <span className="font-semibold text-gray-900">{filteredArticles.length}</span>개의 뉴스
-          {searchTerm && (
-            <>
-              {" "}
-              (검색: "<span className="font-medium">{searchTerm}</span>")
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSearchTerm("")}
-                className="ml-2 text-xs text-blue-600 hover:text-blue-800"
-              >
-                검색 초기화
-              </Button>
-            </>
-          )}
-        </p>
-      </div>
-
-      {/* 뉴스 카드 그리드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredArticles.slice(0, visibleCount).map((article, index) => (
-          <div key={article.id}>
-            <NewsCard article={article} onReadMore={handleReadMore} />
-            {/* 6번째마다 광고 삽입 */}
-            {(index + 1) % 6 === 0 && index < visibleCount - 1 && (
-              <div className="col-span-full my-6">
-                <InFeedAd />
+          {/* 통계 */}
+          <div className="flex gap-4">
+            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-gray-600">전체</span>
+                <span className="text-lg font-bold text-blue-600">{stats.totalNews}</span>
+              </div>
+            </div>
+            {stats.breakingNews > 0 && (
+              <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-red-600" />
+                  <span className="text-sm font-medium text-gray-600">속보</span>
+                  <span className="text-lg font-bold text-red-600">{stats.breakingNews}</span>
+                </div>
               </div>
             )}
           </div>
-        ))}
+        </div>
       </div>
 
-      {/* 더 보기 버튼 */}
-      {visibleCount < filteredArticles.length && (
-        <div className="text-center">
-          <Button onClick={handleLoadMore} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2" size="lg">
-            더 많은 뉴스 보기 ({visibleCount}/{filteredArticles.length})
-            <ChevronDown className="w-4 h-4 ml-2" />
-          </Button>
+      {/* 검색 섹션 */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <Input
+          placeholder="뉴스 제목, 내용, 태그, 작성자로 검색..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10 h-12 text-base border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* 카테고리 통계 */}
+      <div className="flex gap-3">
+        <Badge variant="outline" className="px-3 py-1 bg-blue-50 text-blue-700 border-blue-200">
+          현지 뉴스 {stats.localNews}개
+        </Badge>
+        <Badge variant="outline" className="px-3 py-1 bg-green-50 text-green-700 border-green-200">
+          교민 업체 {stats.businessNews}개
+        </Badge>
+      </div>
+
+      {/* 검색 결과 표시 */}
+      {searchQuery && (
+        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+          <p className="text-blue-800">
+            <span className="font-semibold">"{searchQuery}"</span> 검색 결과: {filteredAndSortedNews.length}개의 기사
+          </p>
         </div>
       )}
 
-      {/* 검색 결과 없음 */}
-      {filteredArticles.length === 0 && (
+      {/* 뉴스 그리드 */}
+      {filteredAndSortedNews.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredAndSortedNews.map((article) => (
+            <NewsCard key={article.id} article={article} onClick={() => handleCardClick(article)} />
+          ))}
+        </div>
+      ) : (
         <div className="text-center py-12">
-          <Newspaper className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">검색 결과가 없습니다</h3>
-          <p className="text-gray-600 mb-4">다른 키워드로 검색해보세요</p>
-          <Button variant="outline" onClick={() => setSearchTerm("")} className="bg-white">
-            전체 뉴스 보기
-          </Button>
+          <div className="text-gray-400 mb-4">
+            <Search className="w-16 h-16 mx-auto" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">검색 결과가 없습니다</h3>
+          <p className="text-gray-500">다른 키워드로 검색해보세요.</p>
         </div>
       )}
 
       {/* 뉴스 상세 모달 */}
-      <NewsDetailModal
-        article={selectedArticle}
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false)
-          setSelectedArticle(null)
-        }}
-      />
+      <NewsDetailModal article={selectedArticle} isOpen={isModalOpen} onClose={handleCloseModal} />
     </div>
   )
 }

@@ -2,14 +2,11 @@
 
 import { useState, useEffect, useMemo, Suspense, lazy } from "react"
 import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Search, TrendingUp, Thermometer, DollarSign, Loader2, Newspaper, Building } from "lucide-react"
-import BusinessCard from "@/components/business-card"
+import { TrendingUp, Thermometer, DollarSign, Newspaper, Building2, Badge, Users, MapPin } from "lucide-react"
 import NewsCardList from "@/components/news-card-list"
+import InfiniteScrollCards from "@/components/infinite-scroll-cards"
 import type { BusinessCard as BusinessCardType, Category } from "@/types/business-card"
 import {
   getBusinessCardsPaginated,
@@ -327,200 +324,121 @@ export default function HomePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Header with Weather and Exchange Rate */}
-      {isLoading ? (
-        <HeaderSkeleton />
-      ) : (
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">🔥 핫타이 HOT THAI</h1>
-              <p className="text-orange-100">태국에서 필요한 모든 정보를 한 곳에서 찾아보세요</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* 헤더 정보 */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-bold text-gray-900">🇹🇭 태국 한인 정보</h1>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                실시간 업데이트
+              </Badge>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 text-sm">
-              {/* Weather Info */}
-              <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
-                <div className="flex items-center gap-2 mb-1">
-                  <Thermometer className="w-4 h-4" />
-                  <span className="font-medium">방콕 날씨</span>
-                </div>
+            {/* 날씨 및 환율 정보 */}
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-1">
+                <Thermometer className="w-4 h-4" />
                 {isWeatherLoading ? (
-                  <div className="text-orange-100">로딩 중...</div>
+                  <span>로딩 중...</span>
                 ) : weather ? (
-                  <div className="text-orange-100">
+                  <span>
                     {weather.temperature}°C, {weather.description}
-                  </div>
+                  </span>
                 ) : (
-                  <div className="text-orange-100">정보 없음</div>
+                  <span>정보 없음</span>
                 )}
               </div>
-
-              {/* Exchange Rate Info */}
-              <div className="bg-white/10 rounded-lg p-3 min-w-[140px]">
-                <div className="flex items-center gap-2 mb-1">
-                  <DollarSign className="w-4 h-4" />
-                  <span className="font-medium">환율 (THB→KRW)</span>
-                </div>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="w-4 h-4" />
                 {isExchangeLoading ? (
-                  <div className="text-orange-100">로딩 중...</div>
+                  <span>로딩 중...</span>
                 ) : exchangeRate ? (
-                  <div className="text-orange-100">
-                    1 THB = {exchangeRate.rate} KRW
-                    <div className="text-xs opacity-75 mt-1">
-                      {exchangeRate.source} • {formatTime(exchangeRate.timestamp)}
-                    </div>
-                  </div>
+                  <span>1 THB = {exchangeRate.rate} KRW</span>
                 ) : (
-                  <div className="text-orange-100">정보 없음</div>
+                  <span>정보 없음</span>
                 )}
+              </div>
+              <div className="flex items-center gap-1">
+                <MapPin className="w-4 h-4" />
+                <span>태국 시간: {new Date().toLocaleTimeString("ko-KR", { timeZone: "Asia/Bangkok" })}</span>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 bg-white border border-gray-200 p-1">
-          <TabsTrigger
-            value="news"
-            className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-          >
-            <Newspaper className="w-4 h-4" />
-            뉴스
-          </TabsTrigger>
-          <TabsTrigger
-            value="business"
-            className="flex items-center gap-2 data-[state=active]:bg-orange-600 data-[state=active]:text-white"
-          >
-            <Building className="w-4 h-4" />
-            업체 정보
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="news" className="mt-6">
-          <NewsCardList />
-        </TabsContent>
-
-        <TabsContent value="business" className="mt-6">
-          {/* Search and Filter Controls */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="업체명, 설명으로 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            <Select
-              value={selectedCategory}
-              onValueChange={(value) => {
-                setSelectedCategory(value)
-                setCurrentPage(1) // 페이지 리셋
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="카테고리 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">전체 카테고리</SelectItem>
-                {isCategoriesLoading ? (
-                  <SelectItem value="loading" disabled>
-                    로딩 중...
-                  </SelectItem>
-                ) : (
-                  categories.map((category) => (
-                    <SelectItem key={category.id} value={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+      {/* 메인 콘텐츠 */}
+      <div className="container mx-auto px-4 py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          {/* 탭 네비게이션 */}
+          <div className="bg-white p-1 rounded-lg border border-gray-200 shadow-sm">
+            <TabsList className="grid w-full grid-cols-2 bg-transparent p-0 h-auto">
+              <TabsTrigger
+                value="news"
+                className="flex items-center gap-2 py-3 px-4 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-blue-200 data-[state=active]:shadow-sm rounded-md transition-all"
+              >
+                <Newspaper className="w-5 h-5" />
+                <span className="font-medium">뉴스</span>
+                <Badge variant="secondary" className="ml-1 bg-blue-100 text-blue-700 text-xs">
+                  6
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger
+                value="business"
+                className="flex items-center gap-2 py-3 px-4 data-[state=active]:bg-green-50 data-[state=active]:text-green-700 data-[state=active]:border-green-200 data-[state=active]:shadow-sm rounded-md transition-all"
+              >
+                <Building2 className="w-5 h-5" />
+                <span className="font-medium">업체 정보</span>
+                <Badge variant="secondary" className="ml-1 bg-green-100 text-green-700 text-xs">
+                  500+
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
           </div>
 
-          {/* Results Summary */}
-          {!isLoading && (
-            <div className="flex items-center justify-between text-sm text-gray-600 mb-6">
-              <span>
-                총 {total}개의 업체 정보
-                {searchTerm && ` (검색: "${searchTerm}")`}
-                {selectedCategory !== "all" && ` (카테고리: ${selectedCategory})`}
-              </span>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                <span>인기순 정렬</span>
-                {(searchTerm || selectedCategory !== "all") && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSearchTerm("")
-                      setSelectedCategory("all")
-                    }}
-                    className="text-xs"
-                  >
-                    필터 초기화
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
+          {/* 탭 콘텐츠 */}
+          <TabsContent value="news" className="mt-6">
+            <NewsCardList />
+          </TabsContent>
 
-          {/* Business Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {isCardsLoading && cards.length === 0 ? (
-              // Initial loading skeletons
-              Array.from({ length: 8 }).map((_, index) => <CardSkeleton key={index} />)
-            ) : sortedCards.length > 0 ? (
-              sortedCards.map((card, index) => (
-                <div key={card.id} className="h-full">
-                  <BusinessCard card={card} onDetailClick={handleDetailClick} />
-                  {/* Insert ads every 8 cards */}
-                  {(index + 1) % 8 === 0 && (
-                    <div className="col-span-full my-4">
-                      <Card className="p-4 bg-gray-50 border-dashed">
-                        <div className="text-center text-gray-500 text-sm">광고 영역</div>
-                      </Card>
+          <TabsContent value="business" className="mt-6">
+            <div className="space-y-6">
+              {/* 업체 정보 헤더 */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-xl border border-gray-200">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">🏢 업체 정보</h2>
+                    <p className="text-gray-600">태국 전역의 한인 업체 정보를 확인하세요</p>
+                  </div>
+
+                  {/* 통계 */}
+                  <div className="flex gap-4">
+                    <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-green-600" />
+                        <span className="text-sm font-medium text-gray-600">전체</span>
+                        <span className="text-lg font-bold text-green-600">500+</span>
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              // No results
-              <div className="col-span-full text-center py-12">
-                <div className="text-gray-500 mb-4">
-                  <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">검색 결과가 없습니다</p>
-                  <p className="text-sm">다른 키워드나 카테고리로 검색해보세요</p>
+                    <div className="bg-white px-4 py-2 rounded-lg shadow-sm border">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-gray-600">프리미엄</span>
+                        <span className="text-lg font-bold text-blue-600">50+</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Load More Button */}
-          {hasMore && !isCardsLoading && sortedCards.length > 0 && (
-            <div className="text-center mt-8">
-              <Button onClick={handleLoadMore} variant="outline" size="lg" className="min-w-[200px] bg-white">
-                더 보기 ({sortedCards.length}/{total})
-              </Button>
+              {/* 업체 카드 리스트 */}
+              <InfiniteScrollCards cards={sortedCards} isLoading={isCardsLoading} handleLoadMore={handleLoadMore} />
             </div>
-          )}
-
-          {/* Loading indicator for pagination */}
-          {isCardsLoading && cards.length > 0 && (
-            <div className="text-center py-4">
-              <Loader2 className="w-6 h-6 animate-spin mx-auto" />
-              <p className="text-sm text-gray-500 mt-2">로딩 중...</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Business Detail Modal */}
       <Suspense fallback={<div>Loading modal...</div>}>
