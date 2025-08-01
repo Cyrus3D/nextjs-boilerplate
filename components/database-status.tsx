@@ -4,39 +4,31 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { checkDatabaseStatus, type DatabaseStatus } from "@/lib/supabase"
-import { getTableCounts, checkRequiredFunctions } from "@/lib/database-check"
-import { Database, CheckCircle, XCircle, AlertCircle, RefreshCw } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { checkDatabaseConnection } from "@/lib/database-check"
+import { Database, CheckCircle, XCircle, RefreshCw, Table, ActivityIcon as Function } from "lucide-react"
 
-export function DatabaseComponent() {
-  const [status, setStatus] = useState<DatabaseStatus | null>(null)
-  const [tableCounts, setTableCounts] = useState<{ [key: string]: number }>({})
-  const [functions, setFunctions] = useState<{ [key: string]: boolean }>({})
+export function DatabaseStatusComponent() {
+  const [status, setStatus] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
   const checkStatus = async () => {
-    setLoading(true)
+    setRefreshing(true)
     try {
-      const [dbStatus, counts, funcs] = await Promise.all([
-        checkDatabaseStatus(),
-        getTableCounts(),
-        checkRequiredFunctions(),
-      ])
-
-      setStatus(dbStatus)
-      setTableCounts(counts)
-      setFunctions(funcs)
+      const result = await checkDatabaseConnection()
+      setStatus(result)
     } catch (error) {
-      console.error("Error checking database status:", error)
+      console.error("Failed to check database status:", error)
       setStatus({
-        isConnected: false,
-        tablesExist: false,
-        functionsExist: false,
-        error: "Failed to check database status",
+        connected: false,
+        tables: { business_cards: 0, news_articles: 0, categories: 0, tags: 0 },
+        functions: [],
+        error: "Failed to connect to database",
       })
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -44,32 +36,19 @@ export function DatabaseComponent() {
     checkStatus()
   }, [])
 
-  const getStatusIcon = (isOk: boolean) => {
-    return isOk ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-red-500" />
-  }
-
-  const getStatusBadge = (isOk: boolean, label: string) => {
-    return (
-      <Badge variant={isOk ? "default" : "destructive"} className={isOk ? "bg-green-500" : ""}>
-        {getStatusIcon(isOk)}
-        <span className="ml-1">{label}</span>
-      </Badge>
-    )
-  }
-
   if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
-            데이터베이스 상태 확인 중...
+            데이터베이스 상태
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
         </CardContent>
       </Card>
     )
@@ -83,94 +62,98 @@ export function DatabaseComponent() {
             <Database className="h-5 w-5" />
             데이터베이스 상태
           </CardTitle>
-          <Button size="sm" variant="outline" onClick={checkStatus} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            새로고침
+          <Button variant="outline" size="sm" onClick={checkStatus} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* Connection Status */}
-        <div>
-          <h3 className="font-semibold mb-3">연결 상태</h3>
-          <div className="flex flex-wrap gap-2">
-            {getStatusBadge(status?.isConnected || false, "데이터베이스 연결")}
-            {getStatusBadge(status?.tablesExist || false, "테이블 존재")}
-            {getStatusBadge(status?.functionsExist || false, "함수 존재")}
-          </div>
-          {status?.error && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-              <div className="flex items-center gap-2 text-red-700">
-                <AlertCircle className="h-4 w-4" />
-                <span className="font-medium">오류:</span>
-              </div>
-              <p className="text-red-600 text-sm mt-1">{status.error}</p>
-            </div>
+        <div className="flex items-center gap-2">
+          {status?.connected ? (
+            <CheckCircle className="h-5 w-5 text-green-500" />
+          ) : (
+            <XCircle className="h-5 w-5 text-red-500" />
+          )}
+          <span className="font-medium">연결 상태: {status?.connected ? "연결됨" : "연결 실패"}</span>
+          {status?.connected ? (
+            <Badge variant="default" className="bg-green-100 text-green-800">
+              정상
+            </Badge>
+          ) : (
+            <Badge variant="destructive">오류</Badge>
           )}
         </div>
 
-        <Separator />
+        {/* Error Message */}
+        {status?.error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-sm text-red-700">
+              <strong>오류:</strong> {status.error}
+            </p>
+          </div>
+        )}
 
-        {/* Table Information */}
-        <div>
-          <h3 className="font-semibold mb-3">테이블 정보</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">비즈니스 카드:</span>
-                <Badge variant="outline">{tableCounts.business_cards || 0}</Badge>
+        {/* Tables Information */}
+        {status?.connected && (
+          <div className="space-y-3">
+            <h4 className="font-medium flex items-center gap-2">
+              <Table className="h-4 w-4" />
+              테이블 정보
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-sm font-medium">Business Cards</div>
+                <div className="text-2xl font-bold text-blue-600">{status.tables.business_cards}</div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">뉴스 기사:</span>
-                <Badge variant="outline">{tableCounts.news_articles || 0}</Badge>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-sm font-medium">News Articles</div>
+                <div className="text-2xl font-bold text-green-600">{status.tables.news_articles}</div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">카테고리:</span>
-                <Badge variant="outline">{tableCounts.categories || 0}</Badge>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-sm font-medium">Categories</div>
+                <div className="text-2xl font-bold text-purple-600">{status.tables.categories}</div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">태그:</span>
-                <Badge variant="outline">{tableCounts.tags || 0}</Badge>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-sm font-medium">Tags</div>
+                <div className="text-2xl font-bold text-orange-600">{status.tables.tags}</div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <Separator />
-
-        {/* Functions Status */}
-        <div>
-          <h3 className="font-semibold mb-3">데이터베이스 함수</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">increment_view_count:</span>
-              {getStatusIcon(functions.increment_view_count || false)}
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm">increment_exposure_count:</span>
-              {getStatusIcon(functions.increment_exposure_count || false)}
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm">increment_news_view_count:</span>
-              {getStatusIcon(functions.increment_news_view_count || false)}
+        {/* Functions Information */}
+        {status?.connected && status.functions.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="font-medium flex items-center gap-2">
+              <Function className="h-4 w-4" />
+              데이터베이스 함수
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {status.functions.map((func, index) => (
+                <Badge key={index} variant="outline" className="text-xs">
+                  {func}
+                </Badge>
+              ))}
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Environment Variables */}
-        <Separator />
-        <div>
-          <h3 className="font-semibold mb-3">환경 변수</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">NEXT_PUBLIC_SUPABASE_URL:</span>
-              {getStatusIcon(!!process.env.NEXT_PUBLIC_SUPABASE_URL)}
+        {/* Environment Info */}
+        <div className="space-y-2 pt-3 border-t">
+          <h4 className="font-medium text-sm">환경 변수</h4>
+          <div className="space-y-1 text-xs">
+            <div className="flex justify-between">
+              <span>SUPABASE_URL:</span>
+              <Badge variant={process.env.NEXT_PUBLIC_SUPABASE_URL ? "default" : "destructive"}>
+                {process.env.NEXT_PUBLIC_SUPABASE_URL ? "설정됨" : "미설정"}
+              </Badge>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm">NEXT_PUBLIC_SUPABASE_ANON_KEY:</span>
-              {getStatusIcon(!!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)}
+            <div className="flex justify-between">
+              <span>SUPABASE_ANON_KEY:</span>
+              <Badge variant={process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "default" : "destructive"}>
+                {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "설정됨" : "미설정"}
+              </Badge>
             </div>
           </div>
         </div>

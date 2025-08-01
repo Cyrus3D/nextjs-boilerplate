@@ -3,21 +3,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Phone, MapPin, Globe, Facebook, Instagram, Youtube, MessageCircle, Eye, Star, TrendingUp } from "lucide-react"
+import type { BusinessCard } from "@/lib/supabase"
 import { formatPhoneNumber, detectUrlType, truncateText } from "@/lib/utils"
 import { incrementViewCount, incrementExposureCount } from "@/lib/api"
-import type { BusinessCardType } from "@/lib/supabase"
-import { Phone, MapPin, Globe, Facebook, Instagram, Youtube, MessageCircle, Eye, Star, TrendingUp } from "lucide-react"
 
 interface BusinessCardProps {
-  card: BusinessCardType
-  onClick: (card: BusinessCardType) => void
+  card: BusinessCard
+  onDetailClick?: (card: BusinessCard) => void
 }
 
-export function BusinessCardComponent({ card, onClick }: BusinessCardProps) {
-  const handleClick = () => {
-    incrementViewCount(card.id)
-    incrementExposureCount(card.id)
-    onClick(card)
+export default function BusinessCardComponent({ card, onDetailClick }: BusinessCardProps) {
+  const handleCardClick = async () => {
+    try {
+      await incrementViewCount(card.id)
+      await incrementExposureCount(card.id)
+      onDetailClick?.(card)
+    } catch (error) {
+      console.error("Failed to increment counters:", error)
+      onDetailClick?.(card)
+    }
   }
 
   const getSocialIcon = (url: string) => {
@@ -36,12 +41,25 @@ export function BusinessCardComponent({ card, onClick }: BusinessCardProps) {
     }
   }
 
+  const socialLinks = [
+    { url: card.website, type: "website" },
+    { url: card.facebook, type: "facebook" },
+    { url: card.instagram, type: "instagram" },
+    { url: card.youtube, type: "youtube" },
+    { url: card.line, type: "line" },
+    { url: card.kakao, type: "kakao" },
+    { url: card.whatsapp, type: "whatsapp" },
+    { url: card.telegram, type: "telegram" },
+    { url: card.twitter, type: "twitter" },
+    { url: card.tiktok, type: "tiktok" },
+  ].filter((link) => link.url)
+
   return (
     <Card
       className={`overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer ${
         card.is_premium ? "ring-2 ring-yellow-400 bg-gradient-to-br from-yellow-50 to-white" : ""
       } ${card.is_promoted ? "ring-2 ring-blue-400 bg-gradient-to-br from-blue-50 to-white" : ""}`}
-      onClick={handleClick}
+      onClick={handleCardClick}
     >
       <div className="relative">
         {card.image_url && (
@@ -101,42 +119,26 @@ export function BusinessCardComponent({ card, onClick }: BusinessCardProps) {
         </div>
 
         {/* Social Media Links */}
-        {(card.website || card.facebook || card.instagram || card.youtube || card.line) && (
+        {socialLinks.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {card.website && (
-              <Button size="sm" variant="outline" className="h-8 px-2 bg-transparent" asChild>
-                <a href={card.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                  {getSocialIcon(card.website)}
-                </a>
+            {socialLinks.slice(0, 4).map((link, index) => (
+              <Button
+                key={index}
+                size="sm"
+                variant="outline"
+                className="h-8 px-2 bg-transparent"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  window.open(link.url, "_blank", "noopener,noreferrer")
+                }}
+              >
+                {getSocialIcon(link.url!)}
               </Button>
-            )}
-            {card.facebook && (
-              <Button size="sm" variant="outline" className="h-8 px-2 bg-transparent" asChild>
-                <a href={card.facebook} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                  <Facebook className="h-4 w-4" />
-                </a>
-              </Button>
-            )}
-            {card.instagram && (
-              <Button size="sm" variant="outline" className="h-8 px-2 bg-transparent" asChild>
-                <a href={card.instagram} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                  <Instagram className="h-4 w-4" />
-                </a>
-              </Button>
-            )}
-            {card.youtube && (
-              <Button size="sm" variant="outline" className="h-8 px-2 bg-transparent" asChild>
-                <a href={card.youtube} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                  <Youtube className="h-4 w-4" />
-                </a>
-              </Button>
-            )}
-            {card.line && (
-              <Button size="sm" variant="outline" className="h-8 px-2 bg-transparent" asChild>
-                <a href={card.line} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                  <MessageCircle className="h-4 w-4" />
-                </a>
-              </Button>
+            ))}
+            {socialLinks.length > 4 && (
+              <Badge variant="outline" className="text-xs">
+                +{socialLinks.length - 4}
+              </Badge>
             )}
           </div>
         )}
@@ -146,7 +148,7 @@ export function BusinessCardComponent({ card, onClick }: BusinessCardProps) {
           <div className="flex flex-wrap gap-1">
             {card.tags.slice(0, 3).map((tag, index) => (
               <Badge key={index} variant="outline" className="text-xs">
-                {tag}
+                #{tag}
               </Badge>
             ))}
             {card.tags.length > 3 && (
@@ -164,7 +166,7 @@ export function BusinessCardComponent({ card, onClick }: BusinessCardProps) {
             className="w-full bg-transparent"
             onClick={(e) => {
               e.stopPropagation()
-              handleClick()
+              handleCardClick()
             }}
           >
             자세히 보기

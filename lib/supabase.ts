@@ -1,6 +1,11 @@
 import { createClient } from "@supabase/supabase-js"
 
-// Types
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co"
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key"
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// Database Types
 export interface BusinessCard {
   id: string
   title: string
@@ -12,19 +17,19 @@ export interface BusinessCard {
   facebook?: string
   instagram?: string
   youtube?: string
+  twitter?: string
   tiktok?: string
   line?: string
   kakao?: string
+  whatsapp?: string
+  telegram?: string
   image_url?: string
-  tags: string[]
+  tags?: string[]
   is_active: boolean
   is_premium: boolean
   is_promoted: boolean
-  premium_expires_at?: string
   view_count: number
   exposure_count: number
-  last_exposed_at?: string
-  exposure_weight?: number
   created_at: string
   updated_at: string
 }
@@ -38,15 +43,9 @@ export interface NewsArticle {
   source_url?: string
   image_url?: string
   author?: string
-  tags: string[]
   is_published: boolean
   is_breaking: boolean
   view_count: number
-  read_time?: number
-  language?: string
-  translated_title?: string
-  translated_content?: string
-  translated_summary?: string
   published_at: string
   created_at: string
   updated_at: string
@@ -56,8 +55,8 @@ export interface Category {
   id: string
   name: string
   description?: string
-  icon?: string
   color?: string
+  icon?: string
   is_active: boolean
   sort_order: number
   created_at: string
@@ -68,99 +67,42 @@ export interface Tag {
   name: string
   description?: string
   color?: string
-  is_active: boolean
   usage_count: number
+  is_active: boolean
   created_at: string
 }
 
 export interface DatabaseStatus {
-  isConnected: boolean
-  tablesExist: boolean
-  functionsExist: boolean
-  error?: string
-  tableInfo?: {
+  connected: boolean
+  tables: {
     business_cards: number
     news_articles: number
     categories: number
     tags: number
   }
+  functions: string[]
+  error?: string
 }
 
-// Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
-
-// Safe operation wrapper
-export async function safeSupabaseOperation<T>(operation: () => Promise<{ data: T; error: any }>): Promise<T | null> {
-  if (!supabase) {
-    console.warn("Supabase not configured, returning null")
-    return null
-  }
-
+// Safe Supabase operation wrapper
+export async function safeSupabaseOperation<T>(operation: () => Promise<{ data: T | null; error: any }>): Promise<T> {
   try {
-    const result = await operation()
-    if (result.error) {
-      console.error("Supabase operation failed:", result.error)
-      return null
+    const { data, error } = await operation()
+
+    if (error) {
+      console.error("Supabase operation failed:", error.message)
+      throw new Error(`Supabase operation failed: ${error.message}`)
     }
-    return result.data
+
+    return data as T
   } catch (error) {
     console.error("Supabase operation error:", error)
-    return null
+    throw error
   }
 }
 
-// Database status check
-export async function checkDatabaseStatus(): Promise<DatabaseStatus> {
-  if (!supabase) {
-    return {
-      isConnected: false,
-      tablesExist: false,
-      functionsExist: false,
-      error: "Supabase not configured",
-    }
-  }
-
-  try {
-    // Test connection with a simple query
-    const { data: connectionTest, error: connectionError } = await supabase.from("business_cards").select("count")
-
-    if (connectionError) {
-      return {
-        isConnected: false,
-        tablesExist: false,
-        functionsExist: false,
-        error: connectionError.message,
-      }
-    }
-
-    // Check table counts
-    const [businessCardsResult, newsResult, categoriesResult, tagsResult] = await Promise.all([
-      supabase.from("business_cards").select("*", { count: "exact", head: true }),
-      supabase.from("news_articles").select("*", { count: "exact", head: true }),
-      supabase.from("categories").select("*", { count: "exact", head: true }),
-      supabase.from("tags").select("*", { count: "exact", head: true }),
-    ])
-
-    return {
-      isConnected: true,
-      tablesExist: true,
-      functionsExist: true,
-      tableInfo: {
-        business_cards: businessCardsResult.count || 0,
-        news_articles: newsResult.count || 0,
-        categories: categoriesResult.count || 0,
-        tags: tagsResult.count || 0,
-      },
-    }
-  } catch (error) {
-    return {
-      isConnected: false,
-      tablesExist: false,
-      functionsExist: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    }
-  }
-}
+// Type aliases for compatibility
+export type BusinessCardType = BusinessCard
+export type NewsArticleType = NewsArticle
+export type CategoryType = Category
+export type TagType = Tag

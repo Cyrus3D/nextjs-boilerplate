@@ -1,105 +1,111 @@
+"use client"
+
 import { DatabaseStatus } from "@/components/database-status"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Database, Info, AlertTriangle } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Database, Server, Settings } from "lucide-react"
 
 export default function DatabaseCheckPage() {
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="space-y-6">
+    <div className="container mx-auto py-8 px-4">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold flex items-center justify-center gap-2">
             <Database className="h-8 w-8" />
             데이터베이스 상태 확인
           </h1>
-          <p className="text-gray-600">Supabase 데이터베이스 연결 상태와 테이블 정보를 확인합니다.</p>
+          <p className="text-gray-600">시스템의 데이터베이스 연결 상태와 테이블 정보를 확인합니다.</p>
         </div>
 
-        {/* Database Status Component */}
+        {/* Database Status */}
         <DatabaseStatus />
 
-        {/* Information Cards */}
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Setup Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Info className="h-5 w-5 text-blue-500" />
-                설정 안내
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-semibold mb-2">환경 변수 설정</h4>
-                <div className="space-y-1 text-sm">
-                  <p>
-                    <code className="bg-gray-100 px-2 py-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code>
-                  </p>
-                  <p>
-                    <code className="bg-gray-100 px-2 py-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
-                  </p>
-                </div>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">데이터베이스 스크립트 실행</h4>
-                <p className="text-sm text-gray-600">
-                  <code>/scripts</code> 폴더의 SQL 파일들을 순서대로 실행하여 테이블과 함수를 생성하세요.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Troubleshooting */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                문제 해결
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="font-semibold mb-2">연결 실패 시</h4>
-                <ul className="text-sm space-y-1 text-gray-600">
-                  <li>• 환경 변수가 올바르게 설정되었는지 확인</li>
-                  <li>• Supabase 프로젝트가 활성화되어 있는지 확인</li>
-                  <li>• API 키가 유효한지 확인</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">테이블 없음</h4>
-                <ul className="text-sm space-y-1 text-gray-600">
-                  <li>• SQL 스크립트를 실행하여 테이블 생성</li>
-                  <li>• RLS(Row Level Security) 정책 확인</li>
-                  <li>• 권한 설정 확인</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Current Status Summary */}
+        {/* System Information */}
         <Card>
           <CardHeader>
-            <CardTitle>현재 상태 요약</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5" />
+              시스템 정보
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">실시간</div>
-                <div className="text-sm text-gray-600">상태 모니터링</div>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h4 className="font-medium">런타임 환경</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Node.js 버전:</span>
+                    <Badge variant="outline">{process.version}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>플랫폼:</span>
+                    <Badge variant="outline">{process.platform}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>아키텍처:</span>
+                    <Badge variant="outline">{process.arch}</Badge>
+                  </div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">자동</div>
-                <div className="text-sm text-gray-600">Fallback 데이터</div>
+              <div className="space-y-2">
+                <h4 className="font-medium">애플리케이션</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span>Next.js:</span>
+                    <Badge variant="outline">14.x</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>React:</span>
+                    <Badge variant="outline">18.x</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>TypeScript:</span>
+                    <Badge variant="outline">5.x</Badge>
+                  </div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">완전</div>
-                <div className="text-sm text-gray-600">타입 안전성</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Configuration Guide */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              설정 가이드
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 mb-2">환경 변수 설정</h4>
+                <p className="text-sm text-blue-700 mb-2">다음 환경 변수들을 설정해야 합니다:</p>
+                <div className="bg-blue-100 rounded p-2 font-mono text-xs">
+                  <div>NEXT_PUBLIC_SUPABASE_URL=your_supabase_url</div>
+                  <div>NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">안전</div>
-                <div className="text-sm text-gray-600">오류 처리</div>
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-medium text-green-900 mb-2">데이터베이스 설정</h4>
+                <p className="text-sm text-green-700 mb-2">/scripts 폴더의 SQL 파일들을 순서대로 실행하세요:</p>
+                <ul className="text-xs text-green-600 space-y-1">
+                  <li>• 00-create-tables.sql</li>
+                  <li>• 01-insert-categories.sql</li>
+                  <li>• 02-insert-tags.sql</li>
+                  <li>• 03-add-premium-fields.sql</li>
+                  <li>• 04-create-functions.sql</li>
+                </ul>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h4 className="font-medium text-yellow-900 mb-2">샘플 데이터</h4>
+                <p className="text-sm text-yellow-700">
+                  데이터베이스 연결이 실패하면 자동으로 샘플 데이터가 표시됩니다. 실제 데이터를 보려면 데이터베이스를
+                  올바르게 설정하세요.
+                </p>
               </div>
             </div>
           </CardContent>
@@ -107,9 +113,4 @@ export default function DatabaseCheckPage() {
       </div>
     </div>
   )
-}
-
-export const metadata = {
-  title: "데이터베이스 상태 확인 - 태국 한인 정보",
-  description: "Supabase 데이터베이스 연결 상태와 테이블 정보를 실시간으로 확인합니다.",
 }

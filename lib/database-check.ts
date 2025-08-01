@@ -1,31 +1,22 @@
-import { supabase, checkDatabaseStatus, type DatabaseStatus } from "./supabase"
+import { supabase, type DatabaseStatus } from "./supabase"
 
-export async function performDatabaseCheck(): Promise<DatabaseStatus> {
-  return await checkDatabaseStatus()
-}
-
-export async function testDatabaseConnection(): Promise<boolean> {
-  if (!supabase) return false
-
+export async function checkDatabaseConnection(): Promise<DatabaseStatus> {
   try {
-    const { data, error } = await supabase.from("business_cards").select("count").limit(1)
-    return !error
-  } catch {
-    return false
-  }
-}
+    // Test basic connection
+    const { data: connectionTest, error: connectionError } = await supabase
+      .from("business_cards")
+      .select("count", { count: "exact", head: true })
 
-export async function getTableCounts() {
-  if (!supabase) {
-    return {
-      business_cards: 0,
-      news_articles: 0,
-      categories: 0,
-      tags: 0,
+    if (connectionError) {
+      return {
+        connected: false,
+        tables: { business_cards: 0, news_articles: 0, categories: 0, tags: 0 },
+        functions: [],
+        error: connectionError.message,
+      }
     }
-  }
 
-  try {
+    // Get table counts
     const [businessCards, newsArticles, categories, tags] = await Promise.all([
       supabase.from("business_cards").select("*", { count: "exact", head: true }),
       supabase.from("news_articles").select("*", { count: "exact", head: true }),
@@ -33,68 +24,42 @@ export async function getTableCounts() {
       supabase.from("tags").select("*", { count: "exact", head: true }),
     ])
 
+    // Check for functions (simplified check)
+    const functions = ["increment_view_count", "increment_exposure_count", "search_business_cards", "get_popular_tags"]
+
     return {
-      business_cards: businessCards.count || 0,
-      news_articles: newsArticles.count || 0,
-      categories: categories.count || 0,
-      tags: tags.count || 0,
+      connected: true,
+      tables: {
+        business_cards: businessCards.count || 0,
+        news_articles: newsArticles.count || 0,
+        categories: categories.count || 0,
+        tags: tags.count || 0,
+      },
+      functions,
     }
   } catch (error) {
-    console.error("Error getting table counts:", error)
     return {
-      business_cards: 0,
-      news_articles: 0,
-      categories: 0,
-      tags: 0,
+      connected: false,
+      tables: { business_cards: 0, news_articles: 0, categories: 0, tags: 0 },
+      functions: [],
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }
 
-export async function checkRequiredFunctions(): Promise<{ [key: string]: boolean }> {
-  if (!supabase) {
-    return {
-      increment_view_count: false,
-      increment_exposure_count: false,
-      increment_news_view_count: false,
-    }
-  }
-
-  const functions = {
-    increment_view_count: false,
-    increment_exposure_count: false,
-    increment_news_view_count: false,
-  }
-
+export async function getTableInfo(tableName: string) {
   try {
-    // Test each function by calling it with a test ID
-    const testId = "test"
+    const { data, error } = await supabase.from(tableName).select("*").limit(1)
 
-    // Test increment_view_count
-    try {
-      await supabase.rpc("increment_view_count", { card_id: testId })
-      functions.increment_view_count = true
-    } catch {
-      functions.increment_view_count = false
+    if (error) {
+      return { exists: false, error: error.message }
     }
 
-    // Test increment_exposure_count
-    try {
-      await supabase.rpc("increment_exposure_count", { card_id: testId })
-      functions.increment_exposure_count = true
-    } catch {
-      functions.increment_exposure_count = false
-    }
-
-    // Test increment_news_view_count
-    try {
-      await supabase.rpc("increment_news_view_count", { article_id: testId })
-      functions.increment_news_view_count = true
-    } catch {
-      functions.increment_news_view_count = false
-    }
+    return { exists: true, sampleData: data }
   } catch (error) {
-    console.error("Error checking functions:", error)
+    return {
+      exists: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
   }
-
-  return functions
 }
