@@ -168,10 +168,10 @@ export async function incrementViewCount(id: string): Promise<void> {
   }, undefined)
 }
 
-export async function searchBusinessCards(query: string): Promise<BusinessCard[]> {
+export async function searchBusinessCards(query: string, category?: string): Promise<BusinessCard[]> {
   return safeSupabaseOperation(
     async () => {
-      const { data, error } = await supabase!
+      let queryBuilder = supabase!
         .from("business_cards")
         .select(`
         *,
@@ -181,9 +181,17 @@ export async function searchBusinessCards(query: string): Promise<BusinessCard[]
           )
         )
       `)
-        .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
         .eq("is_published", true)
-        .order("created_at", { ascending: false })
+
+      if (query) {
+        queryBuilder = queryBuilder.or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+      }
+
+      if (category && category !== "all") {
+        queryBuilder = queryBuilder.eq("category", category)
+      }
+
+      const { data, error } = await queryBuilder.order("created_at", { ascending: false })
 
       if (error) throw error
 
@@ -192,11 +200,16 @@ export async function searchBusinessCards(query: string): Promise<BusinessCard[]
         tags: card.business_card_tags?.map((bt: any) => bt.tags.name) || [],
       }))
     },
-    sampleBusinessCards.filter(
-      (card) =>
+    sampleBusinessCards.filter((card) => {
+      const matchesQuery =
+        !query ||
         card.title.toLowerCase().includes(query.toLowerCase()) ||
-        card.description.toLowerCase().includes(query.toLowerCase()),
-    ),
+        card.description.toLowerCase().includes(query.toLowerCase())
+
+      const matchesCategory = !category || category === "all" || card.category === category
+
+      return matchesQuery && matchesCategory
+    }),
   )
 }
 
@@ -251,25 +264,70 @@ export async function getBreakingNews(): Promise<NewsArticle[]> {
   )
 }
 
-export async function searchNews(query: string): Promise<NewsArticle[]> {
+export async function searchNewsArticles(query: string, category?: string): Promise<NewsArticle[]> {
   return safeSupabaseOperation(
     async () => {
-      const { data, error } = await supabase!
-        .from("news_articles")
-        .select("*")
-        .or(`title.ilike.%${query}%,content.ilike.%${query}%,summary.ilike.%${query}%`)
-        .eq("is_published", true)
-        .order("published_at", { ascending: false })
+      let queryBuilder = supabase!.from("news_articles").select("*").eq("is_published", true)
+
+      if (query) {
+        queryBuilder = queryBuilder.or(`title.ilike.%${query}%,content.ilike.%${query}%,summary.ilike.%${query}%`)
+      }
+
+      if (category && category !== "all") {
+        queryBuilder = queryBuilder.eq("category", category)
+      }
+
+      const { data, error } = await queryBuilder.order("published_at", { ascending: false })
 
       if (error) throw error
       return data
     },
-    sampleNewsArticles.filter(
-      (article) =>
+    sampleNewsArticles.filter((article) => {
+      const matchesQuery =
+        !query ||
         article.title.toLowerCase().includes(query.toLowerCase()) ||
         article.content.toLowerCase().includes(query.toLowerCase()) ||
-        article.summary.toLowerCase().includes(query.toLowerCase()),
-    ),
+        article.summary.toLowerCase().includes(query.toLowerCase())
+
+      const matchesCategory = !category || category === "all" || article.category === category
+
+      return matchesQuery && matchesCategory
+    }),
+  )
+}
+
+// Statistics API
+export async function getStatistics() {
+  return safeSupabaseOperation(
+    async () => {
+      const [newsCount, businessCount, breakingCount, premiumCount] = await Promise.all([
+        supabase!.from("news_articles").select("id", { count: "exact" }).eq("is_published", true),
+        supabase!.from("business_cards").select("id", { count: "exact" }).eq("is_published", true),
+        supabase!
+          .from("news_articles")
+          .select("id", { count: "exact" })
+          .eq("is_published", true)
+          .eq("is_breaking", true),
+        supabase!
+          .from("business_cards")
+          .select("id", { count: "exact" })
+          .eq("is_published", true)
+          .eq("is_premium", true),
+      ])
+
+      return {
+        newsCount: newsCount.count || 0,
+        businessCount: businessCount.count || 0,
+        breakingCount: breakingCount.count || 0,
+        premiumCount: premiumCount.count || 0,
+      }
+    },
+    {
+      newsCount: sampleNewsArticles.length,
+      businessCount: sampleBusinessCards.length,
+      breakingCount: sampleNewsArticles.filter((article) => article.is_breaking).length,
+      premiumCount: sampleBusinessCards.filter((card) => card.is_premium).length,
+    },
   )
 }
 

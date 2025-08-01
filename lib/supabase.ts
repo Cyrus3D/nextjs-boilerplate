@@ -7,12 +7,13 @@ export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUr
 
 // Helper function to check if Supabase is configured
 export function isSupabaseConfigured(): boolean {
-  return !!(supabaseUrl && supabaseAnonKey)
+  return !!(supabaseUrl && supabaseAnonKey && supabase)
 }
 
 // Safe wrapper for Supabase operations
 export async function safeSupabaseOperation<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
-  if (!supabase) {
+  if (!isSupabaseConfigured()) {
+    console.log("Supabase not configured, using fallback data")
     return fallback
   }
 

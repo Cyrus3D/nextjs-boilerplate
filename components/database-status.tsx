@@ -1,49 +1,40 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { checkDatabaseConnection, testTableQueries, getTableSchemas } from "@/lib/database-check"
-import type { DatabaseStatus, TableTestResults, TableSchema } from "@/lib/database-check"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Separator } from "@/components/ui/separator"
 import {
-  Database,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   RefreshCw,
+  Database,
   Table,
   ActivityIcon as Function,
   Info,
+  AlertTriangle,
 } from "lucide-react"
+import { checkDatabaseStatus, getSchemaInfo, type DatabaseStatus, type SchemaInfo } from "@/lib/database-check"
+import { formatDateTime } from "@/lib/utils"
 
 export function DatabaseComponent() {
   const [status, setStatus] = useState<DatabaseStatus | null>(null)
-  const [tableTests, setTableTests] = useState<TableTestResults | null>(null)
-  const [schemas, setSchemas] = useState<TableSchema | null>(null)
+  const [schema, setSchema] = useState<SchemaInfo[]>([])
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
 
   const checkStatus = async () => {
-    setRefreshing(true)
+    setLoading(true)
     try {
-      const [dbStatus, tableResults, schemaResults] = await Promise.all([
-        checkDatabaseConnection(),
-        testTableQueries(),
-        getTableSchemas(),
-      ])
-
+      const [dbStatus, schemaInfo] = await Promise.all([checkDatabaseStatus(), getSchemaInfo()])
       setStatus(dbStatus)
-      setTableTests(tableResults)
-      setSchemas(schemaResults)
+      setSchema(schemaInfo)
     } catch (error) {
       console.error("Failed to check database status:", error)
     } finally {
       setLoading(false)
-      setRefreshing(false)
     }
   }
 
@@ -53,19 +44,10 @@ export function DatabaseComponent() {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            데이터베이스 상태 확인 중...
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center p-8">
+        <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+        <span>데이터베이스 상태 확인 중...</span>
+      </div>
     )
   }
 
@@ -78,243 +60,186 @@ export function DatabaseComponent() {
     )
   }
 
-  const getStatusIcon = (success: boolean) => {
-    return success ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-red-500" />
-  }
-
-  const getStatusBadge = (success: boolean, label?: string) => {
-    return <Badge variant={success ? "default" : "destructive"}>{success ? label || "정상" : "오류"}</Badge>
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Database className="h-6 w-6" />
-          <h2 className="text-2xl font-bold">데이터베이스 연결 상태</h2>
+        <div>
+          <h1 className="text-3xl font-bold">데이터베이스 상태</h1>
+          <p className="text-muted-foreground">마지막 확인: {formatDateTime(status.lastChecked)}</p>
         </div>
-        <Button onClick={checkStatus} disabled={refreshing} variant="outline" size="sm">
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+        <Button onClick={checkStatus} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           새로고침
         </Button>
       </div>
 
-      {/* Overall Status */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">설정 상태</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              {getStatusIcon(status.isConfigured)}
-              {getStatusBadge(status.isConfigured, status.isConfigured ? "설정됨" : "미설정")}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Connection Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Database className="h-5 w-5 mr-2" />
+            연결 상태
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <span>환경변수 설정:</span>
+            {status.isConfigured ? (
+              <Badge variant="default" className="bg-green-500">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                설정됨
+              </Badge>
+            ) : (
+              <Badge variant="destructive">
+                <XCircle className="h-3 w-3 mr-1" />
+                미설정
+              </Badge>
+            )}
+          </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">연결 상태</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              {getStatusIcon(status.isConnected)}
-              {getStatusBadge(status.isConnected, status.isConnected ? "연결됨" : "연결 실패")}
-            </div>
-          </CardContent>
-        </Card>
+          <div className="flex items-center space-x-2">
+            <span>데이터베이스 연결:</span>
+            {status.isConnected ? (
+              <Badge variant="default" className="bg-green-500">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                연결됨
+              </Badge>
+            ) : (
+              <Badge variant="destructive">
+                <XCircle className="h-3 w-3 mr-1" />
+                연결 실패
+              </Badge>
+            )}
+          </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">마지막 확인</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm text-gray-600">{new Date(status.lastChecked).toLocaleString("ko-KR")}</div>
-          </CardContent>
-        </Card>
-      </div>
+          {status.error && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{status.error}</AlertDescription>
+            </Alert>
+          )}
 
-      {/* Detailed Status */}
+          {!status.isConfigured && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>환경변수 설정이 필요합니다:</strong>
+                <br />• NEXT_PUBLIC_SUPABASE_URL
+                <br />• NEXT_PUBLIC_SUPABASE_ANON_KEY
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Detailed Information */}
       <Tabs defaultValue="tables" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="tables" className="flex items-center gap-2">
-            <Table className="h-4 w-4" />
-            테이블 상태
-          </TabsTrigger>
-          <TabsTrigger value="functions" className="flex items-center gap-2">
-            <Function className="h-4 w-4" />
-            함수 상태
-          </TabsTrigger>
-          <TabsTrigger value="schemas" className="flex items-center gap-2">
-            <Info className="h-4 w-4" />
-            스키마 정보
-          </TabsTrigger>
+          <TabsTrigger value="tables">테이블</TabsTrigger>
+          <TabsTrigger value="functions">함수</TabsTrigger>
+          <TabsTrigger value="schema">스키마</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tables" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(status.tables).map(([tableName, tableStatus]) => (
-              <Card key={tableName}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    {getStatusIcon(tableStatus.exists)}
-                    {tableName}
-                  </CardTitle>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Table className="h-5 w-5 mr-2" />
+                테이블 상태
+              </CardTitle>
+              <CardDescription>각 테이블의 존재 여부와 레코드 수를 확인합니다.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {status.tables.map((table) => (
+                  <div key={table.name} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {table.exists ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      )}
+                      <span className="font-medium">{table.name}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {table.exists && <Badge variant="secondary">{table.recordCount}개 레코드</Badge>}
+                      {table.error && <Badge variant="destructive">오류</Badge>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="functions" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Function className="h-5 w-5 mr-2" />
+                함수 상태
+              </CardTitle>
+              <CardDescription>데이터베이스 함수의 존재 여부를 확인합니다.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {status.functions.map((func) => (
+                  <div key={func.name} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {func.exists ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      )}
+                      <span className="font-medium">{func.name}</span>
+                    </div>
+                    {func.error && <Badge variant="destructive">{func.error}</Badge>}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="schema" className="space-y-4">
+          {schema.length > 0 ? (
+            schema.map((table) => (
+              <Card key={table.tableName}>
+                <CardHeader>
+                  <CardTitle>{table.tableName}</CardTitle>
+                  <CardDescription>{table.columns.length}개 컬럼</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">상태:</span>
-                      {getStatusBadge(tableStatus.exists)}
-                    </div>
-                    {tableStatus.exists && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">행 수:</span>
-                        <span className="text-sm font-medium">{tableStatus.rowCount?.toLocaleString() || "0"}</span>
+                    {table.columns.map((column, index) => (
+                      <div key={column.name}>
+                        <div className="flex items-center justify-between py-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium">{column.name}</span>
+                            <Badge variant="outline">{column.type}</Badge>
+                            {!column.nullable && <Badge variant="secondary">NOT NULL</Badge>}
+                          </div>
+                          {column.defaultValue && (
+                            <span className="text-sm text-muted-foreground">기본값: {column.defaultValue}</span>
+                          )}
+                        </div>
+                        {index < table.columns.length - 1 && <Separator />}
                       </div>
-                    )}
-                    {tableStatus.error && <div className="text-xs text-red-600 mt-2">{tableStatus.error}</div>}
+                    ))}
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-
-          {/* Table Query Tests */}
-          {tableTests && (
+            ))
+          ) : (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">쿼리 테스트 결과</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(tableTests.businessCards.success)}
-                      <span className="font-medium">Business Cards</span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {tableTests.businessCards.success
-                        ? `${tableTests.businessCards.count}개 레코드`
-                        : tableTests.businessCards.error}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(tableTests.newsArticles.success)}
-                      <span className="font-medium">News Articles</span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {tableTests.newsArticles.success
-                        ? `${tableTests.newsArticles.count}개 레코드`
-                        : tableTests.newsArticles.error}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(tableTests.categories.success)}
-                      <span className="font-medium">Categories</span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {tableTests.categories.success
-                        ? `${tableTests.categories.count}개 레코드`
-                        : tableTests.categories.error}
-                    </div>
-                  </div>
-                </div>
+              <CardContent className="p-6">
+                <p className="text-center text-muted-foreground">스키마 정보를 가져올 수 없습니다.</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
-
-        <TabsContent value="functions" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(status.functions).map(([functionName, functionStatus]) => (
-              <Card key={functionName}>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    {getStatusIcon(functionStatus.exists)}
-                    {functionName}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">상태:</span>
-                      {getStatusBadge(functionStatus.exists)}
-                    </div>
-                    {functionStatus.error && <div className="text-xs text-red-600 mt-2">{functionStatus.error}</div>}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="schemas" className="space-y-4">
-          {schemas &&
-            Object.entries(schemas).map(([tableName, schema]) => (
-              <Card key={tableName}>
-                <CardHeader>
-                  <CardTitle className="text-lg">{tableName}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {schema.error ? (
-                    <div className="text-red-600 text-sm">{schema.error}</div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left p-2">컬럼명</th>
-                            <th className="text-left p-2">데이터 타입</th>
-                            <th className="text-left p-2">NULL 허용</th>
-                            <th className="text-left p-2">기본값</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {schema.columns.map((column, index) => (
-                            <tr key={index} className="border-b">
-                              <td className="p-2 font-medium">{column.column_name}</td>
-                              <td className="p-2">{column.data_type}</td>
-                              <td className="p-2">{column.is_nullable}</td>
-                              <td className="p-2">{column.column_default || "-"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-        </TabsContent>
       </Tabs>
-
-      {/* Recommendations */}
-      {(!status.isConfigured || !status.isConnected) && (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            <div className="space-y-2">
-              <p className="font-medium">데이터베이스 연결 문제가 발견되었습니다:</p>
-              <ul className="list-disc list-inside space-y-1 text-sm">
-                {!status.isConfigured && (
-                  <li>환경 변수 NEXT_PUBLIC_SUPABASE_URL과 NEXT_PUBLIC_SUPABASE_ANON_KEY를 확인하세요.</li>
-                )}
-                {status.isConfigured && !status.isConnected && (
-                  <li>Supabase 프로젝트가 활성화되어 있고 네트워크 연결이 정상인지 확인하세요.</li>
-                )}
-                <li>scripts/ 폴더의 SQL 파일들을 실행하여 필요한 테이블과 함수를 생성하세요.</li>
-              </ul>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
     </div>
   )
 }
