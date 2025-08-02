@@ -1,488 +1,783 @@
 # 태국 정보카드 플랫폼 디자인 가이드라인
 
-## 📋 목차
+## 목차
 1. [디자인 철학](#디자인-철학)
-2. [컬러 시스템](#컬러-시스템)
+2. [색상 시스템](#색상-시스템)
 3. [타이포그래피](#타이포그래피)
 4. [컴포넌트 디자인](#컴포넌트-디자인)
-5. [레이아웃 원칙](#레이아웃-원칙)
+5. [레이아웃 시스템](#레이아웃-시스템)
 6. [반응형 디자인](#반응형-디자인)
 7. [UI/UX 패턴](#uiux-패턴)
-8. [접근성](#접근성)
+8. [접근성 가이드라인](#접근성-가이드라인)
 9. [다국어 지원](#다국어-지원)
+10. [성능 최적화](#성능-최적화)
 
----
+## 디자인 철학
 
-## 🎨 디자인 철학
+### 핵심 원칙
+1. **명확성** - 정보 전달이 명확하고 직관적이어야 함
+2. **신뢰성** - 안정적이고 일관된 사용자 경험 제공
+3. **효율성** - 빠른 정보 접근과 탐색이 가능해야 함
+4. **현지화** - 태국 거주 한국인의 니즈에 최적화
 
-### 핵심 가치
-- **명확성**: 정보를 명확하고 직관적으로 전달
-- **신뢰성**: 비즈니스 정보의 신뢰성을 시각적으로 표현
-- **효율성**: 사용자가 빠르게 원하는 정보를 찾을 수 있도록 지원
-- **현지화**: 태국 현지 문화와 언어에 최적화
+### 디자인 가치
+- **정보 우선**: 콘텐츠가 디자인보다 우선
+- **일관성**: 모든 페이지와 컴포넌트에서 통일된 경험
+- **접근성**: 모든 사용자가 쉽게 이용할 수 있는 인터페이스
+- **성능**: 빠른 로딩과 부드러운 인터랙션
 
-### 디자인 원칙
-1. **정보 우선**: 콘텐츠가 가장 중요하며, 디자인은 이를 돋보이게 함
-2. **일관성**: 모든 페이지와 컴포넌트에서 일관된 디자인 언어 사용
-3. **접근성**: 모든 사용자가 쉽게 사용할 수 있는 인터페이스
-4. **성능**: 빠른 로딩과 부드러운 인터랙션
+## 색상 시스템
 
----
+### 기본 색상 팔레트
 
-## 🎨 컬러 시스템
-
-### 주요 컬러 팔레트
-
-#### Primary Colors (파란색 계열)
+#### Primary Colors (주요 색상)
 \`\`\`css
---primary: 220 90% 56%;           /* #3B82F6 - 메인 브랜드 컬러 */
---primary-foreground: 0 0% 100%;  /* #FFFFFF - 주요 텍스트 */
+/* 기본 파란색 */
+--primary-50: #eff6ff;
+--primary-100: #dbeafe;
+--primary-200: #bfdbfe;
+--primary-300: #93c5fd;
+--primary-400: #60a5fa;
+--primary-500: #3b82f6;  /* 메인 컬러 */
+--primary-600: #2563eb;
+--primary-700: #1d4ed8;
+--primary-800: #1e40af;
+--primary-900: #1e3a8a;
 \`\`\`
 
-#### Secondary Colors
+#### Secondary Colors (보조 색상)
 \`\`\`css
---secondary: 210 40% 96%;         /* #F8FAFC - 보조 배경 */
---secondary-foreground: 222.2 47.4% 11.2%; /* #1E293B - 보조 텍스트 */
+/* 회색 계열 */
+--gray-50: #f9fafb;
+--gray-100: #f3f4f6;
+--gray-200: #e5e7eb;
+--gray-300: #d1d5db;
+--gray-400: #9ca3af;
+--gray-500: #6b7280;
+--gray-600: #4b5563;
+--gray-700: #374151;
+--gray-800: #1f2937;
+--gray-900: #111827;
 \`\`\`
 
-#### Status Colors
+#### Status Colors (상태 색상)
 \`\`\`css
---destructive: 0 84.2% 60.2%;     /* #EF4444 - 오류/삭제 */
---success: 142 76% 36%;           /* #10B981 - 성공 */
---warning: 38 92% 50%;            /* #F59E0B - 경고 */
---info: 199 89% 48%;              /* #0EA5E9 - 정보 */
+/* 성공 */
+--success-50: #f0fdf4;
+--success-500: #22c55e;
+--success-600: #16a34a;
+
+/* 경고 */
+--warning-50: #fffbeb;
+--warning-500: #f59e0b;
+--warning-600: #d97706;
+
+/* 오류 */
+--error-50: #fef2f2;
+--error-500: #ef4444;
+--error-600: #dc2626;
+
+/* 정보 */
+--info-50: #f0f9ff;
+--info-500: #06b6d4;
+--info-600: #0891b2;
 \`\`\`
 
-#### Premium/Promoted Colors
+#### Special Colors (특수 색상)
 \`\`\`css
---premium-gold: 45 93% 58%;       /* #F59E0B - 프리미엄 카드 */
---promoted-blue: 217 91% 60%;     /* #3B82F6 - 추천 카드 */
+/* 프리미엄 골드 */
+--premium-50: #fffbeb;
+--premium-100: #fef3c7;
+--premium-200: #fde68a;
+--premium-300: #fcd34d;
+--premium-400: #fbbf24;
+--premium-500: #f59e0b;  /* 프리미엄 메인 */
+--premium-600: #d97706;
+--premium-700: #b45309;
+--premium-800: #92400e;
+--premium-900: #78350f;
+
+/* 프로모션 블루 */
+--promoted-500: #3b82f6;
+--promoted-600: #2563eb;
 \`\`\`
 
-### 컬러 사용 가이드
+### 색상 사용 규칙
 
-#### 비즈니스 카드
-- **일반 카드**: 흰색 배경 (`--background`)
-- **프리미엄 카드**: 골드 그라데이션 (`from-yellow-50 to-white`, `ring-yellow-400`)
-- **추천 카드**: 블루 그라데이션 (`from-blue-50 to-white`, `ring-blue-400`)
+#### 비즈니스 카드 색상 매핑
+- **일반 카드**: `bg-white border-gray-200`
+- **프리미엄 카드**: `bg-gradient-to-br from-premium-50 to-premium-100 border-premium-300`
+- **프로모션 카드**: `bg-gradient-to-br from-primary-50 to-blue-50 border-primary-300`
 
-#### 뉴스 카드
-- **일반 뉴스**: 흰색 배경
-- **속보**: 빨간색 배지 (`bg-red-500`)
-- **카테고리**: 회색 배지 (`bg-gray-100`)
+#### 뉴스 카테고리 색상
+- **현지 뉴스**: `bg-blue-500 text-white`
+- **교민 업체**: `bg-green-500 text-white`
+- **정책**: `bg-purple-500 text-white`
+- **교통**: `bg-orange-500 text-white`
+- **비자**: `bg-red-500 text-white`
+- **경제**: `bg-indigo-500 text-white`
+- **문화**: `bg-pink-500 text-white`
+- **스포츠**: `bg-teal-500 text-white`
+- **일반**: `bg-gray-500 text-white`
 
----
-
-## 📝 타이포그래피
+## 타이포그래피
 
 ### 폰트 스택
 \`\`\`css
-font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+font-family: 
+  'Pretendard Variable', 
+  'Pretendard', 
+  -apple-system, 
+  BlinkMacSystemFont, 
+  system-ui, 
+  Roboto, 
+  'Helvetica Neue', 
+  'Segoe UI', 
+  'Apple SD Gothic Neo', 
+  'Noto Sans KR', 
+  'Malgun Gothic', 
+  'Apple Color Emoji', 
+  'Segoe UI Emoji', 
+  'Segoe UI Symbol', 
+  sans-serif;
 \`\`\`
 
-### 텍스트 크기 시스템
+### 타이포그래피 스케일
 
-#### 제목 (Headlines)
-- **H1**: `text-3xl` (30px) - 페이지 메인 제목
-- **H2**: `text-2xl` (24px) - 섹션 제목
-- **H3**: `text-xl` (20px) - 서브섹션 제목
-- **H4**: `text-lg` (18px) - 카드 제목
+#### 제목 (Headings)
+\`\`\`css
+/* H1 - 페이지 제목 */
+.text-h1 {
+  font-size: 2.25rem; /* 36px */
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+/* H2 - 섹션 제목 */
+.text-h2 {
+  font-size: 1.875rem; /* 30px */
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+}
+
+/* H3 - 서브 섹션 제목 */
+.text-h3 {
+  font-size: 1.5rem; /* 24px */
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* H4 - 카드 제목 */
+.text-h4 {
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;
+  line-height: 1.4;
+}
+\`\`\`
 
 #### 본문 (Body Text)
-- **Large**: `text-base` (16px) - 주요 본문
-- **Regular**: `text-sm` (14px) - 일반 본문
-- **Small**: `text-xs` (12px) - 보조 정보
+\`\`\`css
+/* Large Body - 주요 설명 */
+.text-body-large {
+  font-size: 1rem; /* 16px */
+  font-weight: 400;
+  line-height: 1.6;
+}
 
-#### 특수 텍스트
-- **Caption**: `text-xs text-gray-500` - 캡션, 메타데이터
-- **Label**: `text-sm font-medium` - 폼 라벨
-- **Button**: `text-sm font-medium` - 버튼 텍스트
+/* Regular Body - 일반 텍스트 */
+.text-body {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 400;
+  line-height: 1.5;
+}
 
-### 한국어/태국어 텍스트 고려사항
-- 한국어: 충분한 행간 (`leading-relaxed`)
-- 태국어: 문자 높이를 고려한 여백 조정
-- 혼합 텍스트: 언어별 폰트 fallback 설정
+/* Small Body - 부가 정보 */
+.text-body-small {
+  font-size: 0.75rem; /* 12px */
+  font-weight: 400;
+  line-height: 1.4;
+}
+\`\`\`
 
----
+#### 라벨 및 버튼 (Labels & Buttons)
+\`\`\`css
+/* Button Text */
+.text-button {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.025em;
+}
 
-## 🧩 컴포넌트 디자인
+/* Label Text */
+.text-label {
+  font-size: 0.75rem; /* 12px */
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+\`\`\`
+
+### 한국어/태국어 최적화
+- 한국어 텍스트는 `leading-relaxed` (1.625) 사용
+- 태국어 텍스트는 추가적인 line-height 고려
+- 긴 단어 처리를 위한 `word-break: keep-all` 적용
+
+## 컴포넌트 디자인
 
 ### 비즈니스 카드 컴포넌트
 
 #### 기본 구조
-\`\`\`
-┌─────────────────────────────────┐
-│ [Premium Badge]    [Image 64px] │
-│ Title (18px, bold)              │
-│ [Category Badge]                │
-│                                 │
-│ Description (14px, 3 lines)     │
-│                                 │
-│ 📞 Phone Number                 │
-│ 📍 Address                      │
-│                                 │
-│ [Social Icons] [+N more]        │
-│ #tag1 #tag2 #tag3 [+N]         │
-│                                 │
-│ 👁 1,234 조회 | 노출 5,678      │
-└─────────────────────────────────┘
+\`\`\`tsx
+<Card className="overflow-hidden transition-all duration-200 hover:shadow-lg">
+  <CardHeader className="pb-3">
+    <CardTitle className="flex items-start justify-between">
+      <span>{title}</span>
+      <Badge variant={getBadgeVariant(type)}>{category}</Badge>
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <p className="text-gray-600 mb-4">{description}</p>
+    <ContactInfo />
+    <SocialLinks />
+  </CardContent>
+</Card>
 \`\`\`
 
 #### 상태별 스타일
-- **기본**: `hover:shadow-lg transition-shadow`
-- **프리미엄**: `ring-2 ring-yellow-400 bg-gradient-to-br from-yellow-50`
-- **추천**: `ring-2 ring-blue-400 bg-gradient-to-br from-blue-50`
-- **로딩**: `opacity-75`
+\`\`\`css
+/* 일반 카드 */
+.card-normal {
+  @apply bg-white border border-gray-200 shadow-sm;
+}
+
+/* 프리미엄 카드 */
+.card-premium {
+  @apply bg-gradient-to-br from-premium-50 to-premium-100 
+         border border-premium-300 shadow-md
+         relative before:absolute before:top-0 before:right-0 
+         before:w-0 before:h-0 before:border-l-[20px] 
+         before:border-b-[20px] before:border-l-transparent 
+         before:border-b-premium-500;
+}
+
+/* 프로모션 카드 */
+.card-promoted {
+  @apply bg-gradient-to-br from-primary-50 to-blue-50 
+         border border-primary-300 shadow-md
+         ring-2 ring-primary-200;
+}
+\`\`\`
 
 ### 뉴스 카드 컴포넌트
 
 #### 기본 구조
-\`\`\`
-┌─────────────────────────────────┐
-│                                 │
-│        Image (400x200)          │
-│ [Breaking] [Category]    [Link] │
-│                                 │
-│ News Title (18px, 2 lines)      │
-│ Summary (14px, 3 lines)         │
-│                                 │
-│ 🕐 2시간 전 | 👁 1,234         │
-│ by Author Name                  │
-│                                 │
-│ #tag1 #tag2 #tag3 [+N]         │
-│                                 │
-│ [자세히 보기 버튼]               │
-└─────────────────────────────────┘
+\`\`\`tsx
+<Card className="overflow-hidden group">
+  <div className="aspect-video overflow-hidden">
+    <img 
+      src={imageUrl || "/placeholder.svg"} 
+      alt={title}
+      className="w-full h-full object-cover transition-transform 
+                 duration-200 group-hover:scale-105"
+    />
+  </div>
+  <CardContent className="p-4">
+    <CategoryBadge category={category} />
+    <h3 className="font-semibold text-lg mt-2 mb-2">{title}</h3>
+    <p className="text-gray-600 text-sm mb-3">{excerpt}</p>
+    <ArticleMeta author={author} publishedAt={publishedAt} viewCount={viewCount} />
+  </CardContent>
+</Card>
 \`\`\`
 
-### 버튼 디자인
+### 버튼 컴포넌트
 
-#### Primary Button
+#### 버튼 변형
 \`\`\`css
+/* Primary Button */
 .btn-primary {
-  @apply bg-primary text-primary-foreground hover:bg-primary/90;
-  @apply px-4 py-2 rounded-md font-medium transition-colors;
+  @apply bg-primary-500 hover:bg-primary-600 text-white 
+         px-4 py-2 rounded-md font-medium 
+         transition-colors duration-200
+         focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
 }
-\`\`\`
 
-#### Secondary Button
-\`\`\`css
+/* Secondary Button */
 .btn-secondary {
-  @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
-  @apply px-4 py-2 rounded-md font-medium transition-colors;
+  @apply bg-gray-100 hover:bg-gray-200 text-gray-900 
+         px-4 py-2 rounded-md font-medium 
+         transition-colors duration-200
+         focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
 }
-\`\`\`
 
-#### Outline Button
-\`\`\`css
+/* Outline Button */
 .btn-outline {
-  @apply border border-input bg-background hover:bg-accent;
-  @apply px-4 py-2 rounded-md font-medium transition-colors;
+  @apply border border-primary-500 text-primary-500 
+         hover:bg-primary-500 hover:text-white 
+         px-4 py-2 rounded-md font-medium 
+         transition-all duration-200
+         focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
 }
 \`\`\`
 
-### 배지 (Badge) 디자인
+### 배지 컴포넌트
 
 #### 카테고리 배지
-\`\`\`css
-.badge-category {
-  @apply bg-secondary text-secondary-foreground;
-  @apply px-2 py-1 rounded-full text-xs font-medium;
+\`\`\`tsx
+const getBadgeVariant = (category: string) => {
+  const variants = {
+    '현지 뉴스': 'bg-blue-500 text-white',
+    '교민 업체': 'bg-green-500 text-white',
+    '정책': 'bg-purple-500 text-white',
+    '교통': 'bg-orange-500 text-white',
+    '비자': 'bg-red-500 text-white',
+    '경제': 'bg-indigo-500 text-white',
+    '문화': 'bg-pink-500 text-white',
+    '스포츠': 'bg-teal-500 text-white',
+    '일반': 'bg-gray-500 text-white'
+  }
+  return variants[category] || variants['일반']
 }
 \`\`\`
 
 #### 상태 배지
-- **프리미엄**: `bg-yellow-500 text-white`
-- **추천**: `bg-blue-500 text-white`
-- **속보**: `bg-red-500 text-white animate-pulse`
+\`\`\`css
+/* 프리미엄 배지 */
+.badge-premium {
+  @apply bg-premium-500 text-white px-2 py-1 text-xs font-medium rounded-full;
+}
 
----
+/* 프로모션 배지 */
+.badge-promoted {
+  @apply bg-primary-500 text-white px-2 py-1 text-xs font-medium rounded-full;
+}
 
-## 📐 레이아웃 원칙
+/* 속보 배지 */
+.badge-breaking {
+  @apply bg-red-500 text-white px-2 py-1 text-xs font-medium rounded-full
+         animate-pulse;
+}
+\`\`\`
+
+## 레이아웃 시스템
 
 ### 그리드 시스템
+\`\`\`css
+/* 메인 컨테이너 */
+.container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
 
-#### 데스크톱 (1024px+)
-- **컨테이너**: `max-w-7xl mx-auto px-4`
-- **카드 그리드**: `grid-cols-3 gap-6`
-- **사이드바**: `w-80` (320px)
+/* 카드 그리드 */
+.card-grid {
+  @apply grid gap-6 
+         grid-cols-1 
+         md:grid-cols-2 
+         lg:grid-cols-3 
+         xl:grid-cols-4;
+}
 
-#### 태블릿 (768px - 1023px)
-- **컨테이너**: `max-w-4xl mx-auto px-4`
-- **카드 그리드**: `grid-cols-2 gap-4`
+/* 뉴스 그리드 */
+.news-grid {
+  @apply grid gap-6 
+         grid-cols-1 
+         md:grid-cols-2 
+         lg:grid-cols-3;
+}
+\`\`\`
 
-#### 모바일 (< 768px)
-- **컨테이너**: `px-4`
-- **카드 그리드**: `grid-cols-1 gap-4`
+### 간격 시스템
+\`\`\`css
+/* 표준 간격 */
+--spacing-xs: 0.25rem;  /* 4px */
+--spacing-sm: 0.5rem;   /* 8px */
+--spacing-md: 1rem;     /* 16px */
+--spacing-lg: 1.5rem;   /* 24px */
+--spacing-xl: 2rem;     /* 32px */
+--spacing-2xl: 3rem;    /* 48px */
+--spacing-3xl: 4rem;    /* 64px */
+\`\`\`
 
-### 여백 시스템
+### 섹션 레이아웃
+\`\`\`tsx
+// 섹션 구조
+<section className="py-12 lg:py-16">
+  <div className="container">
+    <div className="text-center mb-12">
+      <h2 className="text-h2 text-gray-900 mb-4">{title}</h2>
+      <p className="text-body-large text-gray-600 max-w-2xl mx-auto">
+        {description}
+      </p>
+    </div>
+    <div className="card-grid">
+      {content}
+    </div>
+  </div>
+</section>
+\`\`\`
 
-#### 섹션 간격
-- **Large**: `py-16` (64px) - 메인 섹션
-- **Medium**: `py-8` (32px) - 서브 섹션
-- **Small**: `py-4` (16px) - 컴포넌트 내부
-
-#### 컴포넌트 간격
-- **Card Padding**: `p-6` (24px)
-- **Card Gap**: `gap-6` (24px) 데스크톱, `gap-4` (16px) 모바일
-- **Button Spacing**: `space-x-4` (16px)
-
----
-
-## 📱 반응형 디자인
+## 반응형 디자인
 
 ### 브레이크포인트
 \`\`\`css
-/* Mobile First Approach */
-sm: 640px   /* 작은 태블릿 */
-md: 768px   /* 태블릿 */
-lg: 1024px  /* 데스크톱 */
-xl: 1280px  /* 큰 데스크톱 */
-2xl: 1536px /* 초대형 화면 */
+/* Tailwind CSS 기본 브레이크포인트 */
+sm: 640px;   /* 모바일 가로 */
+md: 768px;   /* 태블릿 */
+lg: 1024px;  /* 데스크톱 */
+xl: 1280px;  /* 대형 데스크톱 */
+2xl: 1536px; /* 초대형 화면 */
 \`\`\`
+
+### 모바일 우선 접근법
+- 기본 스타일은 모바일부터 시작
+- 점진적으로 큰 화면에 대한 스타일 추가
+- 터치 친화적인 인터페이스 요소 크기
 
 ### 반응형 패턴
-
-#### 카드 레이아웃
 \`\`\`css
-/* 모바일: 1열 */
-.card-grid {
-  @apply grid grid-cols-1 gap-4;
-}
-
-/* 태블릿: 2열 */
-@media (min-width: 768px) {
-  .card-grid {
-    @apply grid-cols-2 gap-6;
-  }
-}
-
-/* 데스크톱: 3열 */
-@media (min-width: 1024px) {
-  .card-grid {
-    @apply grid-cols-3 gap-6;
-  }
-}
-\`\`\`
-
-#### 텍스트 크기 조정
-\`\`\`css
+/* 반응형 텍스트 크기 */
 .responsive-title {
-  @apply text-xl md:text-2xl lg:text-3xl;
+  @apply text-2xl sm:text-3xl lg:text-4xl;
 }
 
-.responsive-body {
-  @apply text-sm md:text-base;
+/* 반응형 그리드 */
+.responsive-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+}
+
+/* 반응형 간격 */
+.responsive-spacing {
+  @apply p-4 md:p-6 lg:p-8;
 }
 \`\`\`
 
----
-
-## 🎯 UI/UX 패턴
+## UI/UX 패턴
 
 ### 인터랙션 패턴
 
 #### 호버 효과
-- **카드**: `hover:shadow-lg transition-shadow duration-300`
-- **버튼**: `hover:bg-primary/90 transition-colors`
-- **링크**: `hover:text-primary transition-colors`
+\`\`\`css
+/* 카드 호버 */
+.card-hover {
+  @apply transition-all duration-200 
+         hover:shadow-lg hover:-translate-y-1;
+}
 
-#### 로딩 상태
-- **스켈레톤**: `animate-pulse bg-gray-200`
-- **스피너**: `animate-spin`
-- **오버레이**: `opacity-75`
+/* 버튼 호버 */
+.button-hover {
+  @apply transition-colors duration-200 
+         hover:bg-opacity-90;
+}
+
+/* 링크 호버 */
+.link-hover {
+  @apply transition-colors duration-200 
+         hover:text-primary-600;
+}
+\`\`\`
 
 #### 포커스 상태
 \`\`\`css
+/* 포커스 링 */
 .focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+}
+
+/* 입력 필드 포커스 */
+.input-focus {
+  @apply focus:border-primary-500 focus:ring-1 focus:ring-primary-500;
 }
 \`\`\`
 
-### 네비게이션 패턴
+### 로딩 상태
 
-#### 메인 네비게이션
-- 고정 헤더 (`sticky top-0`)
-- 로고 + 검색 + 메뉴
-- 모바일에서 햄버거 메뉴
-
-#### 페이지네이션
-- 이전/다음 버튼
-- 페이지 번호 (최대 7개 표시)
-- 무한 스크롤 (카드 리스트)
-
-### 검색 패턴
-
-#### 검색 입력
+#### 스켈레톤 로더
 \`\`\`css
-.search-input {
-  @apply w-full px-4 py-2 border border-input rounded-md;
-  @apply focus:ring-2 focus:ring-primary focus:border-transparent;
+.skeleton {
+  @apply animate-pulse bg-gray-200 rounded;
+}
+
+.skeleton-text {
+  @apply h-4 bg-gray-200 rounded animate-pulse;
+}
+
+.skeleton-avatar {
+  @apply w-10 h-10 bg-gray-200 rounded-full animate-pulse;
 }
 \`\`\`
 
-#### 필터
-- 드롭다운 선택
-- 태그 기반 필터
-- 카테고리 필터
+#### 스피너
+\`\`\`css
+.spinner {
+  @apply animate-spin rounded-full border-2 border-gray-200 border-t-primary-500;
+}
+\`\`\`
 
----
+### 피드백 패턴
 
-## ♿ 접근성
+#### 토스트 알림
+\`\`\`tsx
+const ToastPattern = {
+  success: "bg-green-50 text-green-800 border-green-200",
+  error: "bg-red-50 text-red-800 border-red-200",
+  warning: "bg-yellow-50 text-yellow-800 border-yellow-200",
+  info: "bg-blue-50 text-blue-800 border-blue-200"
+}
+\`\`\`
+
+#### 빈 상태
+\`\`\`tsx
+<div className="text-center py-12">
+  <div className="w-24 h-24 mx-auto mb-4 text-gray-300">
+    <EmptyStateIcon />
+  </div>
+  <h3 className="text-lg font-medium text-gray-900 mb-2">
+    {emptyTitle}
+  </h3>
+  <p className="text-gray-500 mb-6">
+    {emptyDescription}
+  </p>
+  <Button onClick={onAction}>
+    {actionText}
+  </Button>
+</div>
+\`\`\`
+
+## 접근성 가이드라인
 
 ### 키보드 네비게이션
-- 모든 인터랙티브 요소에 `tabindex` 설정
-- 포커스 표시 (`focus:ring-2`)
-- 논리적 탭 순서
+- 모든 인터랙티브 요소는 키보드로 접근 가능
+- Tab 순서가 논리적이고 직관적
+- Skip links 제공으로 메인 콘텐츠로 빠른 이동
 
 ### 스크린 리더 지원
-\`\`\`html
-<!-- 의미있는 alt 텍스트 -->
-<img src="..." alt="비즈니스 로고" />
+\`\`\`tsx
+// 올바른 ARIA 라벨 사용
+<button aria-label="메뉴 열기" aria-expanded={isOpen}>
+  <MenuIcon />
+</button>
 
-<!-- ARIA 라벨 -->
-<button aria-label="검색">🔍</button>
+// 의미있는 제목 구조
+<h1>페이지 제목</h1>
+<h2>섹션 제목</h2>
+<h3>서브섹션 제목</h3>
 
-<!-- 상태 정보 -->
-<div aria-live="polite">검색 결과 123개</div>
+// 이미지 대체 텍스트
+<img src={imageUrl || "/placeholder.svg"} alt="비즈니스 로고 - 태국 한식당" />
 \`\`\`
 
 ### 색상 대비
-- 텍스트: 최소 4.5:1 대비율
-- 큰 텍스트: 최소 3:1 대비율
-- 색상에만 의존하지 않는 정보 전달
+- WCAG AA 기준 4.5:1 이상의 대비율 유지
+- 색상만으로 정보를 전달하지 않음
+- 색맹 사용자를 고려한 색상 조합
 
-### 반응형 접근성
-- 터치 타겟 최소 44px
-- 충분한 여백과 간격
-- 가독성 있는 폰트 크기
+### 터치 타겟
+- 최소 44x44px 크기의 터치 영역
+- 터치 요소 간 충분한 간격 유지
+- 모바일에서 엄지손가락으로 쉽게 접근 가능한 위치
 
----
-
-## 🌏 다국어 지원
+## 다국어 지원
 
 ### 한국어 최적화
-- 충분한 행간 (`leading-relaxed`)
-- 적절한 문자 간격
-- 한글 폰트 fallback
+\`\`\`css
+/* 한국어 텍스트 최적화 */
+.korean-text {
+  font-family: 'Pretendard Variable', 'Pretendard', 'Noto Sans KR', sans-serif;
+  line-height: 1.6;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+\`\`\`
 
 ### 태국어 지원
-- 태국어 문자 높이 고려
-- 적절한 여백 조정
-- 태국어 폰트 지원
-
-### 영어 지원
-- 기본 시스템 폰트 사용
-- 적절한 단어 간격
-- 하이픈 처리
+\`\`\`css
+/* 태국어 텍스트 최적화 */
+.thai-text {
+  font-family: 'Noto Sans Thai', 'Sarabun', system-ui, sans-serif;
+  line-height: 1.8; /* 태국 문자의 높이를 고려한 추가 여백 */
+}
+\`\`\`
 
 ### RTL 언어 준비
 \`\`\`css
-[dir="rtl"] .card {
-  @apply text-right;
+/* RTL 지원 준비 */
+.rtl-support {
+  direction: ltr;
 }
 
-[dir="rtl"] .icon {
-  @apply scale-x-[-1];
+[dir="rtl"] .rtl-support {
+  direction: rtl;
 }
 \`\`\`
 
----
+## 성능 최적화
 
-## 🎨 광고 통합 디자인
+### CSS 최적화
+- Critical CSS 인라인 배치
+- 사용하지 않는 스타일 제거
+- CSS-in-JS 최소화
 
-### 네이티브 광고
-- 콘텐츠와 자연스럽게 통합
-- 명확한 "광고" 표시
-- 일관된 카드 디자인 유지
+### 이미지 최적화
+\`\`\`tsx
+// Next.js Image 컴포넌트 활용
+<Image
+  src={imageUrl || "/placeholder.svg"}
+  alt={altText}
+  width={400}
+  height={300}
+  className="object-cover"
+  placeholder="blur"
+  blurDataURL="data:image/jpeg;base64,..."
+  loading="lazy"
+/>
+\`\`\`
 
-### 배너 광고
+### 폰트 최적화
 \`\`\`css
-.ad-banner {
-  @apply w-full max-w-4xl mx-auto my-8;
-  @apply border border-gray-200 rounded-lg overflow-hidden;
+/* 폰트 로딩 최적화 */
+@font-face {
+  font-family: 'Pretendard Variable';
+  src: url('/fonts/pretendard-variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
 }
 \`\`\`
 
-### 인피드 광고
-- 3-5개 카드마다 삽입
-- 콘텐츠와 유사한 디자인
-- 호버 효과 제한
+## 컴포넌트 라이브러리 활용
 
----
+### shadcn/ui 컴포넌트 커스터마이징
+\`\`\`tsx
+// 기본 Button 컴포넌트 확장
+const ButtonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+        premium: "bg-gradient-to-r from-premium-400 to-premium-600 text-white hover:from-premium-500 hover:to-premium-700",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  }
+)
+\`\`\`
 
-## 🔧 개발 가이드라인
+## 개발 가이드라인
 
 ### CSS 클래스 명명 규칙
 \`\`\`css
-/* 컴포넌트 기반 */
-.business-card { }
-.business-card__title { }
-.business-card__description { }
-.business-card--premium { }
+/* BEM 방법론 기반 */
+.card {} /* Block */
+.card__header {} /* Element */
+.card--premium {} /* Modifier */
 
-/* 유틸리티 우선 (Tailwind) */
-.btn-primary { @apply bg-primary text-white px-4 py-2 rounded; }
-\`\`\`
-
-### 컴포넌트 구조
-\`\`\`typescript
-interface ComponentProps {
-  // 필수 props
-  data: DataType
-  
-  // 선택적 props
-  className?: string
-  onClick?: () => void
-  
-  // 상태 props
-  isLoading?: boolean
-  isError?: boolean
+/* Tailwind 유틸리티 클래스 우선 사용 */
+.btn-primary {
+  @apply bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-md;
 }
 \`\`\`
 
-### 성능 최적화
-- 이미지 lazy loading
-- 컴포넌트 메모이제이션
-- CSS 최적화 (critical CSS)
-- 번들 크기 최적화
+### 컴포넌트 구조
+\`\`\`tsx
+// 표준 컴포넌트 구조
+interface ComponentProps {
+  variant?: 'default' | 'premium' | 'promoted'
+  size?: 'sm' | 'md' | 'lg'
+  className?: string
+  children?: React.ReactNode
+}
+
+export const Component = forwardRef<HTMLDivElement, ComponentProps>(
+  ({ variant = 'default', size = 'md', className, children, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          componentVariants({ variant, size }),
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </div>
+    )
+  }
+)
+
+Component.displayName = "Component"
+\`\`\`
+
+### 상태 관리 패턴
+\`\`\`tsx
+// 로컬 상태 관리
+const [isLoading, setIsLoading] = useState(false)
+const [data, setData] = useState<T[]>([])
+const [error, setError] = useState<string | null>(null)
+
+// 서버 상태 관리 (React Query 권장)
+const { data, isLoading, error } = useQuery({
+  queryKey: ['business-cards'],
+  queryFn: getBusinessCards,
+  staleTime: 5 * 60 * 1000, // 5분
+})
+\`\`\`
+
+## 메트릭스 및 KPI
+
+### 성능 메트릭스
+- **FCP (First Contentful Paint)**: < 1.5초
+- **LCP (Largest Contentful Paint)**: < 2.5초
+- **CLS (Cumulative Layout Shift)**: < 0.1
+- **FID (First Input Delay)**: < 100ms
+
+### 사용자 경험 메트릭스
+- **페이지 로딩 시간**: < 3초
+- **검색 응답 시간**: < 500ms
+- **이미지 로딩 시간**: < 2초
+- **모바일 사용성 점수**: > 95점
+
+### 접근성 메트릭스
+- **Lighthouse 접근성 점수**: > 95점
+- **WCAG 2.1 AA 준수율**: 100%
+- **키보드 네비게이션 가능 요소**: 100%
+
+## 버전 관리 및 업데이트
+
+### 디자인 시스템 버전
+- **Major**: 기본 색상, 타이포그래피, 레이아웃 변경
+- **Minor**: 새로운 컴포넌트, 변형 추가
+- **Patch**: 버그 수정, 미세 조정
+
+### 업데이트 프로세스
+1. 디자인 가이드라인 문서 업데이트
+2. 컴포넌트 라이브러리 반영
+3. 기존 페이지 호환성 확인
+4. 테스트 및 검증
+5. 배포 및 문서화
 
 ---
 
-## 📊 메트릭스 및 KPI
+이 디자인 가이드라인은 태국 정보카드 플랫폼의 일관되고 사용자 친화적인 경험을 위한 기준을 제시합니다. 모든 개발자와 디자이너는 이 가이드라인을 참조하여 작업해주시기 바랍니다.
 
-### 디자인 성능 지표
-- **로딩 시간**: < 3초 (First Contentful Paint)
-- **인터랙션**: < 100ms 응답 시간
-- **접근성**: WCAG 2.1 AA 준수
-- **모바일 친화성**: Google Mobile-Friendly 통과
-
-### 사용자 경험 지표
-- **클릭률**: 카드 클릭률 > 15%
-- **체류 시간**: 평균 > 2분
-- **이탈률**: < 60%
-- **전환율**: 연락처 클릭 > 5%
-
----
-
-## 🚀 향후 개선 계획
-
-### 단기 계획 (1-3개월)
-- 다크 모드 지원
-- 애니메이션 개선
-- 접근성 강화
-
-### 중기 계획 (3-6개월)
-- PWA 기능 추가
-- 오프라인 지원
-- 고급 필터링
-
-### 장기 계획 (6개월+)
-- AI 기반 추천
-- 개인화 UI
-- 다국어 확장
-
----
-
-*이 가이드라인은 프로젝트의 발전과 함께 지속적으로 업데이트됩니다.*
-*최종 업데이트: 2025년 1월*
+**마지막 업데이트**: 2024년 1월
+**버전**: 1.0.0
+**담당자**: v0 Development Team
