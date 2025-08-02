@@ -27,27 +27,6 @@ function NewsLoadingSkeleton() {
 async function NewsContent() {
   const articles = await getNewsArticles()
 
-  // 콘솔에 뉴스 목록 표시
-  console.log("=== 데이터베이스에서 가져온 뉴스 목록 ===")
-  console.log(`총 ${articles.length}개의 뉴스를 찾았습니다.`)
-
-  articles.forEach((article, index) => {
-    console.log(`\n[${index + 1}] ${article.title}`)
-    console.log(`카테고리: ${article.category}`)
-    console.log(`작성자: ${article.author || "Unknown"}`)
-    console.log(`조회수: ${article.view_count}`)
-    console.log(`생성일: ${new Date(article.created_at).toLocaleString("ko-KR")}`)
-    console.log(`발행일: ${new Date(article.published_at).toLocaleString("ko-KR")}`)
-    console.log(`태그: ${Array.isArray(article.tags) ? article.tags.join(", ") : "None"}`)
-    console.log(`요약: ${article.excerpt ? article.excerpt.substring(0, 100) + "..." : "No excerpt"}`)
-    console.log(`이미지: ${article.image_url || "No image"}`)
-    console.log(`소스: ${article.source_url || "No source"}`)
-    console.log(`속보여부: ${article.is_breaking ? "YES" : "NO"}`)
-    console.log(`발행상태: ${article.is_published ? "Published" : "Draft"}`)
-    console.log(`내용 길이: ${article.content.length} characters`)
-    console.log(`---`)
-  })
-
   return <NewsCardList initialArticles={articles} />
 }
 
