@@ -196,37 +196,39 @@ export async function getBusinessCardById(id: string): Promise<BusinessCard | nu
 }
 
 export async function incrementViewCount(id: string): Promise<void> {
-  // Try using the database function first
-  const result = await safeSupabaseOperation(async () => {
-    return await supabase!.rpc("increment_view_count", { card_id: id })
-  })
+  if (!supabase) return
 
-  // If function doesn't exist, try direct update
-  if (!result) {
-    await safeSupabaseOperation(async () => {
+  // Use direct update instead of database function to avoid function dependency
+  await safeSupabaseOperation(async () => {
+    const { data: currentCard } = await supabase!.from("business_cards").select("view_count").eq("id", id).single()
+
+    if (currentCard) {
       return await supabase!
         .from("business_cards")
-        .update({ view_count: supabase!.raw("view_count + 1") })
+        .update({ view_count: currentCard.view_count + 1 })
         .eq("id", id)
-    })
-  }
+    }
+
+    return { data: null, error: null }
+  })
 }
 
 export async function incrementExposureCount(id: string): Promise<void> {
-  // Try using the database function first
-  const result = await safeSupabaseOperation(async () => {
-    return await supabase!.rpc("increment_exposure_count", { card_id: id })
-  })
+  if (!supabase) return
 
-  // If function doesn't exist, try direct update
-  if (!result) {
-    await safeSupabaseOperation(async () => {
+  // Use direct update instead of database function to avoid function dependency
+  await safeSupabaseOperation(async () => {
+    const { data: currentCard } = await supabase!.from("business_cards").select("exposure_count").eq("id", id).single()
+
+    if (currentCard) {
       return await supabase!
         .from("business_cards")
-        .update({ exposure_count: supabase!.raw("exposure_count + 1") })
+        .update({ exposure_count: currentCard.exposure_count + 1 })
         .eq("id", id)
-    })
-  }
+    }
+
+    return { data: null, error: null }
+  })
 }
 
 // News Articles API
@@ -296,20 +298,21 @@ export async function getBreakingNews(): Promise<NewsArticle[]> {
 }
 
 export async function incrementNewsViewCount(id: string): Promise<void> {
-  // Try using the database function first
-  const result = await safeSupabaseOperation(async () => {
-    return await supabase!.rpc("increment_news_view_count", { article_id: id })
-  })
+  if (!supabase) return
 
-  // If function doesn't exist, try direct update
-  if (!result) {
-    await safeSupabaseOperation(async () => {
+  // Use direct update instead of database function to avoid function dependency
+  await safeSupabaseOperation(async () => {
+    const { data: currentArticle } = await supabase!.from("news_articles").select("view_count").eq("id", id).single()
+
+    if (currentArticle) {
       return await supabase!
         .from("news_articles")
-        .update({ view_count: supabase!.raw("view_count + 1") })
+        .update({ view_count: currentArticle.view_count + 1 })
         .eq("id", id)
-    })
-  }
+    }
+
+    return { data: null, error: null }
+  })
 }
 
 // Categories API
@@ -339,12 +342,21 @@ export async function getStatistics() {
     premiumCount: 0,
   }
 
+  if (!supabase) {
+    // Return sample data counts as fallback
+    stats.businessCount = sampleBusinessCards.length
+    stats.newsCount = sampleNewsArticles.length
+    stats.breakingCount = sampleNewsArticles.filter((a) => a.is_breaking).length
+    stats.premiumCount = sampleBusinessCards.filter((c) => c.is_premium).length
+    return stats
+  }
+
   try {
     const [businessResult, newsResult, breakingResult, premiumResult] = await Promise.all([
-      supabase!.from("business_cards").select("*", { count: "exact", head: true }).eq("is_active", true),
-      supabase!.from("news_articles").select("*", { count: "exact", head: true }).eq("is_published", true),
-      supabase!.from("news_articles").select("*", { count: "exact", head: true }).eq("is_breaking", true),
-      supabase!.from("business_cards").select("*", { count: "exact", head: true }).eq("is_premium", true),
+      supabase.from("business_cards").select("*", { count: "exact", head: true }).eq("is_active", true),
+      supabase.from("news_articles").select("*", { count: "exact", head: true }).eq("is_published", true),
+      supabase.from("news_articles").select("*", { count: "exact", head: true }).eq("is_breaking", true),
+      supabase.from("business_cards").select("*", { count: "exact", head: true }).eq("is_premium", true),
     ])
 
     stats.businessCount = businessResult.count || sampleBusinessCards.length

@@ -24,10 +24,10 @@ export default function BusinessCardComponent({ card, onCardClick, showViewCount
 
     setIsLoading(true)
     try {
-      // Increment exposure count when card is clicked (with error handling)
-      await incrementExposureCount(card.id)
-    } catch (error) {
-      console.warn("Failed to increment exposure count:", error)
+      // Increment exposure count when card is clicked (silently, don't block UI)
+      incrementExposureCount(card.id).catch((error) => {
+        console.warn("Failed to increment exposure count:", error)
+      })
     } finally {
       setIsLoading(false)
       onCardClick?.(card)
