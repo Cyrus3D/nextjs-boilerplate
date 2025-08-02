@@ -38,7 +38,9 @@ export default function DatabaseCheckPage() {
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">데이터베이스 상태 확인</h1>
-          <p className="text-gray-600">Supabase 데이터베이스 연결 상태와 테이블 정보를 확인할 수 있습니다.</p>
+          <p className="text-gray-600">
+            Supabase 데이터베이스 연결 상태, 테이블 정보, 함수 존재 여부를 확인할 수 있습니다.
+          </p>
         </div>
 
         <Suspense fallback={<LoadingSkeleton />}>

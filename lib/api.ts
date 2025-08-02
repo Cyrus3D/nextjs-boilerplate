@@ -146,7 +146,7 @@ const sampleTags: Tag[] = [
 // Business Cards API
 export async function getBusinessCards(limit = 20, offset = 0): Promise<BusinessCard[]> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase
+    return await supabase!
       .from("business_cards")
       .select("*")
       .eq("is_active", true)
@@ -159,7 +159,7 @@ export async function getBusinessCards(limit = 20, offset = 0): Promise<Business
 
 export async function searchBusinessCards(query: string, category?: string): Promise<BusinessCard[]> {
   const result = await safeSupabaseOperation(async () => {
-    let queryBuilder = supabase.from("business_cards").select("*").eq("is_active", true)
+    let queryBuilder = supabase!.from("business_cards").select("*").eq("is_active", true)
 
     if (query) {
       queryBuilder = queryBuilder.or(`title.ilike.%${query}%,description.ilike.%${query}%`)
@@ -189,28 +189,50 @@ export async function searchBusinessCards(query: string, category?: string): Pro
 
 export async function getBusinessCardById(id: string): Promise<BusinessCard | null> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase.from("business_cards").select("*").eq("id", id).single()
+    return await supabase!.from("business_cards").select("*").eq("id", id).single()
   })
 
   return result || sampleBusinessCards.find((card) => card.id === id) || null
 }
 
 export async function incrementViewCount(id: string): Promise<void> {
-  await safeSupabaseOperation(async () => {
-    return await supabase.rpc("increment_view_count", { card_id: id })
+  // Try using the database function first
+  const result = await safeSupabaseOperation(async () => {
+    return await supabase!.rpc("increment_view_count", { card_id: id })
   })
+
+  // If function doesn't exist, try direct update
+  if (!result) {
+    await safeSupabaseOperation(async () => {
+      return await supabase!
+        .from("business_cards")
+        .update({ view_count: supabase!.raw("view_count + 1") })
+        .eq("id", id)
+    })
+  }
 }
 
 export async function incrementExposureCount(id: string): Promise<void> {
-  await safeSupabaseOperation(async () => {
-    return await supabase.rpc("increment_exposure_count", { card_id: id })
+  // Try using the database function first
+  const result = await safeSupabaseOperation(async () => {
+    return await supabase!.rpc("increment_exposure_count", { card_id: id })
   })
+
+  // If function doesn't exist, try direct update
+  if (!result) {
+    await safeSupabaseOperation(async () => {
+      return await supabase!
+        .from("business_cards")
+        .update({ exposure_count: supabase!.raw("exposure_count + 1") })
+        .eq("id", id)
+    })
+  }
 }
 
 // News Articles API
 export async function getNewsArticles(limit = 20, offset = 0): Promise<NewsArticle[]> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase
+    return await supabase!
       .from("news_articles")
       .select("*")
       .eq("is_published", true)
@@ -223,7 +245,7 @@ export async function getNewsArticles(limit = 20, offset = 0): Promise<NewsArtic
 
 export async function searchNewsArticles(query: string, category?: string): Promise<NewsArticle[]> {
   const result = await safeSupabaseOperation(async () => {
-    let queryBuilder = supabase.from("news_articles").select("*").eq("is_published", true)
+    let queryBuilder = supabase!.from("news_articles").select("*").eq("is_published", true)
 
     if (query) {
       queryBuilder = queryBuilder.or(`title.ilike.%${query}%,content.ilike.%${query}%`)
@@ -253,7 +275,7 @@ export async function searchNewsArticles(query: string, category?: string): Prom
 
 export async function getNewsArticleById(id: string): Promise<NewsArticle | null> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase.from("news_articles").select("*").eq("id", id).single()
+    return await supabase!.from("news_articles").select("*").eq("id", id).single()
   })
 
   return result || sampleNewsArticles.find((article) => article.id === id) || null
@@ -261,7 +283,7 @@ export async function getNewsArticleById(id: string): Promise<NewsArticle | null
 
 export async function getBreakingNews(): Promise<NewsArticle[]> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase
+    return await supabase!
       .from("news_articles")
       .select("*")
       .eq("is_published", true)
@@ -274,15 +296,26 @@ export async function getBreakingNews(): Promise<NewsArticle[]> {
 }
 
 export async function incrementNewsViewCount(id: string): Promise<void> {
-  await safeSupabaseOperation(async () => {
-    return await supabase.rpc("increment_news_view_count", { article_id: id })
+  // Try using the database function first
+  const result = await safeSupabaseOperation(async () => {
+    return await supabase!.rpc("increment_news_view_count", { article_id: id })
   })
+
+  // If function doesn't exist, try direct update
+  if (!result) {
+    await safeSupabaseOperation(async () => {
+      return await supabase!
+        .from("news_articles")
+        .update({ view_count: supabase!.raw("view_count + 1") })
+        .eq("id", id)
+    })
+  }
 }
 
 // Categories API
 export async function getCategories(): Promise<Category[]> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase.from("categories").select("*").eq("is_active", true).order("name")
+    return await supabase!.from("categories").select("*").eq("is_active", true).order("name")
   })
 
   return result || sampleCategories
@@ -291,7 +324,7 @@ export async function getCategories(): Promise<Category[]> {
 // Tags API
 export async function getTags(): Promise<Tag[]> {
   const result = await safeSupabaseOperation(async () => {
-    return await supabase.from("tags").select("*").eq("is_active", true).order("usage_count", { ascending: false })
+    return await supabase!.from("tags").select("*").eq("is_active", true).order("usage_count", { ascending: false })
   })
 
   return result || sampleTags
@@ -308,10 +341,10 @@ export async function getStatistics() {
 
   try {
     const [businessResult, newsResult, breakingResult, premiumResult] = await Promise.all([
-      supabase.from("business_cards").select("*", { count: "exact", head: true }).eq("is_active", true),
-      supabase.from("news_articles").select("*", { count: "exact", head: true }).eq("is_published", true),
-      supabase.from("news_articles").select("*", { count: "exact", head: true }).eq("is_breaking", true),
-      supabase.from("business_cards").select("*", { count: "exact", head: true }).eq("is_premium", true),
+      supabase!.from("business_cards").select("*", { count: "exact", head: true }).eq("is_active", true),
+      supabase!.from("news_articles").select("*", { count: "exact", head: true }).eq("is_published", true),
+      supabase!.from("news_articles").select("*", { count: "exact", head: true }).eq("is_breaking", true),
+      supabase!.from("business_cards").select("*", { count: "exact", head: true }).eq("is_premium", true),
     ])
 
     stats.businessCount = businessResult.count || sampleBusinessCards.length

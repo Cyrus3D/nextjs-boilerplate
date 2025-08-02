@@ -1,9 +1,9 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
 
 export interface BusinessCard {
   id: string
@@ -90,15 +90,32 @@ export interface DatabaseStatus {
 export async function safeSupabaseOperation<T>(
   operation: () => Promise<{ data: T | null; error: any }>,
 ): Promise<T | null> {
+  if (!supabase) {
+    console.warn("Supabase client not initialized")
+    return null
+  }
+
   try {
     const { data, error } = await operation()
     if (error) {
-      console.error("Supabase operation error:", error)
+      console.error("Supabase operation error:", error.message)
       return null
     }
     return data
   } catch (error) {
     console.error("Supabase operation failed:", error)
     return null
+  }
+}
+
+// Database connection test
+export async function testDatabaseConnection(): Promise<boolean> {
+  if (!supabase) return false
+
+  try {
+    const { data, error } = await supabase.from("business_cards").select("count").limit(1)
+    return !error
+  } catch {
+    return false
   }
 }

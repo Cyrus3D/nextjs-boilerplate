@@ -1,6 +1,6 @@
 import { supabase, type DatabaseStatus } from "./supabase"
 
-export async function checkDatabaseConnection(): Promise<DatabaseStatus> {
+export async function checkDatabaseStatus(): Promise<DatabaseStatus> {
   const status: DatabaseStatus = {
     connected: false,
     tables: {
@@ -20,41 +20,49 @@ export async function checkDatabaseConnection(): Promise<DatabaseStatus> {
     },
   }
 
+  if (!supabase) {
+    return status
+  }
+
   try {
-    // Test basic connection
-    const { data: connectionTest, error: connectionError } = await supabase
-      .from("business_cards")
-      .select("count", { count: "exact", head: true })
+    // Test connection
+    const { error: connectionError } = await supabase.from("business_cards").select("count").limit(1)
+    status.connected = !connectionError
 
-    if (!connectionError) {
-      status.connected = true
-    }
+    if (status.connected) {
+      // Check table counts
+      const [businessCards, newsArticles, categories, tags] = await Promise.all([
+        supabase.from("business_cards").select("*", { count: "exact", head: true }),
+        supabase.from("news_articles").select("*", { count: "exact", head: true }),
+        supabase.from("categories").select("*", { count: "exact", head: true }),
+        supabase.from("tags").select("*", { count: "exact", head: true }),
+      ])
 
-    // Count records in each table
-    const tables = ["business_cards", "news_articles", "categories", "tags"]
+      status.tables.business_cards = businessCards.count || 0
+      status.tables.news_articles = newsArticles.count || 0
+      status.tables.categories = categories.count || 0
+      status.tables.tags = tags.count || 0
 
-    for (const table of tables) {
+      // Check functions (these will fail gracefully if functions don't exist)
       try {
-        const { count, error } = await supabase.from(table).select("*", { count: "exact", head: true })
-
-        if (!error && count !== null) {
-          status.tables[table as keyof typeof status.tables] = count
-        }
-      } catch (error) {
-        console.error(`Error counting ${table}:`, error)
+        await supabase.rpc("increment_view_count", { card_id: "test" })
+        status.functions.increment_view_count = true
+      } catch {
+        status.functions.increment_view_count = false
       }
-    }
 
-    // Check if functions exist
-    const functions = ["increment_view_count", "increment_exposure_count", "increment_news_view_count"]
-
-    for (const func of functions) {
       try {
-        const { error } = await supabase.rpc(func, { card_id: "test" })
-        // If no error or specific function not found error, function exists
-        status.functions[func as keyof typeof status.functions] = !error || !error.message.includes("function")
-      } catch (error) {
-        status.functions[func as keyof typeof status.functions] = false
+        await supabase.rpc("increment_exposure_count", { card_id: "test" })
+        status.functions.increment_exposure_count = true
+      } catch {
+        status.functions.increment_exposure_count = false
+      }
+
+      try {
+        await supabase.rpc("increment_news_view_count", { article_id: "test" })
+        status.functions.increment_news_view_count = true
+      } catch {
+        status.functions.increment_news_view_count = false
       }
     }
   } catch (error) {
@@ -62,29 +70,4 @@ export async function checkDatabaseConnection(): Promise<DatabaseStatus> {
   }
 
   return status
-}
-
-export async function getTableInfo() {
-  const tables = ["business_cards", "news_articles", "categories", "tags"]
-  const info: Record<string, any> = {}
-
-  for (const table of tables) {
-    try {
-      const { data, error, count } = await supabase.from(table).select("*", { count: "exact" }).limit(5)
-
-      info[table] = {
-        count: count || 0,
-        sample: data || [],
-        error: error?.message || null,
-      }
-    } catch (error) {
-      info[table] = {
-        count: 0,
-        sample: [],
-        error: error instanceof Error ? error.message : "Unknown error",
-      }
-    }
-  }
-
-  return info
 }

@@ -17,11 +17,21 @@ interface BusinessCardProps {
 
 export default function BusinessCardComponent({ card, onCardClick, showViewCount = false }: BusinessCardProps) {
   const [imageError, setImageError] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleCardClick = async () => {
-    // Increment exposure count when card is clicked
-    await incrementExposureCount(card.id)
-    onCardClick?.(card)
+    if (isLoading) return
+
+    setIsLoading(true)
+    try {
+      // Increment exposure count when card is clicked (with error handling)
+      await incrementExposureCount(card.id)
+    } catch (error) {
+      console.warn("Failed to increment exposure count:", error)
+    } finally {
+      setIsLoading(false)
+      onCardClick?.(card)
+    }
   }
 
   const getSocialIcon = (type: string) => {
@@ -56,7 +66,9 @@ export default function BusinessCardComponent({ card, onCardClick, showViewCount
     <Card
       className={`h-full transition-all duration-200 hover:shadow-lg cursor-pointer relative overflow-hidden ${
         card.is_premium ? "ring-2 ring-yellow-400 bg-gradient-to-br from-yellow-50 to-white" : ""
-      } ${card.is_promoted ? "ring-2 ring-blue-400 bg-gradient-to-br from-blue-50 to-white" : ""}`}
+      } ${card.is_promoted ? "ring-2 ring-blue-400 bg-gradient-to-br from-blue-50 to-white" : ""} ${
+        isLoading ? "opacity-75" : ""
+      }`}
       onClick={handleCardClick}
     >
       {/* Premium/Promoted badges */}
@@ -130,7 +142,7 @@ export default function BusinessCardComponent({ card, onCardClick, showViewCount
                   window.open(link.url, "_blank")
                 }}
               >
-                {getSocialIcon(detectUrlType(link.url))}
+                {getSocialIcon(detectUrlType(link.url!))}
               </Button>
             ))}
             {socialLinks.length > 4 && (
