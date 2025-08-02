@@ -1,11 +1,10 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Types
 export interface BusinessCard {
   id: string
   title: string
@@ -18,13 +17,18 @@ export interface BusinessCard {
   instagram?: string
   youtube?: string
   line?: string
+  kakao?: string
+  whatsapp?: string
+  telegram?: string
+  twitter?: string
+  tiktok?: string
   image_url?: string
   tags: string[]
-  is_active: boolean
-  is_premium: boolean
-  is_promoted: boolean
   view_count: number
   exposure_count: number
+  is_premium: boolean
+  is_promoted: boolean
+  is_active: boolean
   created_at: string
   updated_at: string
 }
@@ -37,11 +41,10 @@ export interface NewsArticle {
   category: string
   source_url?: string
   image_url?: string
-  author?: string
-  tags?: string[]
-  is_published: boolean
-  is_breaking: boolean
+  tags: string[]
   view_count: number
+  is_breaking: boolean
+  is_published: boolean
   published_at: string
   created_at: string
   updated_at: string
@@ -51,32 +54,31 @@ export interface Category {
   id: string
   name: string
   description?: string
-  color?: string
-  icon?: string
   is_active: boolean
-  sort_order: number
   created_at: string
 }
 
 export interface Tag {
   id: string
   name: string
-  is_active: boolean
+  category?: string
   usage_count: number
+  is_active: boolean
   created_at: string
 }
 
 export interface DatabaseStatus {
   connected: boolean
   tables: {
-    business_cards: boolean
-    news_articles: boolean
-    categories: boolean
-    tags: boolean
+    business_cards: number
+    news_articles: number
+    categories: number
+    tags: number
   }
   functions: {
     increment_view_count: boolean
     increment_exposure_count: boolean
+    increment_news_view_count: boolean
   }
   environment: {
     supabase_url: boolean
@@ -84,21 +86,16 @@ export interface DatabaseStatus {
   }
 }
 
-// Safe operation wrapper
-export async function safeSupabaseOperation<T>(operation: () => Promise<{ data: T; error: any }>): Promise<T | null> {
-  if (!supabase) {
-    console.warn("Supabase client not initialized")
-    return null
-  }
-
+// Safe database operations with error handling
+export async function safeSupabaseOperation<T>(
+  operation: () => Promise<{ data: T | null; error: any }>,
+): Promise<T | null> {
   try {
     const { data, error } = await operation()
-
     if (error) {
       console.error("Supabase operation error:", error)
       return null
     }
-
     return data
   } catch (error) {
     console.error("Supabase operation failed:", error)

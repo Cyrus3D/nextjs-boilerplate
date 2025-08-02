@@ -6,6 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDateTime(date: string | Date): string {
+  if (!date) return ""
   const d = new Date(date)
   return d.toLocaleDateString("ko-KR", {
     year: "numeric",
@@ -16,7 +17,18 @@ export function formatDateTime(date: string | Date): string {
   })
 }
 
+export function formatDate(date: string | Date): string {
+  if (!date) return ""
+  const d = new Date(date)
+  return d.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+}
+
 export function formatRelativeTime(date: string | Date): string {
+  if (!date) return ""
   const now = new Date()
   const target = new Date(date)
   const diffInSeconds = Math.floor((now.getTime() - target.getTime()) / 1000)
@@ -33,8 +45,12 @@ export function formatRelativeTime(date: string | Date): string {
     const days = Math.floor(diffInSeconds / 86400)
     return `${days}일 전`
   } else {
-    return formatDateTime(date)
+    return formatDate(date)
   }
+}
+
+export function getRelativeTime(date: string | Date): string {
+  return formatRelativeTime(date)
 }
 
 export function formatPhoneNumber(phone: string): string {
@@ -50,11 +66,9 @@ export function formatPhoneNumber(phone: string): string {
     if (number.length === 9) {
       return `+66 ${number.substring(0, 2)} ${number.substring(2, 5)} ${number.substring(5)}`
     }
-  } else if (cleaned.startsWith("0")) {
+  } else if (cleaned.startsWith("0") && cleaned.length === 10) {
     // Local format: 0XX XXX XXXX
-    if (cleaned.length === 10) {
-      return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 6)} ${cleaned.substring(6)}`
-    }
+    return `${cleaned.substring(0, 3)} ${cleaned.substring(3, 6)} ${cleaned.substring(6)}`
   }
 
   return phone
@@ -80,17 +94,40 @@ export function detectUrlType(url: string): "facebook" | "instagram" | "youtube"
   return "unknown"
 }
 
+export function getUrlType(url?: string): "website" | "map" | "social" | "unknown" {
+  if (!url) return "unknown"
+
+  const lowerUrl = url.toLowerCase()
+
+  if (lowerUrl.includes("maps.google") || lowerUrl.includes("maps.app.goo.gl") || lowerUrl.includes("goo.gl/maps")) {
+    return "map"
+  }
+
+  if (
+    lowerUrl.includes("facebook.com") ||
+    lowerUrl.includes("instagram.com") ||
+    lowerUrl.includes("twitter.com") ||
+    lowerUrl.includes("youtube.com") ||
+    lowerUrl.includes("tiktok.com") ||
+    lowerUrl.includes("line.me")
+  ) {
+    return "social"
+  }
+
+  return "website"
+}
+
 export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text
+  if (!text || text.length <= maxLength) return text
   return text.substring(0, maxLength) + "..."
 }
 
 export function generateSlug(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9가-힣]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
 }
 
 export function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
@@ -107,11 +144,6 @@ export function debounce<T extends (...args: any[]) => any>(func: T, wait: numbe
   }
 }
 
-export function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
-}
-
 export function isValidUrl(url: string): boolean {
   try {
     new URL(url)
@@ -123,101 +155,70 @@ export function isValidUrl(url: string): boolean {
 
 export function extractDomain(url: string): string {
   try {
-    const domain = new URL(url).hostname
-    return domain.replace("www.", "")
+    const urlObj = new URL(url)
+    return urlObj.hostname
   } catch {
-    return url
+    return ""
   }
 }
 
-export function calculateReadTime(content: string): number {
+export function formatViewCount(count: number): string {
+  if (count < 1000) return count.toString()
+  if (count < 1000000) return `${(count / 1000).toFixed(1)}K`
+  return `${(count / 1000000).toFixed(1)}M`
+}
+
+export function calculateReadingTime(text: string): number {
   const wordsPerMinute = 200
-  const words = content.split(/\s+/).length
+  const words = text.split(/\s+/).length
   return Math.ceil(words / wordsPerMinute)
 }
 
-export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 Bytes"
-
-  const k = 1024
-  const sizes = ["Bytes", "KB", "MB", "GB"]
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-
-  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+export function formatNumber(num: number): string {
+  return num.toLocaleString("ko-KR")
 }
 
-export function generateRandomId(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-}
-
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-export function capitalizeFirst(str: string): string {
-  if (!str) return str
-  return str.charAt(0).toUpperCase() + str.slice(1)
+export function generateId(): string {
+  return Math.random().toString(36).substr(2, 9)
 }
 
 export function removeHtmlTags(html: string): string {
   return html.replace(/<[^>]*>/g, "")
 }
 
-export function formatCurrency(amount: number, currency = "THB"): string {
-  return new Intl.NumberFormat("th-TH", {
-    style: "currency",
-    currency: currency,
-  }).format(amount)
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
 }
 
-export function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((word) => word.charAt(0))
-    .join("")
-    .toUpperCase()
-    .substring(0, 2)
+export function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/on\w+="[^"]*"/gi, "")
+    .replace(/javascript:/gi, "")
 }
 
-export function isEmptyObject(obj: object): boolean {
-  return Object.keys(obj).length === 0
-}
-
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
-}
-
-export function arrayToChunks<T>(array: T[], chunkSize: number): T[][] {
-  const chunks: T[][] = []
-  for (let i = 0; i < array.length; i += chunkSize) {
-    chunks.push(array.slice(i, i + chunkSize))
+export function parseJsonSafely<T>(json: string, fallback: T): T {
+  try {
+    return JSON.parse(json) as T
+  } catch {
+    return fallback
   }
-  return chunks
 }
 
-export function removeDuplicates<T>(array: T[], key?: keyof T): T[] {
-  if (!key) {
-    return [...new Set(array)]
-  }
+export function capitalizeFirst(str: string): string {
+  if (!str) return ""
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
 
-  const seen = new Set()
-  return array.filter((item) => {
-    const value = item[key]
-    if (seen.has(value)) {
-      return false
+export function removeEmptyFields<T extends Record<string, any>>(obj: T): Partial<T> {
+  const result: Partial<T> = {}
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== null && value !== undefined && value !== "") {
+      result[key as keyof T] = value
     }
-    seen.add(value)
-    return true
-  })
-}
+  }
 
-export function sortByKey<T>(array: T[], key: keyof T, direction: "asc" | "desc" = "asc"): T[] {
-  return [...array].sort((a, b) => {
-    const aVal = a[key]
-    const bVal = b[key]
-
-    if (aVal < bVal) return direction === "asc" ? -1 : 1
-    if (aVal > bVal) return direction === "asc" ? 1 : -1
-    return 0
-  })
+  return result
 }
