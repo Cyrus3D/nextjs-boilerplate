@@ -1,10 +1,13 @@
 import { createClient } from "@supabase/supabase-js"
 
+// Supabase configuration
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+// Create Supabase client (singleton pattern)
 export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null
 
+// Database Types
 export interface BusinessCard {
   id: string
   title: string
@@ -24,11 +27,10 @@ export interface BusinessCard {
   tiktok?: string
   image_url?: string
   tags: string[]
-  view_count: number
-  exposure_count: number
   is_premium: boolean
   is_promoted: boolean
-  is_active: boolean
+  view_count: number
+  exposure_count: number
   created_at: string
   updated_at: string
 }
@@ -39,13 +41,12 @@ export interface NewsArticle {
   content: string
   summary?: string
   category: string
+  author?: string
   source_url?: string
   image_url?: string
   tags: string[]
-  view_count: number
   is_breaking: boolean
-  is_published: boolean
-  published_at: string
+  view_count: number
   created_at: string
   updated_at: string
 }
@@ -54,7 +55,8 @@ export interface Category {
   id: string
   name: string
   description?: string
-  is_active: boolean
+  icon?: string
+  color?: string
   created_at: string
 }
 
@@ -63,30 +65,22 @@ export interface Tag {
   name: string
   category?: string
   usage_count: number
-  is_active: boolean
   created_at: string
 }
 
-export interface DatabaseStatus {
-  connected: boolean
-  tables: {
-    business_cards: number
-    news_articles: number
-    categories: number
-    tags: number
-  }
-  functions: {
-    increment_view_count: boolean
-    increment_exposure_count: boolean
-    increment_news_view_count: boolean
-  }
-  environment: {
-    supabase_url: boolean
-    supabase_anon_key: boolean
+// Database connection check
+export async function checkDatabaseConnection(): Promise<boolean> {
+  if (!supabase) return false
+
+  try {
+    const { error } = await supabase.from("business_cards").select("id").limit(1)
+    return !error
+  } catch {
+    return false
   }
 }
 
-// Safe database operations with error handling
+// Safe database operation wrapper
 export async function safeSupabaseOperation<T>(
   operation: () => Promise<{ data: T | null; error: any }>,
 ): Promise<T | null> {
@@ -97,25 +91,25 @@ export async function safeSupabaseOperation<T>(
 
   try {
     const { data, error } = await operation()
+
     if (error) {
       console.error("Supabase operation error:", error.message)
       return null
     }
+
     return data
   } catch (error) {
-    console.error("Supabase operation failed:", error)
+    console.error("Supabase operation error:", error)
     return null
   }
 }
 
-// Database connection test
-export async function testDatabaseConnection(): Promise<boolean> {
-  if (!supabase) return false
-
-  try {
-    const { data, error } = await supabase.from("business_cards").select("count").limit(1)
-    return !error
-  } catch {
-    return false
+// Environment check
+export function getSupabaseStatus() {
+  return {
+    hasUrl: !!supabaseUrl,
+    hasKey: !!supabaseAnonKey,
+    isConfigured: !!(supabaseUrl && supabaseAnonKey),
+    client: !!supabase,
   }
 }
